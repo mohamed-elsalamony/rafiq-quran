@@ -12,7 +12,6 @@ class AppState extends ChangeNotifier {
   static const String _keyLastAudioAyah = 'last_audio_ayah';
   static const String _keyFontSize = 'font_size';
   static const String _keyDarkMode = 'dark_mode';
-  static const String _keyGeminiKey = 'gemini_key';
 
   int _lastPageRead = 1;
   int _lastSurahRead = 1;
@@ -24,7 +23,6 @@ class AppState extends ChangeNotifier {
   int _lastAudioAyah = 1;
   double _fontSize = 22.0;
   bool _isDarkMode = false;
-  String _geminiApiKey = '';
 
   // Getters
   int get lastPageRead => _lastPageRead;
@@ -37,7 +35,6 @@ class AppState extends ChangeNotifier {
   int get lastAudioAyah => _lastAudioAyah;
   double get fontSize => _fontSize;
   bool get isDarkMode => _isDarkMode;
-  String get geminiApiKey => _geminiApiKey;
 
   AppState() {
     _loadState();
@@ -55,7 +52,6 @@ class AppState extends ChangeNotifier {
     _lastAudioAyah = prefs.getInt(_keyLastAudioAyah) ?? 1;
     _fontSize = prefs.getDouble(_keyFontSize) ?? 22.0;
     _isDarkMode = prefs.getBool(_keyDarkMode) ?? false;
-    _geminiApiKey = prefs.getString(_keyGeminiKey) ?? '';
     notifyListeners();
   }
 
@@ -112,13 +108,5 @@ class AppState extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyDarkMode, isDark);
-  }
-
-  Future<void> saveGeminiApiKey(String apiKey) async {
-    _geminiApiKey = apiKey;
-    notifyListeners();
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyGeminiKey, apiKey);
   }
 }

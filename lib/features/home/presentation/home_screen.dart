@@ -117,8 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: isDark 
-                ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
-                : [const Color(0xFFE8F0EC), const Color(0xFFF9FBF9)],
+                ? [const Color(0xFF0F2520), const Color(0xFF0B1412)]
+                : [const Color(0xFFF0F5F2), const Color(0xFFFAFBF9)],
           ),
         ),
         child: SafeArea(
@@ -134,30 +134,47 @@ class _HomeScreenState extends State<HomeScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'رفيق القرآن',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Outfit',
-                            color: isDark ? Colors.white : primaryColor,
-                          ),
+                        Row(
+                          children: [
+                            Icon(Icons.stars, color: accentColor, size: 28),
+                            const SizedBox(width: 8),
+                            Text(
+                              'رفيق القرآن',
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Outfit',
+                                color: isDark ? Colors.white : primaryColor,
+                              ),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 4),
                         Text(
-                          'مرحباً بك في رفيقك اليومي',
+                          'مرحباً بك في رفيقك اليومي للعبادة والقرآن',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             color: isDark ? Colors.grey[400] : Colors.grey[600],
                           ),
                         ),
                       ],
                     ),
-                    IconButton(
-                      icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-                      color: accentColor,
-                      onPressed: () {
-                        appState.toggleDarkMode(!isDark);
-                      },
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withOpacity(0.08) : primaryColor.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: accentColor.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: IconButton(
+                        icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+                        color: accentColor,
+                        onPressed: () {
+                          appState.toggleDarkMode(!isDark);
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -165,15 +182,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // بطاقة مواقيت الصلاة الحالية القادمة
                 Container(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.all(22.0),
                   decoration: BoxDecoration(
-                    color: primaryColor,
-                    borderRadius: BorderRadius.circular(20),
+                    gradient: LinearGradient(
+                      colors: isDark
+                          ? [const Color(0xFF0C4638), const Color(0xFF072C23)]
+                          : [primaryColor, const Color(0xFF0A3E31)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: accentColor.withOpacity(0.4),
+                      width: 1.5,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                        color: primaryColor.withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
                       )
                     ],
                   ),
@@ -183,51 +210,69 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: accentColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'الصلاة القادمة: $_nextPrayerName',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.white90,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
                             Text(
-                              'الصلاة القادمة: $_nextPrayerName',
+                              '- $_timeUntilNextPrayer',
                               style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.teal[100],
+                                fontSize: 40,
                                 fontWeight: FontWeight.bold,
+                                color: accentColor,
+                                fontFamily: 'Outfit',
+                                letterSpacing: 1,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Text(
-                              '- $_timeUntilNextPrayer',
-                              style: const TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                fontFamily: 'Outfit',
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
+                            const Text(
                               'مواقيت الصلاة حسب توقيت مكة المكرمة',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: Colors.teal[200],
+                                color: Colors.white60,
                               ),
                             ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withOpacity(0.1),
                           shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.2),
+                            width: 1,
+                          ),
                         ),
                         child: const Icon(
-                          Icons.access_time_filled,
-                          size: 40,
+                          Icons.mosque,
+                          size: 42,
                           color: Colors.white,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
                 // أزرار سريعة: متابعة القراءة واستكمال الاستماع
                 Row(
@@ -237,9 +282,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         title: 'متابعة القراءة',
                         subtitle: 'سورة ${quran.getSurahNameArabic(appState.lastSurahRead)} - ص ${appState.lastPageRead}',
-                        icon: Icons.chrome_reader_mode,
-                        color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                        icon: Icons.chrome_reader_mode_outlined,
+                        color: isDark ? const Color(0xFF1E2825) : Colors.white,
                         textColor: isDark ? Colors.white : Colors.black87,
+                        borderColor: isDark ? accentColor.withOpacity(0.2) : primaryColor.withOpacity(0.15),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -253,17 +299,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: _buildQuickActionButton(
                         context,
                         title: 'استكمال الاستماع',
                         subtitle: 'سورة ${quran.getSurahNameArabic(appState.lastAudioSurah)} (${appState.lastAudioReciter})',
-                        icon: Icons.play_circle_filled,
-                        color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                        icon: Icons.play_circle_outline,
+                        color: isDark ? const Color(0xFF1E2825) : Colors.white,
                         textColor: isDark ? Colors.white : Colors.black87,
+                        borderColor: isDark ? accentColor.withOpacity(0.2) : primaryColor.withOpacity(0.15),
                         onTap: () {
-                          // تحويل المستخدم لشاشة القرآن مع تفعيل التلاوة
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -279,61 +325,84 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
                 // آية اليوم
                 _buildSectionCard(
                   title: 'آية اليوم',
+                  isDark: isDark,
+                  accentColor: accentColor,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      const SizedBox(height: 8),
                       Text(
                         '﴿ $ayahOfDayText ﴾',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.amber[200] : primaryColor,
+                          color: isDark ? accentColor : primaryColor,
                           fontFamily: 'Amiri',
+                          height: 1.6,
                         ),
                         textAlign: TextAlign.center,
                         textDirection: TextDirection.rtl,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        ayahOfDayReference,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                        textAlign: TextAlign.left,
-                        textDirection: TextDirection.rtl,
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(Icons.bookmark_outline, color: accentColor.withOpacity(0.6), size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            ayahOfDayReference,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.right,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  color: isDark ? const Color(0xFF1F2E2A) : const Color(0xFFF0F7F4),
+                  color: isDark ? const Color(0xFF152A24) : const Color(0xFFEDF6F2),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
                 // ذكر اليوم
                 _buildSectionCard(
                   title: 'ذكر اليوم',
-                  child: Text(
-                    zekrOfDayText,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: isDark ? Colors.grey[200] : Colors.black87,
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.right,
+                  isDark: isDark,
+                  accentColor: accentColor,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 8),
+                      Text(
+                        zekrOfDayText,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Colors.grey[200] : Colors.black87,
+                          height: 1.5,
+                          fontFamily: 'Amiri',
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ],
                   ),
-                  color: isDark ? const Color(0xFF2A281E) : const Color(0xFFFDFBF0),
+                  color: isDark ? const Color(0xFF23231A) : const Color(0xFFFDFBF2),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
                 // الورد اليومي والختمات
                 if (_khatmaPlans.isNotEmpty)
                   _buildSectionCard(
                     title: 'خطة الختمة الحالية',
+                    isDark: isDark,
+                    accentColor: accentColor,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: _khatmaPlans.map((khatma) {
@@ -343,30 +412,35 @@ class _HomeScreenState extends State<HomeScreen> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            const SizedBox(height: 8),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   khatma['title'] ?? 'ختمة القرآن الكبرى',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
                                 ),
                                 Text(
                                   '${(percent * 100).toInt()}%',
-                                  style: TextStyle(color: accentColor, fontWeight: FontWeight.bold),
+                                  style: TextStyle(color: accentColor, fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(8),
                               child: LinearProgressIndicator(
                                 value: percent,
-                                backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                                backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[200],
                                 valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-                                minHeight: 8,
+                                minHeight: 10,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 8),
                             Text(
                               'الصفحة الحالية: ${khatma['currentPage']} من ${khatma['endPage']}',
                               style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey[600]),
@@ -375,127 +449,95 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       }).toList(),
                     ),
-                    color: isDark ? const Color(0xFF242424) : Colors.white,
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   )
                 else
                   _buildSectionCard(
                     title: 'خطة الختمة',
+                    isDark: isDark,
+                    accentColor: accentColor,
                     child: Column(
                       children: [
+                        const SizedBox(height: 8),
                         Text(
                           'لم تقم بإنشاء خطة ختمة قرآني بعد. أنشئ خطتك المخصصة لتتبع وردك اليومي ونسبة الإنجاز.',
-                          style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                          style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[300] : Colors.grey[700], height: 1.4),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: () {
-                            // التبديل إلى تبويب الختمة أو فتح شاشتها
                             widget.onTabChanged(2); // التبويب الثالث (الحفظ والختمات)
                           },
-                          icon: const Icon(Icons.add),
-                          label: const Text('إنشاء خطة ختمة جديدة'),
+                          icon: const Icon(Icons.add, size: 20),
+                          label: const Text('إنشاء خطة ختمة جديدة', style: TextStyle(fontWeight: FontWeight.bold)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: accentColor.withOpacity(0.5), width: 1),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           ),
                         ),
                       ],
                     ),
-                    color: isDark ? const Color(0xFF242424) : Colors.white,
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
                 // العلامات المرجعية الأخيرة
                 if (_lastBookmark != null)
                   _buildSectionCard(
                     title: 'آخر العلامات المرجعية',
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.bookmark, color: accentColor, size: 28),
-                      title: Text(
-                        'سورة ${_lastBookmark!['surahName']} - الآية ${_lastBookmark!['ayah']}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                    isDark: isDark,
+                    accentColor: accentColor,
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withOpacity(0.02) : Colors.grey.withOpacity(0.03),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? Colors.white12 : Colors.black12,
+                          width: 0.5,
+                        ),
                       ),
-                      subtitle: Text('صفحة ${_lastBookmark!['page']} - ${_lastBookmark!['label']}'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => QuranScreen(
-                              initialPage: _lastBookmark!['page'],
-                              initialSurah: _lastBookmark!['surah'],
-                            ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: accentColor.withOpacity(0.15),
+                            shape: BoxShape.circle,
                           ),
-                        ).then((_) => _loadDashboardData());
-                      },
-                    ),
-                    color: isDark ? const Color(0xFF242424) : Colors.white,
-                  ),
-                const SizedBox(height: 20),
-
-                // اختصار رفيق الذكي
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [const Color(0xFF1E3C72), const Color(0xFF2A5298)],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blue.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'هل لديك سؤال حول آية أو تفسير؟',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'اسأل مساعدك الذكي "رفيق الذكي" ليجيبك في الحال',
-                              style: TextStyle(
-                                color: Colors.blue.shade100,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                          child: Icon(Icons.bookmark, color: accentColor, size: 24),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          widget.onTabChanged(4); // التبويب الخامس (رفيق الذكي)
+                        title: Text(
+                          'سورة ${_lastBookmark!['surahName']} - الآية ${_lastBookmark!['ayah']}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        subtitle: Text(
+                          'صفحة ${_lastBookmark!['page']} - ${_lastBookmark!['label']}',
+                          style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                        ),
+                        trailing: Icon(Icons.arrow_forward_ios, size: 14, color: accentColor),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => QuranScreen(
+                                initialPage: _lastBookmark!['page'],
+                                initialSurah: _lastBookmark!['surah'],
+                              ),
+                            ),
+                          ).then((_) => _loadDashboardData());
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF1E3C72),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        ),
-                        child: const Text(
-                          'تحدث معه',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      )
-                    ],
+                      ),
+                    ),
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   ),
-                ),
                 const SizedBox(height: 24),
               ],
             ),
@@ -512,45 +554,64 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
     required Color color,
     required Color textColor,
+    required Color borderColor,
     required VoidCallback onTap,
   }) {
     final Color accentColor = const Color(0xFFD4AF37);
-    return Card(
-      elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.05),
-      color: color,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(icon, color: accentColor, size: 32),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: accentColor, size: 28),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey[500],
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -561,33 +622,60 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required Widget child,
     required Color color,
+    required bool isDark,
+    required Color accentColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.04),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           )
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-            textDirection: TextDirection.rtl,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 6,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
           ),
-          const Divider(height: 16, thickness: 0.5),
+          const SizedBox(height: 8),
+          Divider(
+            height: 16,
+            thickness: 0.5,
+            color: isDark ? Colors.white10 : Colors.black12,
+          ),
           child,
         ],
       ),

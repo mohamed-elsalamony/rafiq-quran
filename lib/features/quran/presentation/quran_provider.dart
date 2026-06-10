@@ -27,6 +27,8 @@ class QuranProvider extends ChangeNotifier {
   double _downloadProgress = 0.0;
   String? _errorMessage;
 
+  final Map<int, List<Map<String, dynamic>>> _pageVersesCache = {};
+
   // Getters
   int get currentPage => _currentPage;
   int? get activePlayingSurah => _activePlayingSurah;
@@ -53,6 +55,7 @@ class QuranProvider extends ChangeNotifier {
 
   QuranProvider({required this.appState}) {
     _currentPage = appState.lastPageRead;
+    _precomputeQuranPages();
     
     // Listen to audio player events
     _audioPlayer.onPlayerComplete.listen((event) {
@@ -62,6 +65,26 @@ class QuranProvider extends ChangeNotifier {
     _audioPlayer.onLog.listen((log) {
       debugPrint("AudioPlayer Log: $log");
     });
+  }
+
+  void _precomputeQuranPages() {
+    try {
+      for (int s = 1; s <= 114; s++) {
+        int count = quran.getVerseCount(s);
+        String surahName = quran.getSurahNameArabic(s);
+        for (int v = 1; v <= count; v++) {
+          int pageNum = quran.getPageNumber(s, v);
+          _pageVersesCache.putIfAbsent(pageNum, () => []).add({
+            'surah': s,
+            'ayah': v,
+            'text': quran.getVerse(s, v),
+            'surahName': surahName,
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error precomputing Quran pages: $e");
+    }
   }
 
   @override
@@ -100,25 +123,7 @@ class QuranProvider extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> getVersesOnPage(int pageNum) {
-    List<Map<String, dynamic>> pageVerses = [];
-    try {
-      for (int s = 1; s <= 114; s++) {
-        int count = quran.getVerseCount(s);
-        for (int v = 1; v <= count; v++) {
-          if (quran.getPageNumber(s, v) == pageNum) {
-            pageVerses.add({
-              'surah': s,
-              'ayah': v,
-              'text': quran.getVerse(s, v),
-              'surahName': quran.getSurahNameArabic(s),
-            });
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint("Error loading verses: $e");
-    }
-    return pageVerses;
+    return _pageVersesCache[pageNum] ?? [];
   }
 
   // --- Recitation controls ---

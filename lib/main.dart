@@ -8,15 +8,12 @@ import 'features/quran/presentation/quran_screen.dart';
 import 'features/adhkar/presentation/adhkar_screen.dart';
 import 'features/tasbih/presentation/tasbih_screen.dart';
 import 'features/prayer_times/presentation/prayer_qibla_screen.dart';
-import 'features/ai_assistant/presentation/ai_chat_screen.dart';
-import 'features/admin/presentation/admin_panel_screen.dart';
 import 'features/auth/presentation/auth_screen.dart';
 import 'features/hifz_khatma/presentation/hifz_khatma_screen.dart';
 
 import 'features/quran/presentation/quran_provider.dart';
 import 'features/tasbih/presentation/tasbih_provider.dart';
 import 'features/prayer_times/presentation/prayer_provider.dart';
-import 'features/ai_assistant/presentation/ai_provider.dart';
 import 'features/adhkar/presentation/adhkar_provider.dart';
 
 void main() {
@@ -31,10 +28,6 @@ void main() {
         ),
         ChangeNotifierProvider(create: (context) => TasbihProvider()),
         ChangeNotifierProvider(create: (context) => PrayerProvider()),
-        ChangeNotifierProxyProvider<AppState, AiProvider>(
-          create: (context) => AiProvider(appState: Provider.of<AppState>(context, listen: false)),
-          update: (context, appState, previous) => previous ?? AiProvider(appState: appState),
-        ),
         ChangeNotifierProvider(create: (context) => AdhkarProvider()),
       ],
       child: const MyApp(),
@@ -120,7 +113,6 @@ class _MainShellState extends State<MainShell> {
       const HifzKhatmaScreen(),
       const CombinedDhikrTab(), // تبويب الأذكار والتسبيح المشترك
       const PrayerQiblaScreen(),
-      const AiChatScreen(),
     ]);
   }
 
@@ -140,7 +132,6 @@ class _MainShellState extends State<MainShell> {
       case 2: return 'hifz';
       case 3: return 'dhikr';
       case 4: return 'prayer';
-      case 5: return 'ai';
       default: return 'home';
     }
   }
@@ -152,7 +143,6 @@ class _MainShellState extends State<MainShell> {
       case 'hifz': return 2;
       case 'dhikr': return 3;
       case 'prayer': return 4;
-      case 'ai': return 5;
       default: return 0;
     }
   }
@@ -214,14 +204,6 @@ class _MainShellState extends State<MainShell> {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const AuthScreen()));
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.admin_panel_settings, color: Colors.teal),
-                title: const Text('لوحة تحكم المشرف (Admin)', textAlign: TextAlign.right),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminPanelScreen()));
-                },
-              ),
               const Divider(),
               
               // التحكم بحجم خط المصحف في القائمة الجانبية مباشرة
@@ -244,34 +226,6 @@ class _MainShellState extends State<MainShell> {
                       onChanged: (val) {
                         appState.setFontSize(val);
                       },
-                    ),
-                  ],
-                ),
-              ),
-
-              // التحكم بمفتاح Gemini API
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Gemini API Key',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      textAlign: TextAlign.right,
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        hintText: 'أدخل مفتاح الـ API للدردشة المفتوحة...',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      ),
-                      onChanged: (val) {
-                        appState.saveGeminiApiKey(val);
-                      },
-                      controller: TextEditingController(text: appState.geminiApiKey),
                     ),
                   ],
                 ),
@@ -303,7 +257,7 @@ class _MainShellState extends State<MainShell> {
       ),
       body: _tabs[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex > 4 ? 0 : _currentIndex, // AI assistant redirect handle
+        currentIndex: _currentIndex,
         onTap: _onTabChanged,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: accentColor,
