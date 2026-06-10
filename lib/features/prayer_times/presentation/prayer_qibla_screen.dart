@@ -238,7 +238,7 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
 
                     return Container(
                       color: isNext 
-                          ? (isDark ? Colors.teal.shade950.withOpacity(0.4) : Colors.teal.shade50.withOpacity(0.5)) 
+                          ? (isDark ? Colors.teal.shade900.withOpacity(0.4) : Colors.teal.shade50.withOpacity(0.5)) 
                           : Colors.transparent,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       child: Row(

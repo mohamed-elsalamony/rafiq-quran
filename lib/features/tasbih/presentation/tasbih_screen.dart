@@ -102,7 +102,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
         content: Text(
           'أحسنت! أتممت الورد لذكر "$_selectedDhikr" ($_target مرة).',
           textAlign: TextAlign.right,
-          style: const TextStyle(fontWeight: kIsWeb ? FontWeight.bold : FontWeight.w700),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.teal.shade800,
         duration: const Duration(seconds: 2),
@@ -393,7 +393,6 @@ class _TasbihScreenState extends State<TasbihScreen> {
                           ),
                           BoxShadow(
                             color: Colors.white.withOpacity(0.08),
-                            inset: true,
                             blurRadius: 8,
                             offset: const Offset(4, 4),
                           )

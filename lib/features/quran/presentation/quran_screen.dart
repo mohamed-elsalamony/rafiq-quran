@@ -91,6 +91,12 @@ class _QuranScreenState extends State<QuranScreen> {
     super.dispose();
   }
 
+  // حساب الحزب تقريبياً بناءً على الصفحة
+  int _getHizbNumber(int page) {
+    if (page <= 1) return 1;
+    return (((page - 2) ~/ 10) + 1).clamp(1, 60);
+  }
+
   // الحصول على الآيات الخاصة بصفحة معينة
   List<Map<String, dynamic>> _getVersesOnPage(int pageNum) {
     List<Map<String, dynamic>> pageVerses = [];
@@ -528,7 +534,7 @@ class _QuranScreenState extends State<QuranScreen> {
                                 style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
                               ),
                               Text(
-                                'الحزب ${quran.getHizbQuarterNumber(pageVerses.first['surah'], pageVerses.first['ayah'])}',
+                                'الحزب ${_getHizbNumber(pageNum)}',
                                 style: const TextStyle(fontSize: 12, color: Colors.grey),
                               ),
                             ],

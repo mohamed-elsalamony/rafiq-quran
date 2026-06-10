@@ -44,6 +44,7 @@ dependencies:
   google_fonts: any
   share_plus: ^7.2.1
   path_provider: any
+  http: any
 
 dev_dependencies:
   flutter_test:

@@ -304,9 +304,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           color: isDark ? Colors.grey[400] : Colors.grey[600],
-                          fontDirection: TextDirection.rtl,
                         ),
                         textAlign: TextAlign.left,
+                        textDirection: TextDirection.rtl,
                       ),
                     ],
                   ),
