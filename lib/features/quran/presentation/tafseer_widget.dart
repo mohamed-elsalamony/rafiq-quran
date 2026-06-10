@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/services/tafseer_service.dart';
 
 class TafseerWidget extends StatefulWidget {
   final int surah;
@@ -20,7 +19,6 @@ class TafseerWidget extends StatefulWidget {
 }
 
 class _TafseerWidgetState extends State<TafseerWidget> {
-  static List<dynamic>? _cachedTafseer;
   String _tafseerText = 'جاري تحميل التفسير...';
   bool _isLoading = true;
 
@@ -31,34 +29,12 @@ class _TafseerWidgetState extends State<TafseerWidget> {
   }
 
   Future<void> _loadTafseer() async {
-    try {
-      if (_cachedTafseer == null) {
-        // تحميل الملف وقراءته بنظام UTF-8 الصحيح
-        final String jsonString = await rootBundle.loadString('assets/data/tafseer.json');
-        _cachedTafseer = json.decode(jsonString) as List<dynamic>;
-      }
-
-      // البحث عن التفسير المطلوب
-      final item = _cachedTafseer!.firstWhere(
-        (element) =>
-            element['number'].toString() == widget.surah.toString() &&
-            element['aya'].toString() == widget.ayah.toString(),
-        orElse: () => null,
-      );
-
-      if (mounted) {
-        setState(() {
-          _tafseerText = item != null ? item['text'] : 'عذراً، تفسير هذه الآية غير متوفر حالياً.';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _tafseerText = 'حدث خطأ أثناء تحميل التفسير: $e';
-          _isLoading = false;
-        });
-      }
+    final text = await TafseerService.getTafseer(widget.surah, widget.ayah);
+    if (mounted) {
+      setState(() {
+        _tafseerText = text;
+        _isLoading = false;
+      });
     }
   }
 

@@ -13,11 +13,30 @@ import 'features/admin/presentation/admin_panel_screen.dart';
 import 'features/auth/presentation/auth_screen.dart';
 import 'features/hifz_khatma/presentation/hifz_khatma_screen.dart';
 
+import 'features/quran/presentation/quran_provider.dart';
+import 'features/tasbih/presentation/tasbih_provider.dart';
+import 'features/prayer_times/presentation/prayer_provider.dart';
+import 'features/ai_assistant/presentation/ai_provider.dart';
+import 'features/adhkar/presentation/adhkar_provider.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => AppState(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => AppState()),
+        ChangeNotifierProxyProvider<AppState, QuranProvider>(
+          create: (context) => QuranProvider(appState: Provider.of<AppState>(context, listen: false)),
+          update: (context, appState, previous) => previous ?? QuranProvider(appState: appState),
+        ),
+        ChangeNotifierProvider(create: (context) => TasbihProvider()),
+        ChangeNotifierProvider(create: (context) => PrayerProvider()),
+        ChangeNotifierProxyProvider<AppState, AiProvider>(
+          create: (context) => AiProvider(appState: Provider.of<AppState>(context, listen: false)),
+          update: (context, appState, previous) => previous ?? AiProvider(appState: appState),
+        ),
+        ChangeNotifierProvider(create: (context) => AdhkarProvider()),
+      ],
       child: const MyApp(),
     ),
   );

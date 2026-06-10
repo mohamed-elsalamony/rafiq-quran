@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/services/app_state.dart';
-import '../../../core/services/db_helper.dart';
-import 'adhkar_data.dart';
+import 'adhkar_provider.dart';
 
 class AdhkarScreen extends StatefulWidget {
   const AdhkarScreen({super.key});
@@ -13,115 +12,34 @@ class AdhkarScreen extends StatefulWidget {
 }
 
 class _AdhkarScreenState extends State<AdhkarScreen> {
-  String _selectedCategory = 'أذكار الصباح';
-  List<String> _favTexts = [];
-  bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-  
-  // حفظ حالة عدادات الجلسة الحالية لكل ذكر (حتى لا تعود للقيمة الأصلية إلا عند إعادة تعيينها)
-  final Map<String, int> _counts = {};
-
-  final List<String> _categories = [
-    'أذكار الصباح',
-    'أذكار المساء',
-    'أذكار النوم والاستيقاظ',
-    'أذكار بعد الصلاة',
-    'أذكار السفر',
-    'أذكار المسجد',
-    'أذكار الطعام والشراب',
-    'أذكار متنوعة',
-    'المفضلة'
-  ];
 
   @override
-  void initState() {
-    super.initState();
-    _loadFavorites();
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
-  void _loadFavorites() async {
-    final list = await DbHelper.getFavoriteAdhkar();
-    if (mounted) {
-      setState(() {
-        _favTexts = list;
-      });
-    }
-  }
-
-  void _toggleFavorite(String text) async {
-    await DbHelper.toggleFavoriteAdhkar(text);
-    _loadFavorites();
-  }
-
-  int _getRemainingCount(ZekrModel item) {
-    if (_counts.containsKey(item.text)) {
-      return _counts[item.text]!;
-    }
-    return item.count;
-  }
-
-  void _decrementCount(ZekrModel item) {
-    int current = _getRemainingCount(item);
-    if (current > 0) {
-      HapticFeedback.lightImpact(); // اهتزاز بسيط للتأكيد اللمسي
-      setState(() {
-        _counts[item.text] = current - 1;
-      });
-      
-      // إذا اكتمل العداد، نسجل هذا التسبيح/الذكر في الإحصائيات
-      if (current - 1 == 0) {
-        DbHelper.addTasbihLog(item.category, item.count);
-      }
-    }
-  }
-
-  void _resetCounts() {
-    setState(() {
-      _counts.clear();
-    });
-    HapticFeedback.mediumImpact();
+  void _resetCounts(AdhkarProvider provider) {
+    provider.resetCounts();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('تمت إعادة تعيين جميع العدادات.')),
     );
   }
 
-  List<ZekrModel> _getFilteredItems() {
-    List<ZekrModel> currentList = [];
-    if (_selectedCategory == 'المفضلة') {
-      currentList = AdhkarData.items
-          .where((item) => _favTexts.contains(item.text))
-          .toList();
-    } else {
-      currentList = AdhkarData.items
-          .where((item) => item.category == _selectedCategory)
-          .toList();
-    }
-
-    if (_searchQuery.isNotEmpty) {
-      currentList = currentList
-          .where((item) =>
-              item.text.contains(_searchQuery) ||
-              item.fadl.contains(_searchQuery))
-          .toList();
-    }
-
-    return currentList;
-  }
-
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final adhkarProvider = Provider.of<AdhkarProvider>(context);
     final isDark = appState.isDarkMode;
     final primaryColor = const Color(0xFF0F5A47);
-    final accentColor = const Color(0xFFD4AF37);
-    final filteredItems = _getFilteredItems();
+    final filteredItems = adhkarProvider.getFilteredItems();
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
-        title: _isSearching
+        title: adhkarProvider.isSearching
             ? TextField(
                 controller: _searchController,
                 style: const TextStyle(color: Colors.white),
@@ -130,11 +48,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                   hintStyle: TextStyle(color: Colors.white70),
                   border: InputBorder.none,
                 ),
-                onChanged: (val) {
-                  setState(() {
-                    _searchQuery = val;
-                  });
-                },
+                onChanged: adhkarProvider.setSearchQuery,
               )
             : const Text(
                 'الأذكار اليومية',
@@ -142,29 +56,22 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
               ),
         centerTitle: true,
         actions: [
-          if (!_isSearching)
+          if (!adhkarProvider.isSearching)
             IconButton(
               icon: const Icon(Icons.search),
-              onPressed: () {
-                setState(() {
-                  _isSearching = true;
-                });
-              },
+              onPressed: () => adhkarProvider.toggleSearching(true),
             )
           else
             IconButton(
               icon: const Icon(Icons.close),
               onPressed: () {
-                setState(() {
-                  _isSearching = false;
-                  _searchQuery = '';
-                  _searchController.clear();
-                });
+                adhkarProvider.toggleSearching(false);
+                _searchController.clear();
               },
             ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _resetCounts,
+            onPressed: () => _resetCounts(adhkarProvider),
             tooltip: 'إعادة تعيين العدادات',
           ),
         ],
@@ -175,18 +82,18 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
         ),
         child: Column(
           children: [
-            // شريط اختيار التصنيفات أفقياً
+            // Category selector bar
             Container(
               height: 54,
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                reverse: true, // لتتناسب مع اللغة العربية RTL
-                itemCount: _categories.length,
+                reverse: true, // RTL fit
+                itemCount: adhkarProvider.categories.length,
                 itemBuilder: (context, index) {
-                  final cat = _categories[index];
-                  final isSelected = _selectedCategory == cat;
+                  final cat = adhkarProvider.categories[index];
+                  final isSelected = adhkarProvider.selectedCategory == cat;
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6.0),
                     child: ChoiceChip(
@@ -202,9 +109,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                       backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.grey[200],
                       onSelected: (val) {
                         if (val) {
-                          setState(() {
-                            _selectedCategory = cat;
-                          });
+                          adhkarProvider.setCategory(cat);
                         }
                       },
                     ),
@@ -212,8 +117,8 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                 },
               ),
             ),
-            
-            // قائمة عرض الأذكار المفلترة
+
+            // Adhkar cards list
             Expanded(
               child: filteredItems.isEmpty
                   ? Center(
@@ -227,7 +132,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            _selectedCategory == 'المفضلة'
+                            adhkarProvider.selectedCategory == 'المفضلة'
                                 ? 'لا توجد أذكار مضافة للمفضلة حالياً.'
                                 : 'عذراً، لم يتم العثور على أذكار مطابقة.',
                             style: TextStyle(
@@ -243,14 +148,14 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                       itemCount: filteredItems.length,
                       itemBuilder: (context, index) {
                         final item = filteredItems[index];
-                        final remaining = _getRemainingCount(item);
+                        final remaining = adhkarProvider.getRemainingCount(item);
                         final isCompleted = remaining == 0;
-                        final isFavorited = _favTexts.contains(item.text);
+                        final isFavorited = adhkarProvider.favTexts.contains(item.text);
 
                         return Card(
                           elevation: 3,
                           shadowColor: Colors.black.withOpacity(0.05),
-                          color: isDark 
+                          color: isDark
                               ? (isCompleted ? const Color(0xFF1B2621) : const Color(0xFF1E1E1E))
                               : (isCompleted ? const Color(0xFFEDF5F1) : Colors.white),
                           shape: RoundedRectangleBorder(
@@ -264,14 +169,13 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                           ),
                           margin: const EdgeInsets.only(bottom: 16.0),
                           child: InkWell(
-                            onTap: () => _decrementCount(item),
+                            onTap: () => adhkarProvider.decrementCount(item),
                             borderRadius: BorderRadius.circular(16),
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // أزرار التحكم بالبطاقة (مفضلة، نسخ، مشاركة)
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
@@ -283,7 +187,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                               color: isFavorited ? Colors.red : Colors.grey,
                                             ),
                                             iconSize: 20,
-                                            onPressed: () => _toggleFavorite(item.text),
+                                            onPressed: () => adhkarProvider.toggleFavorite(item.text),
                                           ),
                                           IconButton(
                                             icon: const Icon(Icons.copy, color: Colors.grey),
@@ -297,7 +201,6 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                           ),
                                         ],
                                       ),
-                                      // الورد اليومي المستهدف كشارة
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
@@ -316,7 +219,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                   ),
                                   const SizedBox(height: 8),
 
-                                  // نص الذكر الشريف
+                                  // Text of Dhikr
                                   Text(
                                     item.text,
                                     style: TextStyle(
@@ -330,7 +233,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                   ),
                                   const SizedBox(height: 12),
 
-                                  // فضل الذكر
+                                  // Fadl text if exists
                                   if (item.fadl.isNotEmpty) ...[
                                     Container(
                                       padding: const EdgeInsets.all(10),
@@ -351,7 +254,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                     const SizedBox(height: 16),
                                   ],
 
-                                  // زر الضغط والعداد التفاعلي
+                                  // Count decrements indicators
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
@@ -363,7 +266,6 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                           fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
                                         ),
                                       ),
-                                      // عداد دائري جميل
                                       Container(
                                         width: 52,
                                         height: 52,

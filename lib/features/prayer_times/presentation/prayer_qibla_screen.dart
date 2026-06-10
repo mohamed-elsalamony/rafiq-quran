@@ -1,10 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:adhan/adhan.dart';
-import 'package:geolocator/geolocator.dart';
 import '../../../core/services/app_state.dart';
 import '../../../core/services/prayer_service.dart';
+import 'prayer_provider.dart';
 
 class PrayerQiblaScreen extends StatefulWidget {
   const PrayerQiblaScreen({super.key});
@@ -14,121 +13,138 @@ class PrayerQiblaScreen extends StatefulWidget {
 }
 
 class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
-  String _selectedCityName = 'القاهرة';
-  late CityConfig _currentCity;
-  late PrayerTimes _prayerTimes;
-  double _qiblaAngle = 0.0;
-  
-  // لتهيئة البوصلة التفاعلية في الكمبيوتر والويب
-  double _simulatedHeading = 0.0; 
+  bool _isInit = false;
 
   @override
-  void initState() {
-    super.initState();
-    _currentCity = PrayerService.defaultCities[_selectedCityName]!;
-    _calculateTimes();
-  }
-
-  void _calculateTimes() {
-    final coords = Coordinates(_currentCity.latitude, _currentCity.longitude);
-    _prayerTimes = PrayerService.getPrayerTimes(coords, _currentCity.method);
-    _qiblaAngle = PrayerService.calculateQiblaDirection(_currentCity.latitude, _currentCity.longitude);
-  }
-
-  // محاولة الحصول على الموقع الحالي عبر الـ GPS
-  void _detectLocation() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text('جاري تحديد موقعك الجغرافي...'),
-            SizedBox(width: 12),
-            CircularProgressIndicator(),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final coords = await PrayerService.getCurrentLocation();
-      // تحديث المدينة للموقع المكتشف
-      if (mounted) {
-        Navigator.pop(context); // إغلاق الحوار
-        setState(() {
-          _selectedCityName = 'موقعي الحالي';
-          _currentCity = CityConfig(
-            nameArabic: 'موقعي الحالي',
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-            method: CalculationMethod.egyptian,
-          );
-          _calculateTimes();
-        });
-      }
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('فشل تحديد الموقع: $e')),
-      );
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInit) {
+      final prayerProvider = Provider.of<PrayerProvider>(context, listen: false);
+      prayerProvider.addListener(_onProviderChange);
+      _isInit = true;
     }
   }
 
-  // حساب التاريخ الهجري التقريبي محلياً (صيغة أم القرى التقريبية)
+  @override
+  void dispose() {
+    try {
+      final prayerProvider = Provider.of<PrayerProvider>(context, listen: false);
+      prayerProvider.removeListener(_onProviderChange);
+    } catch (_) {}
+    super.dispose();
+  }
+
+  void _onProviderChange() {
+    if (!mounted) return;
+    final provider = Provider.of<PrayerProvider>(context, listen: false);
+
+    if (provider.errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && provider.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(provider.errorMessage!, textAlign: TextAlign.right),
+              backgroundColor: Colors.amber[900],
+            ),
+          );
+          provider.clearError();
+        }
+      });
+    }
+
+    if (provider.isDetectingLocation) {
+      _showLocationLoadingDialog();
+    }
+  }
+
+  void _showLocationLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Selector<PrayerProvider, bool>(
+          selector: (context, p) => p.isDetectingLocation,
+          builder: (context, isDetecting, child) {
+            if (!isDetecting) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.of(context, rootNavigator: true).pop();
+              });
+            }
+
+            return const AlertDialog(
+              content: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text('جاري تحديد موقعك الجغرافي...'),
+                  SizedBox(width: 12),
+                  CircularProgressIndicator(),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // التقويم الهجري التقريبي الميسر
   String _getHijriDate() {
-    final now = DateTime.now();
-    // تحويل بسيط لغرض العرض في التطبيقات الإسلامية
-    // الصيغة التقريبية المعتمدة
-    final jd = now.difference(DateTime(1970, 1, 1)).inDays + 2440588;
-    final l = jd - 1948440 + 10632;
-    final n = ((l - 1) / 10631).floor();
-    final l2 = l - 10631 * n + 354;
-    final j = (((10985 - l2) / 30).floor() * ((l2 - 1) / 30).floor() * (l2 / 30).floor());
-    final y = 30 * n + ((10630 - l2) / 354).floor() + j - 1;
-    final m = (((l2 - 354 * j) / 30).floor() + 1);
-    final d = (l2 - 354 * j - 30 * m + 30).floor() + 1;
+    try {
+      final now = DateTime.now();
+      final jd = now.difference(DateTime(1970, 1, 1)).inDays + 2440588;
+      final l = jd - 1948440 + 10632;
+      final n = ((l - 1) / 10631).floor();
+      final l2 = l - 10631 * n + 354;
+      final j = (((10985 - l2) / 30).floor() * ((l2 - 1) / 30).floor() * (l2 / 30).floor());
+      final y = 30 * n + ((10630 - l2) / 354).floor() + j - 1;
+      final m = (((l2 - 354 * j) / 30).floor() + 1);
+      final d = (l2 - 354 * j - 30 * m + 30).floor() + 1;
 
-    final List<String> hijriMonths = [
-      'محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر',
-      'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان',
-      'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
-    ];
-
-    return '$d ${hijriMonths[m - 1]} $y هـ';
+      final List<String> hijriMonths = [
+        'محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر',
+        'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان',
+        'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
+      ];
+      return '$d ${hijriMonths[m - 1]} $y هـ';
+    } catch (_) {
+      return '';
+    }
   }
 
   String _formatTime(DateTime? time) {
     if (time == null) return '--:--';
-    // تحويل إلى توقيت محلي وعرض 12 ساعة
-    final localTime = time.toLocal();
-    final hour = localTime.hour > 12 
-        ? localTime.hour - 12 
-        : (localTime.hour == 0 ? 12 : localTime.hour);
-    final min = localTime.minute.toString().padLeft(2, '0');
-    final period = localTime.hour >= 12 ? 'م' : 'ص';
-    return '$hour:$min $period';
+    try {
+      final localTime = time.toLocal();
+      final hour = localTime.hour > 12
+          ? localTime.hour - 12
+          : (localTime.hour == 0 ? 12 : localTime.hour);
+      final min = localTime.minute.toString().padLeft(2, '0');
+      final period = localTime.hour >= 12 ? 'م' : 'ص';
+      return '$hour:$min $period';
+    } catch (_) {
+      return '--:--';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final prayerProvider = Provider.of<PrayerProvider>(context);
     final isDark = appState.isDarkMode;
     final primaryColor = const Color(0xFF0F5A47);
     final Color accentColor = const Color(0xFFD4AF37);
 
-    // تجهيز أوقات الصلاة للعرض
+    // List of prayers config
     final List<Map<String, dynamic>> prayersList = [
-      {'name': 'الفجر', 'time': _prayerTimes.fajr, 'icon': Icons.wb_twilight},
-      {'name': 'الشروق', 'time': _prayerTimes.sunrise, 'icon': Icons.light_mode},
-      {'name': 'الظهر', 'time': _prayerTimes.dhuhr, 'icon': Icons.wb_sunny},
-      {'name': 'العصر', 'time': _prayerTimes.asr, 'icon': Icons.cloud},
-      {'name': 'المغرب', 'time': _prayerTimes.maghrib, 'icon': Icons.nights_stay},
-      {'name': 'العشاء', 'time': _prayerTimes.isha, 'icon': Icons.dark_mode},
+      {'name': 'الفجر', 'time': prayerProvider.prayerTimes.fajr, 'icon': Icons.wb_twilight},
+      {'name': 'الشروق', 'time': prayerProvider.prayerTimes.sunrise, 'icon': Icons.light_mode},
+      {'name': 'الظهر', 'time': prayerProvider.prayerTimes.dhuhr, 'icon': Icons.wb_sunny},
+      {'name': 'العصر', 'time': prayerProvider.prayerTimes.asr, 'icon': Icons.cloud},
+      {'name': 'المغرب', 'time': prayerProvider.prayerTimes.maghrib, 'icon': Icons.nights_stay},
+      {'name': 'العشاء', 'time': prayerProvider.prayerTimes.isha, 'icon': Icons.dark_mode},
     ];
 
-    final nextPrayer = _prayerTimes.nextPrayer();
+    final nextPrayer = prayerProvider.prayerTimes.nextPrayer();
 
     return Scaffold(
       appBar: AppBar(
@@ -142,7 +158,7 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.my_location),
-            onPressed: _detectLocation,
+            onPressed: prayerProvider.detectLocation,
             tooltip: 'تحديد موقعي بالـ GPS',
           )
         ],
@@ -156,7 +172,7 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // اختيار المدينة والتاريخ
+              // Choose city card
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -169,7 +185,9 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           DropdownButton<String>(
-                            value: _selectedCityName == 'موقعي الحالي' ? 'موقعي الحالي' : _selectedCityName,
+                            value: prayerProvider.selectedCityName == 'موقعي الحالي'
+                                ? 'موقعي الحالي'
+                                : prayerProvider.selectedCityName,
                             underline: const SizedBox(),
                             style: TextStyle(
                               fontSize: 16,
@@ -185,11 +203,7 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                             ],
                             onChanged: (val) {
                               if (val != null && val != 'موقعي الحالي') {
-                                setState(() {
-                                  _selectedCityName = val;
-                                  _currentCity = PrayerService.defaultCities[val]!;
-                                  _calculateTimes();
-                                });
+                                prayerProvider.selectCity(val);
                               }
                             },
                           ),
@@ -217,7 +231,7 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
               ),
               const SizedBox(height: 20),
 
-              // قائمة مواقيت الصلاة لليوم
+              // Prayer times list
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -237,8 +251,8 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                         (nextPrayer.name == 'isha' && name == 'العشاء');
 
                     return Container(
-                      color: isNext 
-                          ? (isDark ? Colors.teal.shade900.withOpacity(0.4) : Colors.teal.shade50.withOpacity(0.5)) 
+                      color: isNext
+                          ? (isDark ? Colors.teal.shade900.withOpacity(0.4) : Colors.teal.shade50.withOpacity(0.5))
                           : Colors.transparent,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       child: Row(
@@ -279,7 +293,7 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
               ),
               const SizedBox(height: 24),
 
-              // بوصلة اتجاه القبلة التفاعلية
+              // Interactive Qibla compass
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -294,25 +308,22 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'زاوية القبلة: ${_qiblaAngle.toInt()}° من الشمال الجغرافي',
+                        'زاوية القبلة: ${prayerProvider.qiblaAngle.toInt()}° من الشمال الجغرافي',
                         style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                       const SizedBox(height: 20),
 
-                      // جسم البوصلة
                       GestureDetector(
                         onPanUpdate: (details) {
-                          // محاكاة تحريك البوصلة بالسحب على الشاشة (للأجهزة بدون حساسات)
-                          setState(() {
-                            _simulatedHeading = (_simulatedHeading + details.delta.dx / 2) % 360;
-                          });
+                          // Allow manual rotation on swipe
+                          prayerProvider.simulateHeading(details.delta.dx / 2);
                         },
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            // إطار البوصلة الدائري الخارجي
+                            // Circular compass dial
                             Transform.rotate(
-                              angle: -_simulatedHeading * pi / 180,
+                              angle: -prayerProvider.simulatedHeading * pi / 180,
                               child: Container(
                                 width: 200,
                                 height: 200,
@@ -321,36 +332,34 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                                   color: isDark ? const Color(0xFF2C2C2C) : Colors.grey[100],
                                   border: Border.all(color: primaryColor, width: 4),
                                 ),
-                                child: Stack(
+                                child: const Stack(
                                   alignment: Alignment.center,
                                   children: [
-                                    // مؤشرات الاتجاهات الأربعة
-                                    const Positioned(top: 8, child: Text('N', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red))),
-                                    const Positioned(bottom: 8, child: Text('S', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    const Positioned(left: 8, child: Text('W', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    const Positioned(right: 8, child: Text('E', style: TextStyle(fontWeight: FontWeight.bold))),
+                                    Positioned(top: 8, child: Text('N', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red))),
+                                    Positioned(bottom: 8, child: Text('S', style: TextStyle(fontWeight: FontWeight.bold))),
+                                    Positioned(left: 8, child: Text('W', style: TextStyle(fontWeight: FontWeight.bold))),
+                                    Positioned(right: 8, child: Text('E', style: TextStyle(fontWeight: FontWeight.bold))),
                                   ],
                                 ),
                               ),
                             ),
 
-                            // سهم القبلة الذهبي المشير إلى الكعبة
+                            // Golden indicator arrow pointing to Kaaba
                             Transform.rotate(
-                              angle: (_qiblaAngle - _simulatedHeading) * pi / 180,
-                              child: Column(
+                              angle: (prayerProvider.qiblaAngle - prayerProvider.simulatedHeading) * pi / 180,
+                              child: const Column(
                                 children: [
-                                  // السهم الذهبي
-                                  const Icon(
+                                  Icon(
                                     Icons.navigation,
                                     size: 80,
                                     color: Color(0xFFD4AF37),
                                   ),
-                                  const SizedBox(height: 60), // لموازنة السهم في المنتصف
+                                  SizedBox(height: 60),
                                 ],
                               ),
                             ),
 
-                            // أيقونة الكعبة المشرفة في المركز
+                            // Central Kaaba icon
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: const BoxDecoration(

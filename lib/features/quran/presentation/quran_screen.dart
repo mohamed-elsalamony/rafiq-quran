@@ -1,19 +1,15 @@
-import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:quran/quran.dart' as quran;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 import '../../../core/services/app_state.dart';
 import '../../../core/services/db_helper.dart';
 import 'audio_player_widget.dart';
 import 'tafseer_widget.dart';
+import 'quran_provider.dart';
 
 class QuranScreen extends StatefulWidget {
   final int initialPage;
@@ -33,307 +29,126 @@ class QuranScreen extends StatefulWidget {
 
 class _QuranScreenState extends State<QuranScreen> {
   late PageController _pageController;
-  int _currentPage = 1;
-  int _selectedSurah = 1;
-  int? _activePlayingSurah;
-  int? _activePlayingAyah;
-  
-  // التحكم في تظليل الآية المحددة يدوياً للتفسير أو الحفظ
-  int? _selectedAyahSurah;
-  int? _selectedAyahNumber;
-
-  bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
-  List<Map<String, dynamic>> _searchResults = [];
-
-  // تشغيل الصوت
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  bool _isPlaying = false;
-  String _currentReciterId = 'Abdul_Basit_Murattal_64kbps'; // الافتراضي عبد الباسط
-  double _playbackSpeed = 1.0;
-  int _repeatTimes = 1;
-  int _currentRepeatCount = 0;
-
-  // قائمة القراء المعتمدين
-  final List<Map<String, String>> _reciters = [
-    {'name': 'عبد الباسط عبد الصمد', 'id': 'Abdul_Basit_Murattal_64kbps'},
-    {'name': 'محمد صديق المنشاوي', 'id': 'Minshawy_Murattal_128kbps'},
-    {'name': 'محمود خليل الحصري', 'id': 'Husary_64kbps'},
-    {'name': 'مشاري راشد العفاسي', 'id': 'Alafasy_128kbps'},
-    {'name': 'سعد الغامدي', 'id': 'Ghamadi_40kbps'},
-  ];
+  bool _isInit = false;
 
   @override
-  void initState() {
-    super.initState();
-    _currentPage = widget.initialPage;
-    _selectedSurah = widget.initialSurah;
-    _pageController = PageController(initialPage: _currentPage - 1);
-    
-    // مراقبة انتهاء التلاوة لتشغيل الآية التالية تلقائياً
-    _audioPlayer.onPlayerComplete.listen((event) {
-      _playNextAyah();
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInit) {
+      final quranProvider = Provider.of<QuranProvider>(context, listen: false);
+      _pageController = PageController(initialPage: quranProvider.currentPage - 1);
+      
+      // Listen to provider changes to handle error alerts and controller syncing
+      quranProvider.addListener(_onProviderChange);
 
-    if (widget.autoPlay) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final appState = Provider.of<AppState>(context, listen: false);
-        _startRecitation(appState.lastAudioSurah, appState.lastAudioAyah);
-      });
+      if (widget.initialPage != 1) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          quranProvider.goToPage(widget.initialPage);
+        });
+      }
+
+      if (widget.autoPlay) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final appState = Provider.of<AppState>(context, listen: false);
+          quranProvider.startRecitation(appState.lastAudioSurah, appState.lastAudioAyah);
+        });
+      }
+      _isInit = true;
     }
   }
 
   @override
   void dispose() {
+    // Safely remove listener to prevent memory leak
+    try {
+      final quranProvider = Provider.of<QuranProvider>(context, listen: false);
+      quranProvider.removeListener(_onProviderChange);
+    } catch (_) {}
     _pageController.dispose();
     _searchController.dispose();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
-  // حساب الحزب تقريبياً بناءً على الصفحة
-  int _getHizbNumber(int page) {
-    if (page <= 1) return 1;
-    return (((page - 2) ~/ 10) + 1).clamp(1, 60);
-  }
+  void _onProviderChange() {
+    if (!mounted) return;
+    final provider = Provider.of<QuranProvider>(context, listen: false);
 
-  // الحصول على الآيات الخاصة بصفحة معينة
-  List<Map<String, dynamic>> _getVersesOnPage(int pageNum) {
-    List<Map<String, dynamic>> pageVerses = [];
-    for (int s = 1; s <= 114; s++) {
-      int count = quran.getVerseCount(s);
-      for (int v = 1; v <= count; v++) {
-        if (quran.getPageNumber(s, v) == pageNum) {
-          pageVerses.add({
-            'surah': s,
-            'ayah': v,
-            'text': quran.getVerse(s, v),
-            'surahName': quran.getSurahNameArabic(s),
-          });
+    // 1. Handle errors
+    if (provider.errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && provider.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(provider.errorMessage!, textAlign: TextAlign.right),
+              backgroundColor: Colors.red[900],
+            ),
+          );
+          provider.clearError();
         }
-      }
-    }
-    return pageVerses;
-  }
-
-  // الانتقال إلى صفحة معينة مع حفظ الحالة تلقائياً
-  void _goToPage(int pageNum) {
-    if (pageNum < 1 || pageNum > 604) return;
-    _pageController.animateToPage(
-      pageNum - 1,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-    _saveProgress(pageNum);
-  }
-
-  void _saveProgress(int pageNum) {
-    final verses = _getVersesOnPage(pageNum);
-    if (verses.isNotEmpty) {
-      final firstVerse = verses.first;
-      final appState = Provider.of<AppState>(context, listen: false);
-      appState.saveReadingPosition(
-        page: pageNum,
-        surah: firstVerse['surah'],
-        ayah: firstVerse['ayah'],
-      );
-    }
-  }
-
-  // --- تشغيل التلاوة الصوتية ---
-  Future<String> _getAudioUrl(int surah, int ayah, String reciter) async {
-    final sStr = surah.toString().padLeft(3, '0');
-    final aStr = ayah.toString().padLeft(3, '0');
-    return 'https://www.everyayah.com/data/$reciter/$sStr$aStr.mp3';
-  }
-
-  Future<void> _startRecitation(int surah, int ayah) async {
-    setState(() {
-      _activePlayingSurah = surah;
-      _activePlayingAyah = ayah;
-      _isPlaying = true;
-      _currentRepeatCount = 0;
-    });
-
-    final url = await _getAudioUrl(surah, ayah, _currentReciterId);
-    
-    // التحقق من الملف محلياً لتشغيل بدون إنترنت
-    final directory = await getApplicationDocumentsDirectory();
-    final sStr = surah.toString().padLeft(3, '0');
-    final aStr = ayah.toString().padLeft(3, '0');
-    final filePath = '${directory.path}/recitations/$_currentReciterId/${sStr}_$aStr.mp3';
-    final file = File(filePath);
-
-    try {
-      await _audioPlayer.setPlaybackRate(_playbackSpeed);
-      if (await file.exists()) {
-        await _audioPlayer.play(DeviceFileSource(filePath));
-      } else {
-        await _audioPlayer.play(UrlSource(url));
-      }
-
-      // حفظ موضع الاستماع الأخير
-      final appState = Provider.of<AppState>(context, listen: false);
-      appState.saveAudioState(
-        reciter: _reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!,
-        positionMs: 0,
-        surah: surah,
-        ayah: ayah,
-      );
-    } catch (e) {
-      debugPrint("Error playing audio: $e");
-    }
-  }
-
-  Future<void> _playNextAyah() async {
-    if (_activePlayingSurah == null || _activePlayingAyah == null) return;
-
-    // تكرار الآية الحالية للمساعدة في الحفظ
-    if (_currentRepeatCount < _repeatTimes - 1) {
-      _currentRepeatCount++;
-      _startRecitation(_activePlayingSurah!, _activePlayingAyah!);
-      return;
-    }
-
-    int currentAyah = _activePlayingAyah!;
-    int currentSurah = _activePlayingSurah!;
-    int totalAyahsInSurah = quran.getVerseCount(currentSurah);
-
-    if (currentAyah < totalAyahsInSurah) {
-      currentAyah++;
-    } else {
-      if (currentSurah < 114) {
-        currentSurah++;
-        currentAyah = 1;
-      } else {
-        // انتهى القرآن الكريم كاملاً
-        setState(() {
-          _isPlaying = false;
-          _activePlayingSurah = null;
-          _activePlayingAyah = null;
-        });
-        return;
-      }
-    }
-
-    // الانتقال التلقائي للصفحة التالية إذا انتقل الصوت لصفحة جديدة
-    int nextPage = quran.getPageNumber(currentSurah, currentAyah);
-    if (nextPage != _currentPage) {
-      _goToPage(nextPage);
-    }
-
-    _startRecitation(currentSurah, currentAyah);
-  }
-
-  void _pauseRecitation() {
-    _audioPlayer.pause();
-    setState(() {
-      _isPlaying = false;
-    });
-  }
-
-  void _resumeRecitation() {
-    if (_activePlayingSurah != null && _activePlayingAyah != null) {
-      _audioPlayer.resume();
-      setState(() {
-        _isPlaying = true;
       });
-    } else {
-      // تشغيل أول آية في الصفحة الحالية
-      final pageVerses = _getVersesOnPage(_currentPage);
-      if (pageVerses.isNotEmpty) {
-        _startRecitation(pageVerses.first['surah'], pageVerses.first['ayah']);
+    }
+
+    // 2. Handle download dialog loader
+    if (provider.isDownloading) {
+      _showDownloadProgressDialog(provider);
+    }
+
+    // 3. Sync page controller
+    if (_pageController.hasClients) {
+      final targetPage = provider.currentPage - 1;
+      if (_pageController.page?.round() != targetPage) {
+        _pageController.animateToPage(
+          targetPage,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
       }
     }
   }
 
-  // تحميل تلاوات الصفحة الحالية للاستماع بدون إنترنت
-  Future<void> _downloadPageAudio() async {
-    final pageVerses = _getVersesOnPage(_currentPage);
-    final directory = await getApplicationDocumentsDirectory();
-    final dirPath = '${directory.path}/recitations/$_currentReciterId';
-    await Directory(dirPath).create(recursive: true);
-
+  void _showDownloadProgressDialog(QuranProvider provider) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('تحميل التلاوات', textAlign: TextAlign.right),
-        content: const Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text('جاري تحميل تلاوات الصفحة الحالية...'),
-            SizedBox(width: 12),
-            CircularProgressIndicator(),
-          ],
-        ),
-      ),
+      builder: (context) {
+        return Selector<QuranProvider, Map<String, dynamic>>(
+          selector: (context, p) => {
+            'isDownloading': p.isDownloading,
+            'progress': p.downloadProgress,
+          },
+          builder: (context, data, child) {
+            final isDownloading = data['isDownloading'] as bool;
+            final progress = data['progress'] as double;
+
+            if (!isDownloading) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.of(context, rootNavigator: true).pop();
+              });
+            }
+
+            return AlertDialog(
+              title: const Text('تحميل التلاوات', textAlign: TextAlign.right),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('جاري تحميل تلاوات الصفحة الحالية للاستماع بدون اتصال...'),
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(value: progress),
+                  const SizedBox(height: 8),
+                  Text('${(progress * 100).toInt()}%', style: const TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
-
-    try {
-      for (final verse in pageVerses) {
-        final surah = verse['surah'] as int;
-        final ayah = verse['ayah'] as int;
-        final sStr = surah.toString().padLeft(3, '0');
-        final aStr = ayah.toString().padLeft(3, '0');
-        final file = File('$dirPath/${sStr}_$aStr.mp3');
-
-        if (!await file.exists()) {
-          final url = await _getAudioUrl(surah, ayah, _currentReciterId);
-          final res = await http.get(Uri.parse(url));
-          if (res.statusCode == 200) {
-            await file.writeAsBytes(res.bodyBytes);
-          }
-        }
-      }
-      if (mounted) Navigator.pop(context); // إغلاق الحوار
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم تحميل تلاوات الصفحة بنجاح!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('فشل التحميل: $e')),
-        );
-      }
-    }
   }
 
-  // --- البحث داخل المصحف الشريف ---
-  void _performSearch(String query) {
-    if (query.trim().isEmpty) return;
-    List<Map<String, dynamic>> results = [];
-
-    // البحث في جميع السور والآيات
-    for (int s = 1; s <= 114; s++) {
-      int count = quran.getVerseCount(s);
-      for (int v = 1; v <= count; v++) {
-        String verseText = quran.getVerse(s, v);
-        // فلترة النصوص والبحث البسيط (يمكن إزالة التشكيل للبحث الاحترافي)
-        if (verseText.contains(query) || 
-            quran.getSurahNameArabic(s).contains(query)) {
-          results.add({
-            'surah': s,
-            'ayah': v,
-            'text': verseText,
-            'page': quran.getPageNumber(s, v),
-            'surahName': quran.getSurahNameArabic(s),
-          });
-        }
-      }
-    }
-
-    setState(() {
-      _searchResults = results;
-    });
-  }
-
-  // --- حوار الانتقال السريع ---
-  void _showNavigationDialog() {
-    int tempPage = _currentPage;
+  // --- Quick navigation dial ---
+  void _showNavigationDialog(QuranProvider provider) {
+    int tempPage = provider.currentPage;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -341,7 +156,6 @@ class _QuranScreenState extends State<QuranScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // الانتقال بالصفحة
             const Text('أدخل رقم الصفحة (1 - 604):'),
             TextField(
               keyboardType: TextInputType.number,
@@ -355,7 +169,6 @@ class _QuranScreenState extends State<QuranScreen> {
               },
             ),
             const SizedBox(height: 16),
-            // قائمة السور
             const Text('أو اختر السورة:'),
             SizedBox(
               height: 150,
@@ -372,7 +185,7 @@ class _QuranScreenState extends State<QuranScreen> {
                     ),
                     onTap: () {
                       Navigator.pop(context);
-                      _goToPage(quran.getPageNumber(sNum, 1));
+                      provider.goToPage(quran.getPageNumber(sNum, 1));
                     },
                   );
                 },
@@ -389,7 +202,7 @@ class _QuranScreenState extends State<QuranScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F5A47)),
             onPressed: () {
               Navigator.pop(context);
-              _goToPage(tempPage);
+              provider.goToPage(tempPage);
             },
             child: const Text('انتقال', style: TextStyle(color: Colors.white)),
           ),
@@ -398,18 +211,30 @@ class _QuranScreenState extends State<QuranScreen> {
     );
   }
 
+  // --- Hizb number calculator ---
+  int _getHizbNumber(int page) {
+    if (page <= 1) return 1;
+    return (((page - 2) ~/ 10) + 1).clamp(1, 60);
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final quranProvider = Provider.of<QuranProvider>(context);
     final Color primaryColor = const Color(0xFF0F5A47);
     final Color accentColor = const Color(0xFFD4AF37);
     final isDark = appState.isDarkMode;
+
+    final currentVerses = quranProvider.getVersesOnPage(quranProvider.currentPage);
+    final String titleText = quranProvider.isSearching
+        ? 'البحث في المصحف'
+        : (currentVerses.isNotEmpty ? 'سورة ${currentVerses.first['surahName']}' : 'القرآن الكريم');
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
-        title: _isSearching
+        title: quranProvider.isSearching
             ? TextField(
                 controller: _searchController,
                 style: const TextStyle(color: Colors.white),
@@ -418,52 +243,45 @@ class _QuranScreenState extends State<QuranScreen> {
                   hintStyle: TextStyle(color: Colors.white70),
                   border: InputBorder.none,
                 ),
-                onSubmitted: _performSearch,
+                onSubmitted: quranProvider.performSearch,
               )
             : Text(
-                'سورة ${quran.getSurahNameArabic(_getVersesOnPage(_currentPage).isNotEmpty ? _getVersesOnPage(_currentPage).first['surah'] : 1)}',
+                titleText,
                 style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
               ),
         centerTitle: true,
         actions: [
-          if (!_isSearching)
+          if (!quranProvider.isSearching)
             IconButton(
               icon: const Icon(Icons.search),
-              onPressed: () {
-                setState(() {
-                  _isSearching = true;
-                });
-              },
+              onPressed: () => quranProvider.toggleSearch(true),
             )
           else
             IconButton(
               icon: const Icon(Icons.close),
               onPressed: () {
-                setState(() {
-                  _isSearching = false;
-                  _searchResults.clear();
-                  _searchController.clear();
-                });
+                quranProvider.toggleSearch(false);
+                _searchController.clear();
               },
             ),
           IconButton(
             icon: const Icon(Icons.import_contacts),
-            onPressed: _showNavigationDialog,
-            tooltip: 'فهرس القرآن الكريَم',
+            onPressed: () => _showNavigationDialog(quranProvider),
+            tooltip: 'فهرس القرآن الكريم',
           )
         ],
       ),
       body: Column(
         children: [
-          // عرض نتائج البحث في حال التفعيل
-          if (_isSearching && _searchResults.isNotEmpty)
+          // Search results
+          if (quranProvider.isSearching && quranProvider.searchResults.isNotEmpty)
             Expanded(
               child: Container(
                 color: isDark ? const Color(0xFF121212) : Colors.grey[100],
                 child: ListView.builder(
-                  itemCount: _searchResults.length,
+                  itemCount: quranProvider.searchResults.length,
                   itemBuilder: (context, index) {
-                    final res = _searchResults[index];
+                    final res = quranProvider.searchResults[index];
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       child: ListTile(
@@ -482,10 +300,9 @@ class _QuranScreenState extends State<QuranScreen> {
                           textAlign: TextAlign.left,
                         ),
                         onTap: () {
-                          setState(() {
-                            _isSearching = false;
-                          });
-                          _goToPage(res['page']);
+                          quranProvider.toggleSearch(false);
+                          _searchController.clear();
+                          quranProvider.goToPage(res['page']);
                         },
                       ),
                     );
@@ -493,23 +310,22 @@ class _QuranScreenState extends State<QuranScreen> {
                 ),
               ),
             )
+          else if (quranProvider.isSearching && quranProvider.searchResults.isEmpty)
+            const Expanded(
+              child: Center(child: Text('لا توجد نتائج مطابقة لبحثك.')),
+            )
           else
-            // المعرض الرئيسي لصفحات القرآن
+            // Main mushaf page views
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: 604,
                 onPageChanged: (idx) {
-                  setState(() {
-                    _currentPage = idx + 1;
-                    _selectedAyahSurah = null;
-                    _selectedAyahNumber = null;
-                  });
-                  _saveProgress(_currentPage);
+                  quranProvider.goToPage(idx + 1);
                 },
                 itemBuilder: (context, pageIdx) {
                   final pageNum = pageIdx + 1;
-                  final pageVerses = _getVersesOnPage(pageNum);
+                  final pageVerses = quranProvider.getVersesOnPage(pageNum);
 
                   if (pageVerses.isEmpty) {
                     return const Center(child: CircularProgressIndicator());
@@ -521,7 +337,7 @@ class _QuranScreenState extends State<QuranScreen> {
                     child: SingleChildScrollView(
                       child: Column(
                         children: [
-                          // معلومات الجزء والحزب والصفحة في الأعلى
+                          // Header information (Juz, Page, Hizb)
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -541,9 +357,9 @@ class _QuranScreenState extends State<QuranScreen> {
                           ),
                           const Divider(height: 20),
 
-                          // عرض البسملة إذا كانت بداية سورة جديدة (وليست الفاتحة أو التوبة)
-                          if (pageVerses.first['ayah'] == 1 && 
-                              pageVerses.first['surah'] != 1 && 
+                          // Bismillah view
+                          if (pageVerses.first['ayah'] == 1 &&
+                              pageVerses.first['surah'] != 1 &&
                               pageVerses.first['surah'] != 9)
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -558,7 +374,7 @@ class _QuranScreenState extends State<QuranScreen> {
                               ),
                             ),
 
-                          // النص القرآني المتصل للصفحة
+                          // Text block for verses
                           RichText(
                             textAlign: TextAlign.justify,
                             textDirection: TextDirection.rtl,
@@ -566,17 +382,17 @@ class _QuranScreenState extends State<QuranScreen> {
                               children: pageVerses.map((verse) {
                                 final sNum = verse['surah'] as int;
                                 final aNum = verse['ayah'] as int;
-                                final isAudioPlaying = (_activePlayingSurah == sNum && _activePlayingAyah == aNum);
-                                final isTextSelected = (_selectedAyahSurah == sNum && _selectedAyahNumber == aNum);
+                                final isAudioPlaying = (quranProvider.activePlayingSurah == sNum &&
+                                    quranProvider.activePlayingAyah == aNum);
+                                final isTextSelected = (quranProvider.selectedAyahSurah == sNum &&
+                                    quranProvider.selectedAyahNumber == aNum);
 
                                 return WidgetSpan(
                                   child: GestureDetector(
                                     onTap: () {
-                                      setState(() {
-                                        _selectedAyahSurah = sNum;
-                                        _selectedAyahNumber = aNum;
-                                      });
-                                      _showVerseActionsBottomSheet(sNum, aNum, verse['text']);
+                                      quranProvider.selectAyah(sNum, aNum);
+                                      _showVerseActionsBottomSheet(
+                                          context, quranProvider, sNum, aNum, verse['text']);
                                     },
                                     child: Container(
                                       color: isAudioPlaying
@@ -609,53 +425,34 @@ class _QuranScreenState extends State<QuranScreen> {
                 },
               ),
             ),
-          
-          // لوحة التحكم بالصوت في الأسفل
+
+          // Audio player bottom panel
           AudioPlayerWidget(
-            isPlaying: _isPlaying,
-            reciters: _reciters,
-            currentReciterId: _currentReciterId,
-            playbackSpeed: _playbackSpeed,
-            repeatTimes: _repeatTimes,
+            isPlaying: quranProvider.isPlaying,
+            reciters: quranProvider.reciters,
+            currentReciterId: quranProvider.currentReciterId,
+            playbackSpeed: quranProvider.playbackSpeed,
+            repeatTimes: quranProvider.repeatTimes,
             onPlayToggle: () {
-              if (_isPlaying) {
-                _pauseRecitation();
+              if (quranProvider.isPlaying) {
+                quranProvider.pauseRecitation();
               } else {
-                _resumeRecitation();
+                quranProvider.resumeRecitation();
               }
             },
-            onReciterChanged: (val) {
-              setState(() {
-                _currentReciterId = val;
-              });
-              if (_isPlaying && _activePlayingSurah != null && _activePlayingAyah != null) {
-                _startRecitation(_activePlayingSurah!, _activePlayingAyah!);
-              }
-            },
-            onSpeedChanged: (val) {
-              setState(() {
-                _playbackSpeed = val;
-              });
-              _audioPlayer.setPlaybackRate(val);
-            },
-            onRepeatChanged: (val) {
-              setState(() {
-                _repeatTimes = val;
-              });
-            },
-            onDownload: _downloadPageAudio,
+            onReciterChanged: quranProvider.changeReciter,
+            onSpeedChanged: quranProvider.changePlaybackSpeed,
+            onRepeatChanged: quranProvider.changeRepeatTimes,
+            onDownload: quranProvider.downloadPageAudio,
           ),
         ],
       ),
     );
   }
 
-  // --- عرض خيارات الآية (تفسير، نسخ، تشغيل، علامة مرجعية) ---
-  void _showVerseActionsBottomSheet(int surah, int ayah, String text) {
-    final appState = Provider.of<AppState>(context, listen: false);
-    final Color primaryColor = const Color(0xFF0F5A47);
-    final isDark = appState.isDarkMode;
-
+  // --- Ayah options dialog sheet ---
+  void _showVerseActionsBottomSheet(
+      BuildContext context, QuranProvider provider, int surah, int ayah, String text) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -678,7 +475,7 @@ class _QuranScreenState extends State<QuranScreen> {
               title: const Text('تلاوة هذه الآية', textAlign: TextAlign.right),
               onTap: () {
                 Navigator.pop(context);
-                _startRecitation(surah, ayah);
+                provider.startRecitation(surah, ayah);
               },
             ),
             ListTile(
@@ -694,17 +491,25 @@ class _QuranScreenState extends State<QuranScreen> {
               title: const Text('إضافة للعلامات المرجعية', textAlign: TextAlign.right),
               onTap: () async {
                 Navigator.pop(context);
-                await DbHelper.addBookmark(
-                  page: quran.getPageNumber(surah, ayah),
-                  surah: surah,
-                  ayah: ayah,
-                  label: 'سورة ${quran.getSurahNameArabic(surah)} الآية $ayah',
-                  surahName: quran.getSurahNameArabic(surah),
-                );
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تمت الإضافة للعلامات المرجعية بنجاح!')),
+                try {
+                  await DbHelper.addBookmark(
+                    page: quran.getPageNumber(surah, ayah),
+                    surah: surah,
+                    ayah: ayah,
+                    label: 'سورة ${quran.getSurahNameArabic(surah)} الآية $ayah',
+                    surahName: quran.getSurahNameArabic(surah),
                   );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تمت الإضافة للعلامات المرجعية بنجاح!')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('فشل الحفظ: $e')),
+                    );
+                  }
                 }
               },
             ),
@@ -730,10 +535,11 @@ class _QuranScreenState extends State<QuranScreen> {
           ],
         ),
       ),
-    );
+    ).then((_) {
+      provider.deselectAyah();
+    });
   }
 
-  // --- عرض مربع حوار التفسير ---
   void _showTafseerDialog(int surah, int ayah, String verseText) {
     showDialog(
       context: context,

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/services/app_state.dart';
-import '../../../core/services/db_helper.dart';
+import 'tasbih_provider.dart';
 
 class TasbihScreen extends StatefulWidget {
   const TasbihScreen({super.key});
@@ -12,106 +11,53 @@ class TasbihScreen extends StatefulWidget {
 }
 
 class _TasbihScreenState extends State<TasbihScreen> {
-  int _counter = 0;
-  int _target = 33; // الهدف الافتراضي للتكرار
-  String _selectedDhikr = 'سبحان الله';
-  bool _isVibrationEnabled = true;
-  bool _isSoundEnabled = true;
-  
-  List<String> _predefinedDhikrs = [
-    'سبحان الله',
-    'الحمد لله',
-    'لا إله إلا الله',
-    'الله أكبر',
-    'أستغفر الله العظيم',
-    'اللهم صلِّ وسلم على محمد'
-  ];
-
-  List<Map<String, dynamic>> _customDhikrs = [];
-  List<Map<String, dynamic>> _tasbihStats = [];
-
-  // حجم الزر للرسوم المتحركة عند الضغط
-  double _btnScale = 1.0;
+  bool _isInit = false;
 
   @override
-  void initState() {
-    super.initState();
-    _loadData();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInit) {
+      final tasbihProvider = Provider.of<TasbihProvider>(context, listen: false);
+      tasbihProvider.addListener(_onProviderChange);
+      _isInit = true;
+    }
   }
 
-  void _loadData() async {
-    final customs = await DbHelper.getCustomAdhkar();
-    final stats = await DbHelper.getTasbihLogs();
-    if (mounted) {
-      setState(() {
-        _customDhikrs = customs;
-        _tasbihStats = stats;
+  @override
+  void dispose() {
+    try {
+      final tasbihProvider = Provider.of<TasbihProvider>(context, listen: false);
+      tasbihProvider.removeListener(_onProviderChange);
+    } catch (_) {}
+    super.dispose();
+  }
+
+  void _onProviderChange() {
+    if (!mounted) return;
+    final provider = Provider.of<TasbihProvider>(context, listen: false);
+
+    if (provider.alertMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && provider.alertMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                provider.alertMessage!,
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: Colors.teal.shade800,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          provider.clearAlert();
+        }
       });
     }
   }
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-      _btnScale = 0.93; // تأثير بصرى للضغط
-    });
-
-    Future.delayed(const Duration(milliseconds: 80), () {
-      if (mounted) {
-        setState(() {
-          _btnScale = 1.0;
-        });
-      }
-    });
-
-    // الصوت والاهتزاز
-    if (_isVibrationEnabled) {
-      HapticFeedback.lightImpact();
-    }
-    if (_isSoundEnabled) {
-      SystemSound.play(SystemSoundType.click);
-    }
-
-    // إذا وصلنا للهدف
-    if (_counter == _target) {
-      if (_isVibrationEnabled) {
-        HapticFeedback.vibrate(); // اهتزاز طويل للتنبيه
-      }
-      _showTargetCompletedAlert();
-      // حفظ السجل
-      DbHelper.addTasbihLog(_selectedDhikr, _target);
-      _loadData();
-    }
-  }
-
-  void _resetCounter() {
-    if (_counter > 0) {
-      // حفظ ما تم تسبيحه قبل التصفير
-      DbHelper.addTasbihLog(_selectedDhikr, _counter);
-      _loadData();
-    }
-    setState(() {
-      _counter = 0;
-    });
-    HapticFeedback.mediumImpact();
-  }
-
-  void _showTargetCompletedAlert() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'أحسنت! أتممت الورد لذكر "$_selectedDhikr" ($_target مرة).',
-          textAlign: TextAlign.right,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.teal.shade800,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  // إضافة ذكر مخصص
-  void _addNewCustomDhikr() {
+  // --- Dialog helper to add custom Zekr ---
+  void _addNewCustomDhikr(TasbihProvider provider) {
     final textController = TextEditingController();
     final targetController = TextEditingController(text: '100');
 
@@ -149,10 +95,10 @@ class _TasbihScreenState extends State<TasbihScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F5A47)),
             onPressed: () async {
-              if (textController.text.trim().isNotEmpty) {
+              final text = textController.text.trim();
+              if (text.isNotEmpty) {
                 final target = int.tryParse(targetController.text) ?? 100;
-                await DbHelper.addCustomAdhkar(textController.text.trim(), target);
-                _loadData();
+                await provider.addNewCustomDhikr(text, target);
                 if (context.mounted) Navigator.pop(context);
               }
             },
@@ -163,64 +109,23 @@ class _TasbihScreenState extends State<TasbihScreen> {
     );
   }
 
-  // حذف ذكر مخصص
-  void _deleteCustomDhikr(int index) async {
-    await DbHelper.deleteCustomAdhkar(index);
-    _loadData();
-  }
-
-  // --- حساب إحصائيات التسبيح الأسبوعية للتصميم البياني ---
-  List<Map<String, dynamic>> _getWeeklyStats() {
-    // سنقوم بتجميع إحصائيات آخر 7 أيام
-    final Map<String, int> dailySums = {};
-    final now = DateTime.now();
-
-    for (int i = 6; i >= 0; i--) {
-      final date = now.subtract(Duration(days: i));
-      final dateStr = date.toIso8601String().substring(0, 10);
-      dailySums[dateStr] = 0;
-    }
-
-    for (final log in _tasbihStats) {
-      final dateStr = log['date'] as String?;
-      final count = log['count'] as int? ?? 0;
-      if (dateStr != null && dailySums.containsKey(dateStr)) {
-        dailySums[dateStr] = dailySums[dateStr]! + count;
-      }
-    }
-
-    List<Map<String, dynamic>> stats = [];
-    final List<String> weekdaysArabic = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
-    
-    dailySums.forEach((dateStr, count) {
-      final parsedDate = DateTime.parse(dateStr);
-      // رقم يوم الأسبوع من 1 (الاثنين) إلى 7 (الأحد)
-      final weekdayIdx = parsedDate.weekday == 7 ? 0 : parsedDate.weekday;
-      stats.add({
-        'day': weekdaysArabic[weekdayIdx],
-        'count': count,
-      });
-    });
-
-    return stats;
-  }
-
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final tasbihProvider = Provider.of<TasbihProvider>(context);
     final isDark = appState.isDarkMode;
     final primaryColor = const Color(0xFF0F5A47);
     final Color accentColor = const Color(0xFFD4AF37);
-    
-    final weeklyStats = _getWeeklyStats();
+
+    final weeklyStats = tasbihProvider.getWeeklyStats();
     final maxStatCount = weeklyStats.map<int>((e) => e['count'] as int).fold(0, (max, e) => e > max ? e : max);
 
-    // دمج الأذكار الافتراضية مع المخصصة في قائمة منسدلة واحدة
+    // Merge predefined & custom list items
     List<DropdownMenuItem<String>> dropdownItems = [];
-    for (var d in _predefinedDhikrs) {
+    for (var d in tasbihProvider.predefinedDhikrs) {
       dropdownItems.add(DropdownMenuItem(value: d, child: Text(d, textAlign: TextAlign.right)));
     }
-    for (var cd in _customDhikrs) {
+    for (var cd in tasbihProvider.customDhikrs) {
       dropdownItems.add(DropdownMenuItem(value: cd['text'], child: Text('👤 ${cd['text']}', textAlign: TextAlign.right)));
     }
 
@@ -236,7 +141,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
-            onPressed: _addNewCustomDhikr,
+            onPressed: () => _addNewCustomDhikr(tasbihProvider),
             tooltip: 'إضافة ذكر مخصص',
           ),
         ],
@@ -250,7 +155,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // لوحة تحديد الذكر والأهداف
+              // Zekr selector and options panel
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -259,14 +164,14 @@ class _TasbihScreenState extends State<TasbihScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      // اختيار الذكر الحالي
+                      // Selected Zekr selector
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
                           Expanded(
                             child: DropdownButton<String>(
-                              value: _selectedDhikr,
+                              value: tasbihProvider.selectedDhikr,
                               isExpanded: true,
                               underline: const SizedBox(),
                               alignment: Alignment.centerRight,
@@ -278,17 +183,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                               items: dropdownItems,
                               onChanged: (val) {
                                 if (val != null) {
-                                  // التحقق من الهدف المخصص لهذا الذكر
-                                  int target = 33;
-                                  final cdIdx = _customDhikrs.indexWhere((element) => element['text'] == val);
-                                  if (cdIdx != -1) {
-                                    target = _customDhikrs[cdIdx]['target'] ?? 100;
-                                  }
-                                  setState(() {
-                                    _selectedDhikr = val;
-                                    _target = target;
-                                    _counter = 0;
-                                  });
+                                  tasbihProvider.setDhikr(val);
                                 }
                               },
                             ),
@@ -298,14 +193,13 @@ class _TasbihScreenState extends State<TasbihScreen> {
                         ],
                       ),
                       const Divider(height: 20),
-                      // اختيار الهدف وتأثيرات الصوت والاهتزاز
+                      // Target chips & vibration/sound control
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // أزرار سريعة لتغيير الهدف
                           Row(
                             children: [33, 100, 1000].map((t) {
-                              final isSelected = _target == t;
+                              final isSelected = tasbihProvider.target == t;
                               return Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                                 child: ChoiceChip(
@@ -319,41 +213,29 @@ class _TasbihScreenState extends State<TasbihScreen> {
                                   ),
                                   onSelected: (val) {
                                     if (val) {
-                                      setState(() {
-                                        _target = t;
-                                        _counter = 0;
-                                      });
+                                      tasbihProvider.setTarget(t);
                                     }
                                   },
                                 ),
                               );
                             }).toList(),
                           ),
-                          // أدوات الصوت والاهتزاز
                           Row(
                             children: [
                               IconButton(
                                 icon: Icon(
-                                  _isSoundEnabled ? Icons.volume_up : Icons.volume_off,
-                                  color: _isSoundEnabled ? Colors.teal : Colors.grey,
+                                  tasbihProvider.isSoundEnabled ? Icons.volume_up : Icons.volume_off,
+                                  color: tasbihProvider.isSoundEnabled ? Colors.teal : Colors.grey,
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isSoundEnabled = !_isSoundEnabled;
-                                  });
-                                },
+                                onPressed: tasbihProvider.toggleSound,
                                 tooltip: 'تفعيل الصوت',
                               ),
                               IconButton(
                                 icon: Icon(
-                                  _isVibrationEnabled ? Icons.vibration : Icons.phone_android,
-                                  color: _isVibrationEnabled ? Colors.teal : Colors.grey,
+                                  tasbihProvider.isVibrationEnabled ? Icons.vibration : Icons.phone_android,
+                                  color: tasbihProvider.isVibrationEnabled ? Colors.teal : Colors.grey,
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isVibrationEnabled = !_isVibrationEnabled;
-                                  });
-                                },
+                                onPressed: tasbihProvider.toggleVibration,
                                 tooltip: 'تفعيل الاهتزاز',
                               ),
                             ],
@@ -366,13 +248,13 @@ class _TasbihScreenState extends State<TasbihScreen> {
               ),
               const SizedBox(height: 30),
 
-              // العداد الدائري اللمسي الرئيسي للتسبيح
+              // Interactive central click button
               Center(
                 child: AnimatedScale(
-                  scale: _btnScale,
+                  scale: tasbihProvider.btnScale,
                   duration: const Duration(milliseconds: 80),
                   child: GestureDetector(
-                    onTap: _incrementCounter,
+                    onTap: tasbihProvider.increment,
                     child: Container(
                       width: 250,
                       height: 250,
@@ -381,7 +263,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: isDark 
+                          colors: isDark
                               ? [const Color(0xFF0F5A47), const Color(0xFF073A2F)]
                               : [const Color(0xFF127F65), const Color(0xFF0A4F3E)],
                         ),
@@ -406,7 +288,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '$_counter',
+                            '${tasbihProvider.counter}',
                             style: const TextStyle(
                               fontSize: 64,
                               fontWeight: FontWeight.bold,
@@ -415,7 +297,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                             ),
                           ),
                           Text(
-                            'الهدف: $_target',
+                            'الهدف: ${tasbihProvider.target}',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.teal[100],
@@ -436,12 +318,12 @@ class _TasbihScreenState extends State<TasbihScreen> {
               ),
               const SizedBox(height: 24),
 
-              // أزرار التحكم بالعداد
+              // Control buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ElevatedButton.icon(
-                    onPressed: _resetCounter,
+                    onPressed: tasbihProvider.reset,
                     icon: const Icon(Icons.refresh),
                     label: const Text('إعادة تعيين'),
                     style: ElevatedButton.styleFrom(
@@ -455,7 +337,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
               ),
               const SizedBox(height: 30),
 
-              // لوحة الإحصائيات الأسبوعية
+              // Weekly statistics chart panel
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -471,7 +353,6 @@ class _TasbihScreenState extends State<TasbihScreen> {
                         textAlign: TextAlign.right,
                       ),
                       const SizedBox(height: 20),
-                      // رسم بياني بالأعمدة
                       SizedBox(
                         height: 120,
                         child: Row(
