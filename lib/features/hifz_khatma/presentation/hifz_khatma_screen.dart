@@ -244,13 +244,42 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
     }
   }
 
-  void _deletePlan(String id, bool isKhatma) async {
-    if (isKhatma) {
-      await DbHelper.deleteKhatmaPlan(id);
-    } else {
-      await DbHelper.deleteHifzPlan(id);
-    }
-    _loadPlans();
+  void _deletePlan(String id, bool isKhatma) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          isKhatma ? 'حذف خطة الختمة' : 'حذف خطة الحفظ',
+          textAlign: TextAlign.right,
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+        ),
+        content: Text(
+          isKhatma 
+              ? 'هل أنت متأكد من رغبتك في حذف خطة الختمة هذه؟ سيتم مسح كل التقدم المرتبط بها.'
+              : 'هل أنت متأكد من رغبتك في حذف خطة الحفظ هذه؟ سيتم مسح كل التقدم المرتبط بها.',
+          textAlign: TextAlign.right,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade900),
+            onPressed: () async {
+              Navigator.pop(context);
+              if (isKhatma) {
+                await DbHelper.deleteKhatmaPlan(id);
+              } else {
+                await DbHelper.deleteHifzPlan(id);
+              }
+              _loadPlans();
+            },
+            child: const Text('نعم، احذف', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

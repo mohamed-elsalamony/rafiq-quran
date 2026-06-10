@@ -12,6 +12,8 @@ class AppState extends ChangeNotifier {
   static const String _keyLastAudioAyah = 'last_audio_ayah';
   static const String _keyFontSize = 'font_size';
   static const String _keyDarkMode = 'dark_mode';
+  static const String _keyOnboarding = 'onboarding_completed';
+  static const String _keyNotifications = 'notifications_enabled';
 
   int _lastPageRead = 1;
   int _lastSurahRead = 1;
@@ -23,6 +25,8 @@ class AppState extends ChangeNotifier {
   int _lastAudioAyah = 1;
   double _fontSize = 22.0;
   bool _isDarkMode = false;
+  bool _isOnboardingCompleted = false;
+  bool _notificationsEnabled = true;
 
   // Getters
   int get lastPageRead => _lastPageRead;
@@ -35,6 +39,8 @@ class AppState extends ChangeNotifier {
   int get lastAudioAyah => _lastAudioAyah;
   double get fontSize => _fontSize;
   bool get isDarkMode => _isDarkMode;
+  bool get isOnboardingCompleted => _isOnboardingCompleted;
+  bool get notificationsEnabled => _notificationsEnabled;
 
   AppState() {
     _loadState();
@@ -52,6 +58,8 @@ class AppState extends ChangeNotifier {
     _lastAudioAyah = prefs.getInt(_keyLastAudioAyah) ?? 1;
     _fontSize = prefs.getDouble(_keyFontSize) ?? 22.0;
     _isDarkMode = prefs.getBool(_keyDarkMode) ?? false;
+    _isOnboardingCompleted = prefs.getBool(_keyOnboarding) ?? false;
+    _notificationsEnabled = prefs.getBool(_keyNotifications) ?? true;
     notifyListeners();
   }
 
@@ -108,5 +116,44 @@ class AppState extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyDarkMode, isDark);
+  }
+
+  Future<void> completeOnboarding() async {
+    _isOnboardingCompleted = true;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyOnboarding, true);
+  }
+
+  Future<void> toggleNotifications(bool val) async {
+    _notificationsEnabled = val;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyNotifications, val);
+  }
+
+  Future<void> clearAllData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
+    _lastPageRead = 1;
+    _lastSurahRead = 1;
+    _lastAyahRead = 1;
+    _lastScreen = 'home';
+    _lastAudioReciter = 'عبد الباسط عبد الصمد';
+    _lastAudioPositionMs = 0;
+    _lastAudioSurah = 1;
+    _lastAudioAyah = 1;
+    _fontSize = 22.0;
+    _isDarkMode = false;
+    _isOnboardingCompleted = true; // Keep onboarding completed
+    _notificationsEnabled = true;
+
+    // Save onboarding completion back to SharedPreferences so onboarding doesn't restart
+    await prefs.setBool(_keyOnboarding, true);
+
+    notifyListeners();
   }
 }

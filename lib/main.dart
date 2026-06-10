@@ -15,6 +15,9 @@ import 'features/quran/presentation/quran_provider.dart';
 import 'features/tasbih/presentation/tasbih_provider.dart';
 import 'features/prayer_times/presentation/prayer_provider.dart';
 import 'features/adhkar/presentation/adhkar_provider.dart';
+import 'features/onboarding/presentation/splash_screen.dart';
+import 'features/onboarding/presentation/onboarding_screen.dart';
+import 'features/settings/presentation/settings_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,7 +89,13 @@ class MyApp extends StatelessWidget {
       ),
 
       themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: const MainShell(),
+      initialRoute: '/splash',
+      routes: {
+        '/splash': (context) => const SplashScreen(),
+        '/onboarding': (context) => const OnboardingScreen(),
+        '/home': (context) => const MainShell(),
+        '/settings': (context) => const SettingsScreen(),
+      },
     );
   }
 }
@@ -202,6 +211,14 @@ class _MainShellState extends State<MainShell> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const AuthScreen()));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings, color: Colors.teal),
+                title: const Text('إعدادات التطبيق', textAlign: TextAlign.right),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/settings');
                 },
               ),
               const Divider(),

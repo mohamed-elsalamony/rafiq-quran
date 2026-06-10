@@ -56,6 +56,31 @@ class _TasbihScreenState extends State<TasbihScreen> {
     }
   }
 
+  // --- Dialog helper to reset counter with confirmation ---
+  void _showResetConfirmation(BuildContext context, TasbihProvider provider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد إعادة التعيين', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('هل أنت متأكد من رغبتك في إعادة تعيين عداد التسبيح الحالي إلى الصفر؟', textAlign: TextAlign.right),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade900),
+            onPressed: () {
+              provider.reset();
+              Navigator.pop(context);
+            },
+            child: const Text('نعم، تصفير', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- Dialog helper to add custom Zekr ---
   void _addNewCustomDhikr(TasbihProvider provider) {
     final textController = TextEditingController();
@@ -323,7 +348,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ElevatedButton.icon(
-                    onPressed: tasbihProvider.reset,
+                    onPressed: () => _showResetConfirmation(context, tasbihProvider),
                     icon: const Icon(Icons.refresh),
                     label: const Text('إعادة تعيين'),
                     style: ElevatedButton.styleFrom(

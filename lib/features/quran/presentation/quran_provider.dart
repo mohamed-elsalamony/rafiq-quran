@@ -27,6 +27,9 @@ class QuranProvider extends ChangeNotifier {
   double _downloadProgress = 0.0;
   String? _errorMessage;
 
+  int _currentAudioPositionMs = 0;
+  int _lastSavedTimeMs = 0;
+
   final Map<int, List<Map<String, dynamic>>> _pageVersesCache = {};
 
   // Getters
@@ -44,6 +47,7 @@ class QuranProvider extends ChangeNotifier {
   bool get isDownloading => _isDownloading;
   double get downloadProgress => _downloadProgress;
   String? get errorMessage => _errorMessage;
+  int get currentAudioPositionMs => _currentAudioPositionMs;
 
   final List<Map<String, String>> reciters = [
     {'name': 'عبد الباسط عبد الصمد', 'id': 'Abdul_Basit_Murattal_64kbps'},
@@ -64,6 +68,23 @@ class QuranProvider extends ChangeNotifier {
 
     _audioPlayer.onLog.listen((log) {
       debugPrint("AudioPlayer Log: $log");
+    });
+
+    _audioPlayer.onPositionChanged.listen((pos) {
+      _currentAudioPositionMs = pos.inMilliseconds;
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      if (nowMs - _lastSavedTimeMs > 5000) {
+        _lastSavedTimeMs = nowMs;
+        if (_isPlaying && _activePlayingSurah != null && _activePlayingAyah != null) {
+          final reciterName = reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!;
+          appState.saveAudioState(
+            reciter: reciterName,
+            positionMs: _currentAudioPositionMs,
+            surah: _activePlayingSurah!,
+            ayah: _activePlayingAyah!,
+          );
+        }
+      }
     });
   }
 
@@ -127,12 +148,13 @@ class QuranProvider extends ChangeNotifier {
   }
 
   // --- Recitation controls ---
-  Future<void> startRecitation(int surah, int ayah) async {
+  Future<void> startRecitation(int surah, int ayah, {int? startPositionMs}) async {
     _errorMessage = null;
     _activePlayingSurah = surah;
     _activePlayingAyah = ayah;
     _isPlaying = true;
     _currentRepeatCount = 0;
+    _currentAudioPositionMs = startPositionMs ?? 0;
     notifyListeners();
 
     try {
@@ -149,11 +171,15 @@ class QuranProvider extends ChangeNotifier {
         );
       }
 
+      if (startPositionMs != null && startPositionMs > 0) {
+        await _audioPlayer.seek(Duration(milliseconds: startPositionMs));
+      }
+
       // Save audio state
       final reciterName = reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!;
       appState.saveAudioState(
         reciter: reciterName,
-        positionMs: 0,
+        positionMs: startPositionMs ?? 0,
         surah: surah,
         ayah: ayah,
       );
@@ -208,6 +234,15 @@ class QuranProvider extends ChangeNotifier {
     try {
       _audioPlayer.pause();
       _isPlaying = false;
+      if (_activePlayingSurah != null && _activePlayingAyah != null) {
+        final reciterName = reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!;
+        appState.saveAudioState(
+          reciter: reciterName,
+          positionMs: _currentAudioPositionMs,
+          surah: _activePlayingSurah!,
+          ayah: _activePlayingAyah!,
+        );
+      }
       notifyListeners();
     } catch (e) {
       debugPrint("Error pausing: $e");

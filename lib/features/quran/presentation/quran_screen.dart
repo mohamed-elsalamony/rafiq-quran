@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:quran/quran.dart' as quran;
 import 'package:google_fonts/google_fonts.dart';
@@ -51,7 +52,11 @@ class _QuranScreenState extends State<QuranScreen> {
       if (widget.autoPlay) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final appState = Provider.of<AppState>(context, listen: false);
-          quranProvider.startRecitation(appState.lastAudioSurah, appState.lastAudioAyah);
+          quranProvider.startRecitation(
+            appState.lastAudioSurah,
+            appState.lastAudioAyah,
+            startPositionMs: appState.lastAudioPositionMs,
+          );
         });
       }
       _isInit = true;
@@ -319,6 +324,7 @@ class _QuranScreenState extends State<QuranScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
+                scrollDirection: Axis.vertical,
                 itemCount: 604,
                 onPageChanged: (idx) {
                   quranProvider.goToPage(idx + 1);
@@ -387,32 +393,29 @@ class _QuranScreenState extends State<QuranScreen> {
                                 final isTextSelected = (quranProvider.selectedAyahSurah == sNum &&
                                     quranProvider.selectedAyahNumber == aNum);
 
-                                return WidgetSpan(
-                                  child: GestureDetector(
-                                    onTap: () {
+                                return TextSpan(
+                                  text: '${verse['text']} ﴿${quran.getVerseEndSymbol(aNum)}﴾ ',
+                                  style: GoogleFonts.amiri(
+                                    fontSize: appState.fontSize,
+                                    fontWeight: FontWeight.w500,
+                                    height: 2.0,
+                                    color: isAudioPlaying
+                                        ? accentColor
+                                        : isTextSelected
+                                            ? Colors.teal
+                                            : (isDark ? Colors.grey[200] : Colors.black87),
+                                    backgroundColor: isAudioPlaying
+                                        ? accentColor.withOpacity(0.2)
+                                        : isTextSelected
+                                            ? Colors.teal.withOpacity(0.15)
+                                            : Colors.transparent,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () {
                                       quranProvider.selectAyah(sNum, aNum);
                                       _showVerseActionsBottomSheet(
                                           context, quranProvider, sNum, aNum, verse['text']);
                                     },
-                                    child: Container(
-                                      color: isAudioPlaying
-                                          ? accentColor.withOpacity(0.3)
-                                          : isTextSelected
-                                              ? Colors.teal.withOpacity(0.2)
-                                              : Colors.transparent,
-                                      padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 4.0),
-                                      child: Text(
-                                        '${verse['text']} ﴿${quran.getVerseEndSymbol(aNum)}﴾ ',
-                                        style: GoogleFonts.amiri(
-                                          fontSize: appState.fontSize,
-                                          fontWeight: FontWeight.w500,
-                                          height: 2.0,
-                                          color: isDark ? Colors.grey[200] : Colors.black87,
-                                        ),
-                                        textDirection: TextDirection.rtl,
-                                      ),
-                                    ),
-                                  ),
                                 );
                               }).toList(),
                             ),

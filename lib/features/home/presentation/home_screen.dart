@@ -98,6 +98,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String _formatAudioPosition(int ms) {
+    if (ms <= 0) return '00:00';
+    final duration = Duration(milliseconds: ms);
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
@@ -223,9 +231,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(width: 8),
                                 Text(
                                   'الصلاة القادمة: $_nextPrayerName',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 15,
-                                    color: Colors.white90,
+                                    color: Colors.white.withOpacity(0.9),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -274,56 +282,125 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // أزرار سريعة: متابعة القراءة واستكمال الاستماع
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildQuickActionButton(
-                        context,
-                        title: 'متابعة القراءة',
-                        subtitle: 'سورة ${quran.getSurahNameArabic(appState.lastSurahRead)} - ص ${appState.lastPageRead}',
-                        icon: Icons.chrome_reader_mode_outlined,
-                        color: isDark ? const Color(0xFF1E2825) : Colors.white,
-                        textColor: isDark ? Colors.white : Colors.black87,
-                        borderColor: isDark ? accentColor.withOpacity(0.2) : primaryColor.withOpacity(0.15),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => QuranScreen(
-                                initialPage: appState.lastPageRead,
-                                initialSurah: appState.lastSurahRead,
-                              ),
+                // بطاقة متابعة من حيث توقفت الموحدة والفاخرة
+                _buildSectionCard(
+                  title: 'متابعة من حيث توقفت',
+                  isDark: isDark,
+                  accentColor: accentColor,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      // بطاقة متابعة القراءة
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withOpacity(0.03) : Colors.grey.withOpacity(0.03),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+                            width: 1,
+                          ),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: accentColor.withOpacity(0.15),
+                              shape: BoxShape.circle,
                             ),
-                          ).then((_) => _loadDashboardData());
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildQuickActionButton(
-                        context,
-                        title: 'استكمال الاستماع',
-                        subtitle: 'سورة ${quran.getSurahNameArabic(appState.lastAudioSurah)} (${appState.lastAudioReciter})',
-                        icon: Icons.play_circle_outline,
-                        color: isDark ? const Color(0xFF1E2825) : Colors.white,
-                        textColor: isDark ? Colors.white : Colors.black87,
-                        borderColor: isDark ? accentColor.withOpacity(0.2) : primaryColor.withOpacity(0.15),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => QuranScreen(
-                                initialPage: quran.getPageNumber(appState.lastAudioSurah, appState.lastAudioAyah),
-                                initialSurah: appState.lastAudioSurah,
-                                autoPlay: true,
-                              ),
+                            child: Icon(Icons.chrome_reader_mode_outlined, color: accentColor, size: 24),
+                          ),
+                          title: const Text(
+                            'آخر ما قرأت في المصحف',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            textAlign: TextAlign.right,
+                          ),
+                          subtitle: Text(
+                            'سورة ${quran.getSurahNameArabic(appState.lastSurahRead)} - الصفحة ${appState.lastPageRead}',
+                            style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                            textAlign: TextAlign.right,
+                          ),
+                          trailing: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => QuranScreen(
+                                    initialPage: appState.lastPageRead,
+                                    initialSurah: appState.lastSurahRead,
+                                  ),
+                                ),
+                              ).then((_) => _loadDashboardData());
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             ),
-                          ).then((_) => _loadDashboardData());
-                        },
+                            child: const Text('اقرأ الآن', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      // بطاقة استكمال الاستماع
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withOpacity(0.03) : Colors.grey.withOpacity(0.03),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+                            width: 1,
+                          ),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: accentColor.withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.play_circle_outline, color: accentColor, size: 24),
+                          ),
+                          title: const Text(
+                            'آخر تلاوة استمعت إليها',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            textAlign: TextAlign.right,
+                          ),
+                          subtitle: Text(
+                            'سورة ${quran.getSurahNameArabic(appState.lastAudioSurah)} (${appState.lastAudioReciter}) عند ${_formatAudioPosition(appState.lastAudioPositionMs)}',
+                            style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                            textAlign: TextAlign.right,
+                          ),
+                          trailing: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => QuranScreen(
+                                    initialPage: quran.getPageNumber(appState.lastAudioSurah, appState.lastAudioAyah),
+                                    initialSurah: appState.lastAudioSurah,
+                                    autoPlay: true,
+                                  ),
+                                ),
+                              ).then((_) => _loadDashboardData());
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            ),
+                            child: const Text('استمع', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 ),
                 const SizedBox(height: 24),
 
