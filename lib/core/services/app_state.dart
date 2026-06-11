@@ -14,6 +14,12 @@ class AppState extends ChangeNotifier {
   static const String _keyDarkMode = 'dark_mode';
   static const String _keyOnboarding = 'onboarding_completed';
   static const String _keyNotifications = 'notifications_enabled';
+  
+  static const String _keyAutoScrollSpeed = 'auto_scroll_speed';
+  static const String _keyQuranThemeMode = 'quran_theme_mode'; // 'light', 'dark', 'sepia'
+  static const String _keyQuranFontFamily = 'quran_font_family'; // 'Amiri', 'Scheherazade'
+  static const String _keyQuranViewMode = 'quran_view_mode'; // 'page', 'verse'
+  static const String _keyShowTranslation = 'show_translation';
 
   int _lastPageRead = 1;
   int _lastSurahRead = 1;
@@ -28,6 +34,12 @@ class AppState extends ChangeNotifier {
   bool _isOnboardingCompleted = false;
   bool _notificationsEnabled = true;
 
+  double _autoScrollSpeed = 30.0;
+  String _quranThemeMode = 'light';
+  String _quranFontFamily = 'Amiri';
+  String _quranViewMode = 'page';
+  bool _showTranslation = true;
+
   // Getters
   int get lastPageRead => _lastPageRead;
   int get lastSurahRead => _lastSurahRead;
@@ -41,6 +53,12 @@ class AppState extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
   bool get isOnboardingCompleted => _isOnboardingCompleted;
   bool get notificationsEnabled => _notificationsEnabled;
+
+  double get autoScrollSpeed => _autoScrollSpeed;
+  String get quranThemeMode => _quranThemeMode;
+  String get quranFontFamily => _quranFontFamily;
+  String get quranViewMode => _quranViewMode;
+  bool get showTranslation => _showTranslation;
 
   AppState() {
     _loadState();
@@ -60,6 +78,12 @@ class AppState extends ChangeNotifier {
     _isDarkMode = prefs.getBool(_keyDarkMode) ?? false;
     _isOnboardingCompleted = prefs.getBool(_keyOnboarding) ?? false;
     _notificationsEnabled = prefs.getBool(_keyNotifications) ?? true;
+
+    _autoScrollSpeed = prefs.getDouble(_keyAutoScrollSpeed) ?? 30.0;
+    _quranThemeMode = prefs.getString(_keyQuranThemeMode) ?? (_isDarkMode ? 'dark' : 'light');
+    _quranFontFamily = prefs.getString(_keyQuranFontFamily) ?? 'Amiri';
+    _quranViewMode = prefs.getString(_keyQuranViewMode) ?? 'page';
+    _showTranslation = prefs.getBool(_keyShowTranslation) ?? true;
     notifyListeners();
   }
 
@@ -112,10 +136,58 @@ class AppState extends ChangeNotifier {
 
   Future<void> toggleDarkMode(bool isDark) async {
     _isDarkMode = isDark;
+    _quranThemeMode = isDark ? 'dark' : 'light';
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyDarkMode, isDark);
+    await prefs.setString(_keyQuranThemeMode, _quranThemeMode);
+  }
+
+  Future<void> setQuranThemeMode(String mode) async {
+    _quranThemeMode = mode;
+    if (mode == 'dark') {
+      _isDarkMode = true;
+    } else {
+      _isDarkMode = false;
+    }
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyQuranThemeMode, mode);
+    await prefs.setBool(_keyDarkMode, _isDarkMode);
+  }
+
+  Future<void> setAutoScrollSpeed(double speed) async {
+    _autoScrollSpeed = speed;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_keyAutoScrollSpeed, speed);
+  }
+
+  Future<void> setQuranFontFamily(String family) async {
+    _quranFontFamily = family;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyQuranFontFamily, family);
+  }
+
+  Future<void> setQuranViewMode(String mode) async {
+    _quranViewMode = mode;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyQuranViewMode, mode);
+  }
+
+  Future<void> setShowTranslation(bool show) async {
+    _showTranslation = show;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyShowTranslation, show);
   }
 
   Future<void> completeOnboarding() async {
@@ -150,6 +222,12 @@ class AppState extends ChangeNotifier {
     _isDarkMode = false;
     _isOnboardingCompleted = true; // Keep onboarding completed
     _notificationsEnabled = true;
+
+    _autoScrollSpeed = 30.0;
+    _quranThemeMode = 'light';
+    _quranFontFamily = 'Amiri';
+    _quranViewMode = 'page';
+    _showTranslation = true;
 
     // Save onboarding completion back to SharedPreferences so onboarding doesn't restart
     await prefs.setBool(_keyOnboarding, true);

@@ -247,6 +247,17 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+            Center(
+              child: Text(
+                '© 2026 Mohamed Elsalamony. All Rights Reserved.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.grey[600] : Colors.grey[500],
+                  fontFamily: 'Outfit',
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

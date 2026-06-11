@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:adhan/adhan.dart';
 import '../../../core/services/app_state.dart';
 import '../../../core/services/prayer_service.dart';
 import 'prayer_provider.dart';
+import 'qibla_compass_screen.dart';
 
 class PrayerQiblaScreen extends StatefulWidget {
   const PrayerQiblaScreen({super.key});
@@ -14,6 +17,9 @@ class PrayerQiblaScreen extends StatefulWidget {
 
 class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
   bool _isInit = false;
+  String _timeUntilNextPrayer = '--:--:--';
+  String _nextPrayerName = '';
+  Timer? _prayerTimer;
 
   @override
   void didChangeDependencies() {
@@ -21,12 +27,14 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
     if (!_isInit) {
       final prayerProvider = Provider.of<PrayerProvider>(context, listen: false);
       prayerProvider.addListener(_onProviderChange);
+      _startPrayerTimer();
       _isInit = true;
     }
   }
 
   @override
   void dispose() {
+    _prayerTimer?.cancel();
     try {
       final prayerProvider = Provider.of<PrayerProvider>(context, listen: false);
       prayerProvider.removeListener(_onProviderChange);
@@ -54,6 +62,60 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
 
     if (provider.isDetectingLocation) {
       _showLocationLoadingDialog();
+    }
+    
+    // Refresh calculations
+    _updatePrayerTime();
+  }
+
+  void _startPrayerTimer() {
+    _updatePrayerTime();
+    _prayerTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _updatePrayerTime();
+    });
+  }
+
+  void _updatePrayerTime() {
+    if (!mounted) return;
+    final provider = Provider.of<PrayerProvider>(context, listen: false);
+    final times = provider.prayerTimes;
+    final now = DateTime.now();
+
+    // Identify next prayer
+    var next = times.nextPrayer();
+    if (next == Prayer.none) {
+      next = Prayer.fajr;
+    }
+
+    DateTime? nextTime = times.timeForPrayer(next);
+    if (nextTime == null || nextTime.isBefore(now)) {
+      // If it's Fajr for tomorrow, calculate next day's times
+      final tomorrow = now.add(const Duration(days: 1));
+      final tomorrowCoords = Coordinates(provider.currentCity.latitude, provider.currentCity.longitude);
+      final tomorrowTimes = PrayerService.getPrayerTimes(tomorrowCoords, provider.currentCity.method, date: tomorrow);
+      nextTime = tomorrowTimes.timeForPrayer(next);
+    }
+
+    if (nextTime != null) {
+      final diff = nextTime.difference(now);
+      final hours = diff.inHours;
+      final mins = diff.inMinutes % 60;
+      final secs = diff.inSeconds % 60;
+
+      String nameStr = '';
+      switch (next) {
+        case Prayer.fajr: nameStr = 'الفجر'; break;
+        case Prayer.dhuhr: nameStr = 'الظهر'; break;
+        case Prayer.asr: nameStr = 'العصر'; break;
+        case Prayer.maghrib: nameStr = 'المغرب'; break;
+        case Prayer.isha: nameStr = 'العشاء'; break;
+        default: nameStr = 'الفجر'; break;
+      }
+
+      setState(() {
+        _nextPrayerName = nameStr;
+        _timeUntilNextPrayer = '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+      });
     }
   }
 
@@ -87,7 +149,6 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
     );
   }
 
-  // التقويم الهجري التقريبي الميسر
   String _getHijriDate() {
     try {
       final now = DateTime.now();
@@ -132,19 +193,20 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
     final prayerProvider = Provider.of<PrayerProvider>(context);
     final isDark = appState.isDarkMode;
     final primaryColor = const Color(0xFF0F5A47);
-    final Color accentColor = const Color(0xFFD4AF37);
+    final Color goldColor = const Color(0xFFD4AF37);
 
-    // List of prayers config
+    // List of prayers with mapping keys for alarms
     final List<Map<String, dynamic>> prayersList = [
-      {'name': 'الفجر', 'time': prayerProvider.prayerTimes.fajr, 'icon': Icons.wb_twilight},
-      {'name': 'الشروق', 'time': prayerProvider.prayerTimes.sunrise, 'icon': Icons.light_mode},
-      {'name': 'الظهر', 'time': prayerProvider.prayerTimes.dhuhr, 'icon': Icons.wb_sunny},
-      {'name': 'العصر', 'time': prayerProvider.prayerTimes.asr, 'icon': Icons.cloud},
-      {'name': 'المغرب', 'time': prayerProvider.prayerTimes.maghrib, 'icon': Icons.nights_stay},
-      {'name': 'العشاء', 'time': prayerProvider.prayerTimes.isha, 'icon': Icons.dark_mode},
+      {'key': 'Fajr', 'name': 'الفجر', 'time': prayerProvider.prayerTimes.fajr, 'icon': Icons.wb_twilight},
+      {'key': 'Sunrise', 'name': 'الشروق', 'time': prayerProvider.prayerTimes.sunrise, 'icon': Icons.light_mode},
+      {'key': 'Dhuhr', 'name': 'الظهر', 'time': prayerProvider.prayerTimes.dhuhr, 'icon': Icons.wb_sunny},
+      {'key': 'Asr', 'name': 'العصر', 'time': prayerProvider.prayerTimes.asr, 'icon': Icons.cloud},
+      {'key': 'Maghrib', 'name': 'المغرب', 'time': prayerProvider.prayerTimes.maghrib, 'icon': Icons.nights_stay},
+      {'key': 'Isha', 'name': 'العشاء', 'time': prayerProvider.prayerTimes.isha, 'icon': Icons.dark_mode},
     ];
 
     final nextPrayer = prayerProvider.prayerTimes.nextPrayer();
+    final currentPrayer = prayerProvider.prayerTimes.currentPrayer();
 
     return Scaffold(
       appBar: AppBar(
@@ -157,16 +219,24 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.explore),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const QiblaCompassScreen()),
+              );
+            },
+            tooltip: 'بوصلة القبلة التفاعلية حية',
+          ),
+          IconButton(
             icon: const Icon(Icons.my_location),
             onPressed: prayerProvider.detectLocation,
             tooltip: 'تحديد موقعي بالـ GPS',
-          )
+          ),
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF121212) : const Color(0xFFF4F6F4),
-        ),
+        color: isDark ? const Color(0xFF121212) : const Color(0xFFF4F6F4),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
           child: Column(
@@ -231,7 +301,156 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Prayer times list
+              // Dynamic countdown card
+              Container(
+                padding: const EdgeInsets.all(20.0),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? [const Color(0xFF0C4638), const Color(0xFF072C23)]
+                        : [primaryColor, const Color(0xFF0A3E31)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: goldColor.withOpacity(0.4),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    )
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: goldColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'المتبقي لصلاة $_nextPrayerName',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _timeUntilNextPrayer,
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: goldColor,
+                        fontFamily: 'Outfit',
+                        letterSpacing: 2,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'حساب المواقيت لمدينة: ${prayerProvider.currentCity.nameArabic}',
+                      style: const TextStyle(fontSize: 11, color: Colors.white70),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // 5 Prayers Horizontal Timeline
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'مخطط الصلوات اليومي',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: prayersList.where((p) => p['key'] != 'Sunrise').map((pr) {
+                          final String pKey = pr['key'];
+                          final String name = pr['name'];
+                          final String formattedTime = _formatTime(pr['time']).split(' ').first; // get numbers only
+                          final String period = _formatTime(pr['time']).split(' ').last;
+                          
+                          // Check if it's the current active prayer
+                          final bool isCurrent = currentPrayer.name == pKey.toLowerCase();
+                          
+                          return Expanded(
+                            child: Column(
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: isCurrent 
+                                        ? primaryColor.withOpacity(0.15) 
+                                        : Colors.transparent,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isCurrent ? goldColor : Colors.transparent,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    pr['icon'],
+                                    color: isCurrent ? goldColor : Colors.grey,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  name,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                                    color: isCurrent ? primaryColor : (isDark ? Colors.grey[300] : Colors.black87),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '$formattedTime $period',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontFamily: 'Outfit',
+                                    color: isCurrent ? goldColor : Colors.grey,
+                                    fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Prayer list details with toggle controls
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -243,29 +462,51 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                   separatorBuilder: (context, index) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final pr = prayersList[index];
+                    final String pKey = pr['key'];
                     final String name = pr['name'];
+                    
                     final isNext = (nextPrayer.name == 'fajr' && name == 'الفجر') ||
                         (nextPrayer.name == 'dhuhr' && name == 'الظهر') ||
                         (nextPrayer.name == 'asr' && name == 'العصر') ||
                         (nextPrayer.name == 'maghrib' && name == 'المغرب') ||
                         (nextPrayer.name == 'isha' && name == 'العشاء');
 
+                    final bool hasAlarm = pKey != 'Sunrise';
+                    final bool isAlarmOn = hasAlarm && (prayerProvider.alarmsEnabled[pKey] ?? true);
+
                     return Container(
                       color: isNext
                           ? (isDark ? Colors.teal.shade900.withOpacity(0.4) : Colors.teal.shade50.withOpacity(0.5))
                           : Colors.transparent,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            _formatTime(pr['time']),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: isNext ? FontWeight.bold : FontWeight.normal,
-                              color: isNext ? accentColor : (isDark ? Colors.white : Colors.black87),
-                              fontFamily: 'Outfit',
-                            ),
+                          Row(
+                            children: [
+                              if (hasAlarm)
+                                IconButton(
+                                  icon: Icon(
+                                    isAlarmOn ? Icons.notifications_active : Icons.notifications_off,
+                                    color: isAlarmOn ? goldColor : Colors.grey,
+                                  ),
+                                  onPressed: () {
+                                    prayerProvider.toggleAlarm(pKey);
+                                  },
+                                  tooltip: isAlarmOn ? 'تعطيل منبه الأذان' : 'تفعيل منبه الأذان',
+                                )
+                              else
+                                const SizedBox(width: 48), // Spacer placeholder for Sunrise
+                              Text(
+                                _formatTime(pr['time']),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: isNext ? FontWeight.bold : FontWeight.normal,
+                                  color: isNext ? goldColor : (isDark ? Colors.white : Colors.black87),
+                                  fontFamily: 'Outfit',
+                                ),
+                              ),
+                            ],
                           ),
                           Row(
                             children: [
@@ -280,7 +521,7 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                               const SizedBox(width: 12),
                               Icon(
                                 pr['icon'],
-                                color: isNext ? accentColor : Colors.grey,
+                                color: isNext ? goldColor : Colors.grey,
                                 size: 22,
                               ),
                             ],
@@ -289,103 +530,6 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                       ),
                     );
                   },
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Interactive Qibla compass
-              Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'بوصلة اتجاه القبلة',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'زاوية القبلة: ${prayerProvider.qiblaAngle.toInt()}° من الشمال الجغرافي',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 20),
-
-                      GestureDetector(
-                        onPanUpdate: (details) {
-                          // Allow manual rotation on swipe
-                          prayerProvider.simulateHeading(details.delta.dx / 2);
-                        },
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Circular compass dial
-                            Transform.rotate(
-                              angle: -prayerProvider.simulatedHeading * pi / 180,
-                              child: Container(
-                                width: 200,
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isDark ? const Color(0xFF2C2C2C) : Colors.grey[100],
-                                  border: Border.all(color: primaryColor, width: 4),
-                                ),
-                                child: const Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Positioned(top: 8, child: Text('N', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red))),
-                                    Positioned(bottom: 8, child: Text('S', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    Positioned(left: 8, child: Text('W', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    Positioned(right: 8, child: Text('E', style: TextStyle(fontWeight: FontWeight.bold))),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // Golden indicator arrow pointing to Kaaba
-                            Transform.rotate(
-                              angle: (prayerProvider.qiblaAngle - prayerProvider.simulatedHeading) * pi / 180,
-                              child: const Column(
-                                children: [
-                                  Icon(
-                                    Icons.navigation,
-                                    size: 80,
-                                    color: Color(0xFFD4AF37),
-                                  ),
-                                  SizedBox(height: 60),
-                                ],
-                              ),
-                            ),
-
-                            // Central Kaaba icon
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: Colors.black,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.mosque,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '💡 ملاحظة: اسحب لتدوير البوصلة يدوياً وتوجيه الحرف N نحو الشمال الجغرافي لضبط الاتجاه.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
                 ),
               ),
               const SizedBox(height: 24),

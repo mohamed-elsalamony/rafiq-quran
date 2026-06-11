@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/services/db_helper.dart';
 
 class TasbihProvider extends ChangeNotifier {
@@ -48,9 +49,30 @@ class TasbihProvider extends ChangeNotifier {
     try {
       _customDhikrs = await DbHelper.getCustomAdhkar();
       _tasbihStats = await DbHelper.getTasbihLogs();
+      
+      final prefs = await SharedPreferences.getInstance();
+      _counter = prefs.getInt('tasbih_current_counter') ?? 0;
+      _target = prefs.getInt('tasbih_current_target') ?? 33;
+      _selectedDhikr = prefs.getString('tasbih_selected_dhikr') ?? 'سبحان الله';
+      _isVibrationEnabled = prefs.getBool('tasbih_is_vibration_enabled') ?? true;
+      _isSoundEnabled = prefs.getBool('tasbih_is_sound_enabled') ?? true;
+      
       notifyListeners();
     } catch (e) {
       debugPrint("Error loading tasbih data: $e");
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('tasbih_current_counter', _counter);
+      await prefs.setInt('tasbih_current_target', _target);
+      await prefs.setString('tasbih_selected_dhikr', _selectedDhikr);
+      await prefs.setBool('tasbih_is_vibration_enabled', _isVibrationEnabled);
+      await prefs.setBool('tasbih_is_sound_enabled', _isSoundEnabled);
+    } catch (e) {
+      debugPrint("Error saving tasbih settings: $e");
     }
   }
 
@@ -65,22 +87,26 @@ class TasbihProvider extends ChangeNotifier {
     _target = targetVal;
     _counter = 0;
     notifyListeners();
+    _saveSettings();
   }
 
   void setTarget(int newTarget) {
     _target = newTarget;
     _counter = 0;
     notifyListeners();
+    _saveSettings();
   }
 
   void toggleVibration() {
     _isVibrationEnabled = !_isVibrationEnabled;
     notifyListeners();
+    _saveSettings();
   }
 
   void toggleSound() {
     _isSoundEnabled = !_isSoundEnabled;
     notifyListeners();
+    _saveSettings();
   }
 
   void increment() {
@@ -88,6 +114,7 @@ class TasbihProvider extends ChangeNotifier {
     _btnScale = 0.93;
     _alertMessage = null;
     notifyListeners();
+    _saveSettings();
 
     // Snapback scale animation
     Future.delayed(const Duration(milliseconds: 80), () {
@@ -127,6 +154,7 @@ class TasbihProvider extends ChangeNotifier {
     _counter = 0;
     HapticFeedback.mediumImpact();
     notifyListeners();
+    _saveSettings();
   }
 
   Future<void> addNewCustomDhikr(String text, int targetCount) async {

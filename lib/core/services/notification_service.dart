@@ -1,54 +1,195 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:adhan/adhan.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
+  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
   Future<void> init() async {
     if (_initialized) return;
 
     if (kIsWeb) {
-      // محاكاة إشعار الويب
       debugPrint("Web Notification Service Initialized");
       _initialized = true;
       return;
     }
 
     try {
-      if (Platform.isAndroid || Platform.isIOS) {
-        // يمكن لاحقاً تهيئة flutter_local_notifications الفعلي هنا للهواتف
-        debugPrint("Mobile Notification Service Initialized (Stub)");
-      } else {
-        debugPrint("Desktop Notification Service Initialized (Stub)");
+      // 1. Initialize timezone database
+      tz.initializeTimeZones();
+      final String localName = 'Asia/Riyadh'; // Fallback timezone
+      try {
+        // You can use flutter_timezone package to get local timezone name if needed,
+        // but setting Riyadh or Cairo as fallback is safe, or we can use local timezone offset.
+        tz.setLocalLocation(tz.getLocation(localName));
+      } catch (_) {
+        debugPrint("Could not set timezone location, using Riyadh as default.");
       }
+
+      // 2. Initialize settings for Android & iOS
+      const AndroidInitializationSettings androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+
+      const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+
+      const InitializationSettings initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+
+      await _notificationsPlugin.initialize(
+        settings: initSettings,
+        onDidReceiveNotificationResponse: (details) {
+          debugPrint("Notification Clicked: ${details.payload}");
+        },
+      );
+
+      // Create high importance notification channel for Android 8.0+
+      if (Platform.isAndroid) {
+        final AndroidNotificationChannel channel = const AndroidNotificationChannel(
+          'prayer_channel_id',
+          'تنبيهات الأذان والصلوات',
+          description: 'تنبهات مواقيت الصلاة والأذان المكتوب',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        );
+
+        final androidImplementation =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        if (androidImplementation != null) {
+          await androidImplementation.createNotificationChannel(channel);
+          await androidImplementation.requestNotificationsPermission();
+        }
+      }
+
+      debugPrint("Notification Service Initialized Successfully");
+      _initialized = true;
     } catch (e) {
       debugPrint("Error initializing notifications: $e");
     }
-
-    _initialized = true;
   }
 
-  // جدولة إشعار
+  // --- Schedule generic local notification ---
   Future<void> scheduleNotification({
     required int id,
     required String title,
     required String body,
     required DateTime scheduledDate,
   }) async {
-    debugPrint("Scheduled notification '$title' for $scheduledDate");
-    // محاكاة الإشعار المجدول في المنصات غير المتوافقة
+    if (kIsWeb || !_initialized) return;
+
+    try {
+      final tz.TZDateTime tzDateTime = tz.TZDateTime.from(scheduledDate, tz.local);
+      
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'prayer_channel_id',
+        'تنبيهات الأذان والصلوات',
+        channelDescription: 'تنبهات مواقيت الصلاة والأذان المكتوب',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+      );
+
+      const NotificationDetails platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+      );
+
+      await _notificationsPlugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tzDateTime,
+        notificationDetails: platformDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+      debugPrint("Scheduled notification '$title' (ID: $id) for $tzDateTime");
+    } catch (e) {
+      debugPrint("Error scheduling notification: $e");
+    }
   }
 
-  // إظهار إشعار فوري (سواء في التطبيق أو عبر النظام)
+  // --- Schedule all weekly prayer alarms based on settings ---
+  Future<void> schedulePrayerAlarms({
+    required double latitude,
+    required double longitude,
+    required Map<String, bool> enabledAlarms,
+    required CalculationMethod method,
+  }) async {
+    if (kIsWeb || !_initialized) return;
+
+    try {
+      // Cancel previous scheduled notifications first to prevent duplicates
+      await _notificationsPlugin.cancelAll();
+
+      final coords = Coordinates(latitude, longitude);
+      final now = DateTime.now();
+
+      // Schedule alarms for the next 7 days
+      for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
+        final date = now.add(Duration(days: dayOffset));
+        final DateComponents dateComponents = DateComponents.from(date);
+        
+        final params = method.getParameters();
+        params.madhab = Madhab.shafi;
+        
+        final times = PrayerTimes(coords, dateComponents, params);
+
+        final List<Map<String, dynamic>> prayers = [
+          {'name': 'Fajr', 'label': 'الفجر', 'time': times.fajr},
+          {'name': 'Dhuhr', 'label': 'الظهر', 'time': times.dhuhr},
+          {'name': 'Asr', 'label': 'العصر', 'time': times.asr},
+          {'name': 'Maghrib', 'label': 'المغرب', 'time': times.maghrib},
+          {'name': 'Isha', 'label': 'العشاء', 'time': times.isha},
+        ];
+
+        for (int i = 0; i < prayers.length; i++) {
+          final prayer = prayers[i];
+          final String name = prayer['name'];
+          final String label = prayer['label'];
+          final DateTime prayerTime = prayer['time'];
+
+          // Skip if alarm is disabled or the time is in the past
+          if (enabledAlarms[name] != true || prayerTime.isBefore(now)) {
+            continue;
+          }
+
+          // Calculate unique ID (e.g., DayOffset 0-6 * 10 + prayerIndex 0-4)
+          final int notificationId = (dayOffset * 10) + i + 1000;
+
+          await scheduleNotification(
+            id: notificationId,
+            title: 'حان الآن موعد صلاة $label 🕌',
+            body: 'الله أكبر، الله أكبر. حان الآن موعد الأذان لصلاة $label حسب توقيتك المحلي. أقم صلاتك تسعد حياتك 🤲',
+            scheduledDate: prayerTime,
+          );
+        }
+      }
+      debugPrint("Prayer alarms scheduled for the next 7 days.");
+    } catch (e) {
+      debugPrint("Error scheduling prayer alarms: $e");
+    }
+  }
+
+  // --- Show instant alert inside the app ---
   void showInstantAlert(BuildContext context, String title, String body) {
     if (!context.mounted) return;
     
-    // إظهار تنبيه مخصص وجميل داخل التطبيق
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -62,7 +203,7 @@ class NotificationService {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: kIsWeb ? FontWeight.bold : FontWeight.w700, fontFamily: 'Outfit'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
                   ),
                   Text(
                     body,

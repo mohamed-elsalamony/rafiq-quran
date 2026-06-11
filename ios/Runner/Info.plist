@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Rafiq Quran</string>
+	<string>رفيق القرآن</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,11 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>rafiq_quran</string>
+	<string>رفيق القرآن</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>نحتاج لموقعك الجغرافي لتحديد مواقيت الصلاة الدقيقة واتجاه القبلة الخاص بمدينتك.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>نحتاج لموقعك الجغرافي لتحديد مواقيت الصلاة الدقيقة واتجاه القبلة الخاص بمدينتك.</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

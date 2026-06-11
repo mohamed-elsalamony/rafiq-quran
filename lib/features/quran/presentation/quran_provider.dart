@@ -369,4 +369,11 @@ class QuranProvider extends ChangeNotifier {
     _selectedAyahNumber = null;
     notifyListeners();
   }
+
+  void setCurrentPageFromScroll(int pageNum) {
+    if (pageNum < 1 || pageNum > 604) return;
+    _currentPage = pageNum;
+    _saveProgress(pageNum);
+    notifyListeners();
+  }
 }

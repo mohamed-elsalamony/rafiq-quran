@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'core/services/app_state.dart';
+import 'core/services/prophet_blessing_service.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/quran/presentation/quran_screen.dart';
 import 'features/adhkar/presentation/adhkar_screen.dart';
@@ -19,8 +21,13 @@ import 'features/onboarding/presentation/splash_screen.dart';
 import 'features/onboarding/presentation/onboarding_screen.dart';
 import 'features/settings/presentation/settings_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint("Firebase initialization failed: $e. Falling back to simulation mode.");
+  }
   runApp(
     MultiProvider(
       providers: [
@@ -32,6 +39,7 @@ void main() {
         ChangeNotifierProvider(create: (context) => TasbihProvider()),
         ChangeNotifierProvider(create: (context) => PrayerProvider()),
         ChangeNotifierProvider(create: (context) => AdhkarProvider()),
+        ChangeNotifierProvider(create: (context) => ProphetBlessingService()),
       ],
       child: const MyApp(),
     ),
@@ -119,8 +127,8 @@ class _MainShellState extends State<MainShell> {
     _tabs.addAll([
       HomeScreen(onTabChanged: _onTabChanged),
       const QuranScreen(),
-      const HifzKhatmaScreen(),
-      const CombinedDhikrTab(), // تبويب الأذكار والتسبيح المشترك
+      const AdhkarScreen(),
+      const TasbihScreen(),
       const PrayerQiblaScreen(),
     ]);
   }
@@ -129,7 +137,6 @@ class _MainShellState extends State<MainShell> {
     setState(() {
       _currentIndex = index;
     });
-    // حفظ اسم الشاشة الأخيرة للعودة التلقائية عند إعادة تشغيل التطبيق
     final appState = Provider.of<AppState>(context, listen: false);
     appState.saveLastScreen(_getScreenNameFromIndex(index));
   }
@@ -138,8 +145,8 @@ class _MainShellState extends State<MainShell> {
     switch (index) {
       case 0: return 'home';
       case 1: return 'quran';
-      case 2: return 'hifz';
-      case 3: return 'dhikr';
+      case 2: return 'adhkar';
+      case 3: return 'tasbih';
       case 4: return 'prayer';
       default: return 'home';
     }
@@ -149,8 +156,8 @@ class _MainShellState extends State<MainShell> {
     switch (name) {
       case 'home': return 0;
       case 'quran': return 1;
-      case 'hifz': return 2;
-      case 'dhikr': return 3;
+      case 'adhkar': return 2;
+      case 'tasbih': return 3;
       case 'prayer': return 4;
       default: return 0;
     }
@@ -163,9 +170,9 @@ class _MainShellState extends State<MainShell> {
     final Color accentColor = const Color(0xFFD4AF37);
     final isDark = appState.isDarkMode;
 
-    // استعادة آخر شاشة تم فتحها مرة واحدة عند إقلاع التطبيق
-    if (!_isInit && appState.lastScreen.isNotEmpty) {
-      _currentIndex = _getIndexFromScreenName(appState.lastScreen);
+    // دائماً يفتح على الرئيسية عند الإقلاع الأول، ونلغي الاستعادة التلقائية لآخر شاشة
+    if (!_isInit) {
+      _currentIndex = 0;
       _isInit = true;
     }
 
@@ -197,7 +204,7 @@ class _MainShellState extends State<MainShell> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'إصدار 1.0.0',
+                      'إصدار 1.1.0',
                       style: TextStyle(color: Colors.teal[100], fontSize: 12),
                     ),
                   ],
@@ -211,6 +218,14 @@ class _MainShellState extends State<MainShell> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const AuthScreen()));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.assignment, color: Colors.teal),
+                title: const Text('الورد وحفظ القرآن', textAlign: TextAlign.right),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HifzKhatmaScreen()));
                 },
               ),
               ListTile(
@@ -255,7 +270,6 @@ class _MainShellState extends State<MainShell> {
         backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
-        // إضافة زر لفتح القائمة الجانبية
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
@@ -280,43 +294,26 @@ class _MainShellState extends State<MainShell> {
         selectedItemColor: accentColor,
         unselectedItemColor: isDark ? Colors.white60 : Colors.grey[600],
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        selectedLabelStyle: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+          color: accentColor,
+          fontFamily: 'Outfit',
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontSize: 11,
+          color: isDark ? Colors.white60 : Colors.grey[600],
+          fontFamily: 'Outfit',
+        ),
+        selectedIconTheme: IconThemeData(size: 26, color: accentColor),
+        unselectedIconTheme: IconThemeData(size: 22, color: isDark ? Colors.white60 : Colors.grey[600]),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'),
-          BottomNavigationBarItem(icon: Icon(Icons.chrome_reader_mode), label: 'المصحف'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'الورد والحفظ'),
-          BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_motion), label: 'الأذكار والسبحة'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'القبلة والمواقيت'),
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'الرئيسية'),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), activeIcon: Icon(Icons.menu_book), label: 'المصحف'),
+          BottomNavigationBarItem(icon: Icon(Icons.library_books_outlined), activeIcon: Icon(Icons.library_books), label: 'الأذكار'),
+          BottomNavigationBarItem(icon: Icon(Icons.fingerprint_outlined), activeIcon: Icon(Icons.fingerprint), label: 'السبحة'),
+          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), activeIcon: Icon(Icons.explore), label: 'الصلاة'),
         ],
-      ),
-    );
-  }
-}
-
-// تبويب مدمج لعرض الأذكار والمسبحة معاً
-class CombinedDhikrTab extends StatelessWidget {
-  const CombinedDhikrTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          toolbarHeight: 0, // إخفاء شريط العنوان الافتراضي لتجنب التكرار
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.touch_app), text: 'المسبحة الإلكترونية'),
-              Tab(icon: Icon(Icons.library_books), text: 'الأذكار اليومية'),
-            ],
-          ),
-        ),
-        body: const TabBarView(
-          children: [
-            TasbihScreen(),
-            AdhkarScreen(),
-          ],
-        ),
       ),
     );
   }

@@ -4,7 +4,12 @@ import 'package:quran/quran.dart' as quran;
 import '../../../core/services/app_state.dart';
 import '../../../core/services/db_helper.dart';
 import '../../../core/services/prayer_service.dart';
+import '../../../core/services/hadith_service.dart';
+import '../../../core/services/prophet_blessing_service.dart';
 import '../../quran/presentation/quran_screen.dart';
+import '../../hifz_khatma/presentation/hifz_khatma_screen.dart';
+import '../../hadith/presentation/hadith_library_screen.dart';
+import 'prophet_blessing_screen.dart';
 import 'package:adhan/adhan.dart';
 import 'dart:async';
 
@@ -22,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _prayerTimer;
   Map<String, dynamic>? _lastBookmark;
   List<Map<String, dynamic>> _khatmaPlans = [];
+  Hadith? _hadithOfDay;
 
   @override
   void initState() {
@@ -39,12 +45,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void _loadDashboardData() async {
     final bookmarks = await DbHelper.getBookmarks();
     final khatmas = await DbHelper.getKhatmaPlans();
+    
+    // Load Hadith of the Day
+    final hadithService = HadithService();
+    final hadith = await hadithService.getHadithOfDay();
+    
     if (mounted) {
       setState(() {
         if (bookmarks.isNotEmpty) {
           _lastBookmark = bookmarks.last;
         }
         _khatmaPlans = khatmas;
+        _hadithOfDay = hadith;
       });
     }
   }
@@ -282,6 +294,72 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                // بطاقة مليونية الصلاة على النبي ﷺ
+                Consumer<ProphetBlessingService>(
+                  builder: (context, blessingService, child) {
+                    return _buildSectionCard(
+                      title: 'مليونية الصلاة على النبي ﷺ',
+                      isDark: isDark,
+                      accentColor: accentColor,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: accentColor.withOpacity(0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.favorite, color: accentColor, size: 24),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'صلواتك اليوم: ${blessingService.personalCount}',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'العداد العالمي: ${blessingService.globalCount.toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")}',
+                                      style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const ProphetBlessingScreen()),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                ),
+                                child: const Text('شارك الآن', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      color: isDark ? const Color(0xFF162520) : const Color(0xFFEAF5F0),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+
                 // بطاقة متابعة من حيث توقفت الموحدة والفاخرة
                 _buildSectionCard(
                   title: 'متابعة من حيث توقفت',
@@ -474,6 +552,54 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                // حديث اليوم
+                if (_hadithOfDay != null)
+                  _buildSectionCard(
+                    title: 'حديث اليوم',
+                    isDark: isDark,
+                    accentColor: accentColor,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 8),
+                        Text(
+                          _hadithOfDay!.text,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.grey[200] : Colors.black87,
+                            height: 1.5,
+                            fontFamily: 'Amiri',
+                          ),
+                          textAlign: TextAlign.right,
+                          textDirection: TextDirection.rtl,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'رواه: ${_hadithOfDay!.source}',
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          textAlign: TextAlign.left,
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const HadithLibraryScreen()),
+                            );
+                          },
+                          icon: const Icon(Icons.library_books, size: 16, color: Colors.teal),
+                          label: const Text('تصفح مكتبة الأحاديث الشريفة', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal)),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: accentColor.withOpacity(0.5)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    color: isDark ? const Color(0xFF15222E) : const Color(0xFFEDF5FA),
+                  ),
+                const SizedBox(height: 24),
+
                 // الورد اليومي والختمات
                 if (_khatmaPlans.isNotEmpty)
                   _buildSectionCard(
@@ -544,7 +670,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: () {
-                            widget.onTabChanged(2); // التبويب الثالث (الحفظ والختمات)
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const HifzKhatmaScreen()),
+                            );
                           },
                           icon: const Icon(Icons.add, size: 20),
                           label: const Text('إنشاء خطة ختمة جديدة', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -619,6 +748,22 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ProphetBlessingScreen()),
+          ).then((_) => _loadDashboardData());
+        },
+        backgroundColor: accentColor,
+        foregroundColor: Colors.white,
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Text(
+          'ﷺ',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Amiri'),
         ),
       ),
     );

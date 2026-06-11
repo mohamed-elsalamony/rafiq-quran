@@ -45,6 +45,11 @@ dependencies:
   share_plus: ^7.2.1
   path_provider: any
   http: any
+  flutter_compass: any
+  flutter_local_notifications: any
+  timezone: any
+  firebase_core: any
+  cloud_firestore: any
 
 dev_dependencies:
   flutter_test:
