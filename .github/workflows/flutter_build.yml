@@ -11,6 +11,8 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,3 +41,13 @@ jobs:
         with:
           name: rafiq-quran-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Create Automatic Release
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: false
+          title: "النسخة الأحدث من التطبيق (Latest Release)"
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
