@@ -28,6 +28,7 @@ import 'features/settings/presentation/settings_screen.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
+  WidgetsFlutterBinding.ensureInitialized();
   Workmanager().executeTask((task, inputData) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -69,8 +70,6 @@ void callbackDispatcher() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Disabled Workmanager to prevent startup crash on Android 14+ devices
-  /*
   try {
     await Workmanager().initialize(
       callbackDispatcher,
@@ -79,7 +78,7 @@ void main() async {
   } catch (e) {
     debugPrint("Workmanager initialization failed: $e");
   }
-  */
+
   try {
     await Firebase.initializeApp();
   } catch (e) {

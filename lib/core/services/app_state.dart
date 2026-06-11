@@ -282,13 +282,26 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _registerPeriodicTask() async {
-    // Disabled to prevent startup crashes on newer Android devices
-    debugPrint("Workmanager: _registerPeriodicTask bypassed.");
+    try {
+      await Workmanager().registerPeriodicTask(
+        "periodic_dhikr_task",
+        "periodic_dhikr",
+        frequency: Duration(minutes: _periodicDhikrInterval),
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+      );
+      debugPrint("Workmanager: Registered periodic task with interval $_periodicDhikrInterval mins.");
+    } catch (e) {
+      debugPrint("Workmanager registration failed: $e");
+    }
   }
 
   Future<void> _cancelPeriodicTask() async {
-    // Disabled to prevent startup crashes on newer Android devices
-    debugPrint("Workmanager: _cancelPeriodicTask bypassed.");
+    try {
+      await Workmanager().cancelByUniqueName("periodic_dhikr_task");
+      debugPrint("Workmanager: Cancelled periodic task.");
+    } catch (e) {
+      debugPrint("Workmanager cancellation failed: $e");
+    }
   }
 
   Future<void> clearAllData() async {

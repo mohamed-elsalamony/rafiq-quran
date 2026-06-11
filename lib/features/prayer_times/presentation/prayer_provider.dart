@@ -44,15 +44,18 @@ class PrayerProvider extends ChangeNotifier {
     _currentCity = PrayerService.defaultCities[_selectedCityName]!;
     _calculateTimes();
     
-    // Load settings immediately on startup
-    _loadSettings();
+    // Load settings and initialize notification service sequentially
+    _initProvider();
+  }
 
-    // Initialize notification service asynchronously in parallel
-    NotificationService().init().then((_) {
+  Future<void> _initProvider() async {
+    await _loadSettings();
+    try {
+      await NotificationService().init();
       _reschedulePrayerAlarms();
-    }).catchError((e) {
+    } catch (e) {
       debugPrint("Error initializing notifications: $e");
-    });
+    }
   }
 
   void clearError() {
