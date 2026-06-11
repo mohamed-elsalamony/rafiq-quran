@@ -12,8 +12,6 @@ import 'audio_player_widget.dart';
 import 'tafseer_widget.dart';
 import 'quran_provider.dart';
 import 'widgets/quran_page_widget.dart';
-import 'widgets/quran_page_separator.dart';
-import 'quran_index_screen.dart';
 
 class QuranScreen extends StatefulWidget {
   final int initialPage;
@@ -32,24 +30,22 @@ class QuranScreen extends StatefulWidget {
 }
 
 class _QuranScreenState extends State<QuranScreen> {
-  late ScrollController _scrollController;
+  late PageController _pageController;
   final TextEditingController _searchController = TextEditingController();
   
   bool _isInit = false;
   bool _isProgrammaticScroll = false;
-  static const double _averagePageHeight = 850.0;
 
   // Auto-scroll variables
   Timer? _autoScrollTimer;
   bool _isAutoScrolling = false;
   bool _showAutoScrollPanel = false;
-  bool _showBackToTopBtn = false;
+  late ScrollController _activePageScrollController;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
-    _scrollController.addListener(_onScroll);
+    _activePageScrollController = ScrollController();
   }
 
   @override
@@ -59,14 +55,12 @@ class _QuranScreenState extends State<QuranScreen> {
       final quranProvider = Provider.of<QuranProvider>(context, listen: false);
       quranProvider.addListener(_onProviderChange);
 
+      final int startPage = widget.initialPage != 1 ? widget.initialPage : quranProvider.currentPage;
+      _pageController = PageController(initialPage: startPage - 1);
+
       if (widget.initialPage != 1) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           quranProvider.goToPage(widget.initialPage);
-          _scrollToPage(widget.initialPage);
-        });
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToPage(quranProvider.currentPage);
         });
       }
 
@@ -87,8 +81,8 @@ class _QuranScreenState extends State<QuranScreen> {
   @override
   void dispose() {
     _autoScrollTimer?.cancel();
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
+    _activePageScrollController.dispose();
+    _pageController.dispose();
     _searchController.dispose();
     try {
       final quranProvider = Provider.of<QuranProvider>(context, listen: false);
@@ -97,36 +91,12 @@ class _QuranScreenState extends State<QuranScreen> {
     super.dispose();
   }
 
-  void _onScroll() {
-    if (!mounted) return;
-    
-    // Show back-to-top button
-    if (_scrollController.offset > 400 && !_showBackToTopBtn) {
-      setState(() => _showBackToTopBtn = true);
-    } else if (_scrollController.offset <= 400 && _showBackToTopBtn) {
-      setState(() => _showBackToTopBtn = false);
-    }
-
-    // Scroll progress tracker
-    if (!_isProgrammaticScroll && _scrollController.hasClients) {
-      final quranProvider = Provider.of<QuranProvider>(context, listen: false);
-      final offset = _scrollController.offset;
-      final pageIndex = (offset / _averagePageHeight).round().clamp(0, 603);
-      final targetPage = pageIndex + 1;
-      
-      if (quranProvider.currentPage != targetPage) {
-        quranProvider.setCurrentPageFromScroll(targetPage);
-      }
-    }
-  }
-
   void _scrollToPage(int pageNum) {
-    if (!_scrollController.hasClients) return;
-    final targetOffset = (pageNum - 1) * _averagePageHeight;
+    if (!_pageController.hasClients) return;
     _isProgrammaticScroll = true;
-    _scrollController.animateTo(
-      targetOffset,
-      duration: const Duration(milliseconds: 400),
+    _pageController.animateToPage(
+      pageNum - 1,
+      duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     ).then((_) {
       _isProgrammaticScroll = false;
@@ -157,33 +127,46 @@ class _QuranScreenState extends State<QuranScreen> {
       _showDownloadProgressDialog(provider);
     }
 
-    // 3. Sync scroll offset when page changes externally
-    if (!_isProgrammaticScroll && _scrollController.hasClients) {
-      final targetOffset = (provider.currentPage - 1) * _averagePageHeight;
-      if ((_scrollController.offset - targetOffset).abs() > 100) {
+    // 3. Sync page change externally
+    if (!_isProgrammaticScroll && _pageController.hasClients) {
+      final currentPageIndex = _pageController.page?.round() ?? 0;
+      if (currentPageIndex + 1 != provider.currentPage) {
         _scrollToPage(provider.currentPage);
       }
     }
   }
 
-  // --- Auto-scroll execution logic ---
+  // Auto Scroll logic customized for PageView
   void _startAutoScroll() {
     _autoScrollTimer?.cancel();
     final appState = Provider.of<AppState>(context, listen: false);
-    
-    // speed is in pixels per second. 
-    // A timer running every 50ms means we execute 20 updates per second.
-    // delta = speed / 20.0
     final double step = appState.autoScrollSpeed / 20.0;
     
     _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      if (_scrollController.hasClients && _isAutoScrolling) {
-        final maxScroll = _scrollController.position.maxScrollExtent;
-        final currentScroll = _scrollController.offset;
+      if (_activePageScrollController.hasClients && _isAutoScrolling) {
+        final maxScroll = _activePageScrollController.position.maxScrollExtent;
+        final currentScroll = _activePageScrollController.offset;
+        
         if (currentScroll >= maxScroll) {
-          _stopAutoScroll();
+          final quranProvider = Provider.of<QuranProvider>(context, listen: false);
+          if (quranProvider.currentPage < 604) {
+            _stopAutoScroll();
+            // Go to next page
+            quranProvider.goToPage(quranProvider.currentPage + 1);
+            // Wait 2 seconds for new page to load, then resume auto scroll from top of new page
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted && _showAutoScrollPanel) {
+                setState(() {
+                  _isAutoScrolling = true;
+                });
+                _startAutoScroll();
+              }
+            });
+          } else {
+            _stopAutoScroll();
+          }
         } else {
-          _scrollController.jumpTo(currentScroll + step);
+          _activePageScrollController.jumpTo(currentScroll + step);
         }
       }
     });
@@ -256,7 +239,6 @@ class _QuranScreenState extends State<QuranScreen> {
     );
   }
 
-  // --- Settings sheet to configure themes, fonts, sizes ---
   void _showReaderSettingsBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -267,7 +249,6 @@ class _QuranScreenState extends State<QuranScreen> {
         return Consumer<AppState>(
           builder: (context, appState, child) {
             final primaryColor = const Color(0xFF0F5A47);
-            final goldColor = const Color(0xFFD4AF37);
             
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
@@ -282,7 +263,6 @@ class _QuranScreenState extends State<QuranScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 1. Theme choices
                   const Text('سمة الخلفية:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.right),
                   const SizedBox(height: 8),
                   Row(
@@ -295,7 +275,6 @@ class _QuranScreenState extends State<QuranScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 2. Font choices
                   const Text('نوع الخط العربي:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.right),
                   const SizedBox(height: 8),
                   Row(
@@ -325,7 +304,6 @@ class _QuranScreenState extends State<QuranScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. Size slider
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -395,13 +373,279 @@ class _QuranScreenState extends State<QuranScreen> {
     );
   }
 
+  void _showSurahIndexBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final appState = Provider.of<AppState>(context);
+            final isDark = appState.isDarkMode;
+            final primaryColor = const Color(0xFF0F5A47);
+            final Color goldColor = const Color(0xFFD4AF37);
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: DefaultTabController(
+                length: 2,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    Text(
+                      'فهرس المصحف الشريف',
+                      style: GoogleFonts.amiri(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? goldColor : primaryColor,
+                      ),
+                    ),
+                    
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? Colors.white10 : Colors.black12,
+                          ),
+                        ),
+                        child: TextField(
+                          textAlign: TextAlign.right,
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                          decoration: const InputDecoration(
+                            hintText: 'ابحث عن سورة بالاسم أو الرقم...',
+                            hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
+                            prefixIcon: Icon(Icons.search, color: Colors.grey),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          onChanged: (val) {
+                            setModalState(() {
+                              _searchQuery = val.trim();
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    
+                    TabBar(
+                      labelColor: goldColor,
+                      unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
+                      indicatorColor: goldColor,
+                      tabs: const [
+                        Tab(text: 'السور'),
+                        Tab(text: 'الأجزاء والأرباع'),
+                      ],
+                    ),
+                    
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          _buildSurahTabList(context, isDark, primaryColor, goldColor, _searchQuery),
+                          _buildJuzTabList(context, isDark, primaryColor, goldColor),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSurahTabList(BuildContext context, bool isDark, Color primaryColor, Color goldColor, String query) {
+    final quranProvider = Provider.of<QuranProvider>(context, listen: false);
+    final List<int> filteredSurahs = [];
+    for (int i = 1; i <= 114; i++) {
+      final name = quran.getSurahNameArabic(i);
+      final englishName = quran.getSurahName(i);
+      if (name.contains(query) || 
+          englishName.toLowerCase().contains(query.toLowerCase()) || 
+          i.toString() == query) {
+        filteredSurahs.add(i);
+      }
+    }
+
+    if (filteredSurahs.isEmpty) {
+      return const Center(child: Text('لا توجد نتائج مطابقة لبحثك.'));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: filteredSurahs.length,
+      itemBuilder: (context, index) {
+        final sNum = filteredSurahs[index];
+        final isMeccan = quran.getPlaceOfRevelation(sNum) == 'Makkah';
+        final totalAyahs = quran.getVerseCount(sNum);
+        final startPage = quran.getPageNumber(sNum, 1);
+        final name = quran.getSurahNameArabic(sNum);
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 10.0),
+          color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+            leading: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: goldColor, width: 1.5),
+              ),
+              child: Center(
+                child: Text(
+                  '$sNum',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? goldColor : primaryColor,
+                    fontFamily: 'Outfit',
+                  ),
+                ),
+              ),
+            ),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  name,
+                  style: GoogleFonts.amiri(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            subtitle: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'صفحة $startPage',
+                  style: TextStyle(color: goldColor, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '$totalAyahs آية',
+                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  isMeccan ? 'مكية 🕋' : 'مدنية 🕌',
+                  style: const TextStyle(fontSize: 11),
+                ),
+              ],
+            ),
+            onTap: () {
+              Navigator.pop(context); // Close bottom sheet instantly to avoid any conflict
+              quranProvider.goToPage(startPage);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildJuzTabList(BuildContext context, bool isDark, Color primaryColor, Color goldColor) {
+    final quranProvider = Provider.of<QuranProvider>(context, listen: false);
+    
+    final List<Map<String, dynamic>> juzList = List.generate(30, (index) {
+      final juzNum = index + 1;
+      final List<int> juzStartPages = [
+        1, 22, 42, 62, 82, 102, 121, 142, 162, 182, 
+        201, 221, 242, 262, 282, 302, 322, 342, 362, 382, 
+        402, 422, 442, 462, 482, 502, 522, 542, 562, 582
+      ];
+      final page = juzStartPages[index];
+      return {
+        'number': juzNum,
+        'name': 'الجزء $juzNum',
+        'page': page,
+        'surahName': quran.getSurahNameArabic(quran.getPageData(page).first['surah']),
+      };
+    });
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16.0),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 2.2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: juzList.length,
+      itemBuilder: (context, index) {
+        final juz = juzList[index];
+        return Card(
+          margin: EdgeInsets.zero,
+          color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: InkWell(
+            onTap: () {
+              Navigator.pop(context); // Close bottom sheet instantly
+              quranProvider.goToPage(juz['page']);
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    juz['name'],
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'ص ${juz['page']}',
+                        style: TextStyle(color: goldColor, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'سورة ${juz['surahName']}',
+                        style: const TextStyle(color: Colors.grey, fontSize: 10),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final quranProvider = Provider.of<QuranProvider>(context);
     final Color primaryColor = const Color(0xFF0F5A47);
     final Color goldColor = const Color(0xFFD4AF37);
-    final isDark = appState.isDarkMode;
 
     final themeMode = appState.quranThemeMode;
     final Color layoutBgColor = themeMode == 'dark'
@@ -409,9 +653,10 @@ class _QuranScreenState extends State<QuranScreen> {
         : (themeMode == 'sepia' ? const Color(0xFFF4ECD8) : const Color(0xFFFDFBF7));
 
     final currentVerses = quranProvider.getVersesOnPage(quranProvider.currentPage);
-    final String titleText = quranProvider.isSearching
-        ? 'البحث في المصحف'
-        : (currentVerses.isNotEmpty ? 'سورة ${currentVerses.first['surahName']}' : 'القرآن الكريم');
+    final String titleText = currentVerses.isNotEmpty ? 'سورة ${currentVerses.first['surahName']}' : 'القرآن الكريم';
+
+    // Verify if we can pop back to home
+    final canPop = Navigator.of(context).canPop();
 
     return Scaffold(
       backgroundColor: layoutBgColor,
@@ -420,177 +665,133 @@ class _QuranScreenState extends State<QuranScreen> {
             ? const Color(0xFF1A1A1A)
             : (themeMode == 'sepia' ? const Color(0xFFE8DECA) : primaryColor),
         foregroundColor: themeMode == 'dark' || themeMode == 'sepia' ? const Color(0xFF5B4636) : Colors.white,
-        title: quranProvider.isSearching
-            ? TextField(
-                controller: _searchController,
-                style: TextStyle(color: themeMode == 'dark' || themeMode == 'sepia' ? const Color(0xFF5B4636) : Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'ابحث عن آية أو سورة...',
-                  hintStyle: TextStyle(color: Colors.black38),
-                  border: InputBorder.none,
-                ),
-                onSubmitted: quranProvider.performSearch,
-              )
-            : Text(
-                titleText,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Outfit',
-                  color: themeMode == 'dark' ? Colors.amber[200] : (themeMode == 'sepia' ? const Color(0xFF5B4636) : Colors.white),
-                ),
+        
+        // Left side: List of Surahs index button (actions inside RTL)
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.format_list_bulleted),
+            onPressed: () => _showSurahIndexBottomSheet(context),
+            tooltip: 'فهرس القرآن الكريم',
+          ),
+        ],
+
+        // Right side: Back, Search and Font Size buttons (leading inside RTL)
+        leadingWidth: canPop ? 150 : 100,
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (canPop)
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
               ),
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () async {
+                final int? targetPage = await showSearch<int?>(
+                  context: context,
+                  delegate: QuranSearchDelegate(
+                    provider: quranProvider,
+                    themeMode: themeMode,
+                  ),
+                );
+                if (targetPage != null) {
+                  quranProvider.goToPage(targetPage);
+                }
+              },
+              tooltip: 'بحث في المصحف',
+            ),
+            IconButton(
+              icon: const Icon(Icons.format_size),
+              onPressed: () => _showReaderSettingsBottomSheet(context),
+              tooltip: 'تخصيص قارئ القرآن',
+            ),
+          ],
+        ),
+
+        // Center: current Surah name with auto-resize
+        centerTitle: true,
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: Text(
+            titleText,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Outfit',
+              fontSize: 20,
+              color: themeMode == 'dark' ? Colors.amber[200] : (themeMode == 'sepia' ? const Color(0xFF5B4636) : Colors.white),
+            ),
+          ),
+        ),
         iconTheme: IconThemeData(
           color: themeMode == 'dark' ? Colors.amber[200] : (themeMode == 'sepia' ? const Color(0xFF5B4636) : Colors.white),
         ),
-        centerTitle: true,
-        actions: [
-          if (!quranProvider.isSearching)
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () => quranProvider.toggleSearch(true),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                quranProvider.toggleSearch(false);
-                _searchController.clear();
-              },
-            ),
-          IconButton(
-            icon: const Icon(Icons.format_size),
-            onPressed: () => _showReaderSettingsBottomSheet(context),
-            tooltip: 'تخصيص قارئ القرآن',
-          ),
-          IconButton(
-            icon: const Icon(Icons.swap_vertical_circle),
-            onPressed: () {
-              setState(() {
-                _showAutoScrollPanel = !_showAutoScrollPanel;
-                if (!_showAutoScrollPanel) {
-                  _stopAutoScroll();
-                }
-              });
-            },
-            color: _showAutoScrollPanel ? goldColor : null,
-            tooltip: 'التمرير التلقائي',
-          ),
-          IconButton(
-            icon: const Icon(Icons.import_contacts),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const QuranIndexScreen()),
-              );
-            },
-            tooltip: 'فهرس القرآن الكريم',
-          )
-        ],
       ),
       body: Stack(
         children: [
           Column(
             children: [
-              // Search results panel
-              if (quranProvider.isSearching && quranProvider.searchResults.isNotEmpty)
-                Expanded(
-                  child: Container(
-                    color: layoutBgColor,
-                    child: ListView.builder(
-                      itemCount: quranProvider.searchResults.length,
-                      itemBuilder: (context, index) {
-                        final res = quranProvider.searchResults[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                          color: themeMode == 'dark' ? const Color(0xFF2C2C2C) : Colors.white,
-                          child: ListTile(
-                            title: Text(
-                              res['text'],
-                              style: GoogleFonts.amiri(
-                                fontSize: 18,
-                                color: themeMode == 'dark' ? Colors.amber[200] : primaryColor,
-                              ),
-                              textAlign: TextAlign.right,
-                              textDirection: TextDirection.rtl,
-                            ),
-                            subtitle: Text(
-                              'سورة ${res['surahName']} - الآية ${res['ayah']} - صفحة ${res['page']}',
-                              textAlign: TextAlign.left,
-                              style: TextStyle(color: themeMode == 'dark' ? Colors.grey[400] : Colors.grey[600]),
-                            ),
-                            onTap: () {
-                              quranProvider.toggleSearch(false);
-                              _searchController.clear();
-                              quranProvider.goToPage(res['page']);
-                              _scrollToPage(res['page']);
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                )
-              else if (quranProvider.isSearching && quranProvider.searchResults.isEmpty)
-                const Expanded(
-                  child: Center(child: Text('لا توجد نتائج مطابقة لبحثك.')),
-                )
-              else
-                // Continuous Vertical Scroll List
-                Expanded(
-                  child: ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-                    itemCount: 604,
-                    separatorBuilder: (context, index) {
-                      final nextPage = index + 2;
-                      final verses = quranProvider.getVersesOnPage(nextPage);
-                      final nextSurah = verses.isNotEmpty ? verses.first['surah'] as int : 1;
-                      return QuranPageSeparator(
-                        pageNumber: nextPage,
-                        nextSurahNumber: nextSurah,
-                      );
-                    },
-                    itemBuilder: (context, index) {
-                      final pageNum = index + 1;
-                      final pageVerses = quranProvider.getVersesOnPage(pageNum);
+              // Horizontal Swipe PageView Reader
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  scrollDirection: Axis.horizontal,
+                  reverse: true, // Swiping RTL
+                  physics: const ClampingScrollPhysics(),
+                  itemCount: 604,
+                  onPageChanged: (index) {
+                    final targetPage = index + 1;
+                    if (quranProvider.currentPage != targetPage) {
+                      quranProvider.setCurrentPageFromScroll(targetPage);
+                    }
+                  },
+                  itemBuilder: (context, index) {
+                    final pageNum = index + 1;
+                    final pageVerses = quranProvider.getVersesOnPage(pageNum);
 
-                      if (pageVerses.isEmpty) {
-                        return const SizedBox(
-                          height: 300,
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-
-                      return Container(
-                        padding: const EdgeInsets.only(bottom: 24.0),
-                        child: QuranPageWidget(
-                          pageNumber: pageNum,
-                          verses: pageVerses,
-                          fontSize: appState.fontSize,
-                          fontFamily: appState.quranFontFamily,
-                          themeMode: themeMode,
-                          activePlayingSurah: quranProvider.activePlayingSurah,
-                          activePlayingAyah: quranProvider.activePlayingAyah,
-                          selectedAyahSurah: quranProvider.selectedAyahSurah,
-                          selectedAyahNumber: quranProvider.selectedAyahNumber,
-                          onAyahTap: (surah, ayah) {
-                            quranProvider.selectAyah(surah, ayah);
-                            _showVerseActionsBottomSheet(
-                              context, quranProvider, surah, ayah, quran.getVerse(surah, ayah));
-                          },
-                        ),
+                    if (pageVerses.isEmpty) {
+                      return const SizedBox(
+                        height: 300,
+                        child: Center(child: CircularProgressIndicator()),
                       );
-                    },
-                  ),
+                    }
+
+                    final bool isActive = (quranProvider.currentPage - 1) == index;
+
+                    return SingleChildScrollView(
+                      controller: isActive ? _activePageScrollController : null,
+                      physics: const ClampingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                      child: QuranPageWidget(
+                        pageNumber: pageNum,
+                        verses: pageVerses,
+                        fontSize: appState.fontSize,
+                        fontFamily: appState.quranFontFamily,
+                        themeMode: themeMode,
+                        activePlayingSurah: quranProvider.activePlayingSurah,
+                        activePlayingAyah: quranProvider.activePlayingAyah,
+                        selectedAyahSurah: quranProvider.selectedAyahSurah,
+                        selectedAyahNumber: quranProvider.selectedAyahNumber,
+                        onAyahTap: (surah, ayah) {
+                          quranProvider.selectAyah(surah, ayah);
+                          _showVerseActionsBottomSheet(
+                            context, quranProvider, surah, ayah, quran.getVerse(surah, ayah));
+                        },
+                      ),
+                    );
+                  },
                 ),
+              ),
 
-              // Audio player bottom panel
+              // Audio player bottom panel (now with auto scroll toggle)
               AudioPlayerWidget(
                 isPlaying: quranProvider.isPlaying,
                 reciters: quranProvider.reciters,
                 currentReciterId: quranProvider.currentReciterId,
                 playbackSpeed: quranProvider.playbackSpeed,
                 repeatTimes: quranProvider.repeatTimes,
+                isAutoScrollOn: _showAutoScrollPanel,
                 onPlayToggle: () {
                   if (quranProvider.isPlaying) {
                     quranProvider.pauseRecitation();
@@ -602,6 +803,17 @@ class _QuranScreenState extends State<QuranScreen> {
                 onSpeedChanged: quranProvider.changePlaybackSpeed,
                 onRepeatChanged: quranProvider.changeRepeatTimes,
                 onDownload: quranProvider.downloadPageAudio,
+                onAutoScrollToggle: () {
+                  setState(() {
+                    _showAutoScrollPanel = !_showAutoScrollPanel;
+                    if (_showAutoScrollPanel) {
+                      _isAutoScrolling = true;
+                      _startAutoScroll();
+                    } else {
+                      _stopAutoScroll();
+                    }
+                  });
+                },
               ),
             ],
           ),
@@ -646,7 +858,7 @@ class _QuranScreenState extends State<QuranScreen> {
                         onPressed: _toggleAutoScrolling,
                       ),
                       const Text(
-                        'القراءة التلقائية',
+                        'التشغيل التلقائي للصفحات',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                     ],
@@ -654,33 +866,11 @@ class _QuranScreenState extends State<QuranScreen> {
                 ),
               ),
             ),
-
-          // Floating back-to-top button
-          if (_showBackToTopBtn)
-            Positioned(
-              bottom: _showAutoScrollPanel ? 150 : 90,
-              right: 16,
-              child: FloatingActionButton(
-                mini: true,
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                onPressed: () {
-                  _isProgrammaticScroll = true;
-                  _scrollController.animateTo(
-                    0,
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeOut,
-                  ).then((_) => _isProgrammaticScroll = false);
-                },
-                child: const Icon(Icons.arrow_upward),
-              ),
-            ),
         ],
       ),
     );
   }
 
-  // --- Ayah options dialog sheet ---
   void _showVerseActionsBottomSheet(
       BuildContext context, QuranProvider provider, int surah, int ayah, String text) {
     showModalBottomSheet(
@@ -780,6 +970,205 @@ class _QuranScreenState extends State<QuranScreen> {
           ayah: ayah,
           verseText: verseText,
         ),
+      ),
+    );
+  }
+}
+
+// Custom Search Delegate for Quran Surahs and Verses
+class QuranSearchDelegate extends SearchDelegate<int?> {
+  final QuranProvider provider;
+  final String themeMode;
+
+  QuranSearchDelegate({required this.provider, required this.themeMode});
+
+  @override
+  String get searchFieldLabel => 'ابحث عن سورة أو آية...';
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = const Color(0xFF0F5A47);
+    return theme.copyWith(
+      appBarTheme: theme.appBarTheme.copyWith(
+        backgroundColor: themeMode == 'dark' ? const Color(0xFF1A1A1A) : (themeMode == 'sepia' ? const Color(0xFFE8DECA) : primaryColor),
+        foregroundColor: themeMode == 'dark' || themeMode == 'sepia' ? const Color(0xFF5B4636) : Colors.white,
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        border: InputBorder.none,
+        hintStyle: TextStyle(color: Colors.grey),
+      ),
+    );
+  }
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () {
+          query = '';
+        },
+      )
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () {
+        close(context, null);
+      },
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildSuggestionsList(context);
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildSuggestionsList(context);
+  }
+
+  Widget _buildSuggestionsList(BuildContext context) {
+    final trimmedQuery = query.trim();
+    if (trimmedQuery.isEmpty) {
+      return Container(
+        color: themeMode == 'dark' ? const Color(0xFF121212) : const Color(0xFFF9FBF9),
+        child: const Center(
+          child: Text('اكتب كلمة للبحث عن آية أو سورة...'),
+        ),
+      );
+    }
+
+    final Color primaryColor = const Color(0xFF0F5A47);
+    final Color goldColor = const Color(0xFFD4AF37);
+    final isDark = themeMode == 'dark';
+
+    // 1. Search Surah Names
+    final List<int> matchedSurahs = [];
+    for (int i = 1; i <= 114; i++) {
+      final name = quran.getSurahNameArabic(i);
+      final englishName = quran.getSurahName(i);
+      if (name.contains(trimmedQuery) || 
+          englishName.toLowerCase().contains(trimmedQuery.toLowerCase())) {
+        matchedSurahs.add(i);
+      }
+    }
+
+    // 2. Search Verses (limit to top 30 for performance)
+    final List<Map<String, dynamic>> matchedVerses = [];
+    int verseMatchesCount = 0;
+    for (int s = 1; s <= 114; s++) {
+      if (verseMatchesCount >= 30) break;
+      final count = quran.getVerseCount(s);
+      final sName = quran.getSurahNameArabic(s);
+      for (int v = 1; v <= count; v++) {
+        final text = quran.getVerse(s, v);
+        if (text.contains(trimmedQuery)) {
+          matchedVerses.add({
+            'surah': s,
+            'ayah': v,
+            'text': text,
+            'surahName': sName,
+            'page': quran.getPageNumber(s, v),
+          });
+          verseMatchesCount++;
+          if (verseMatchesCount >= 30) break;
+        }
+      }
+    }
+
+    return Container(
+      color: themeMode == 'dark' ? const Color(0xFF1E1E1E) : (themeMode == 'sepia' ? const Color(0xFFF4ECD8) : const Color(0xFFFDFBF7)),
+      child: ListView(
+        children: [
+          // Surah Results Header
+          if (matchedSurahs.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                'السور المطابقة:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? goldColor : primaryColor,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.right,
+              ),
+            ),
+            ...matchedSurahs.map((sNum) {
+              final page = quran.getPageNumber(sNum, 1);
+              return ListTile(
+                leading: Icon(Icons.menu_book, color: goldColor),
+                title: Text(
+                  'سورة ${quran.getSurahNameArabic(sNum)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.right,
+                ),
+                subtitle: Text(
+                  'صفحة البداية: $page | آياتها: ${quran.getVerseCount(sNum)}',
+                  textAlign: TextAlign.right,
+                ),
+                onTap: () {
+                  close(context, page);
+                },
+              );
+            }),
+            const Divider(),
+          ],
+
+          // Verse Results Header
+          if (matchedVerses.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                'الآيات المطابقة:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? goldColor : primaryColor,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.right,
+              ),
+            ),
+            ...matchedVerses.map((verse) {
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                child: ListTile(
+                  title: Text(
+                    verse['text'],
+                    style: GoogleFonts.amiri(
+                      fontSize: 18,
+                      color: isDark ? Colors.amber[100] : primaryColor,
+                    ),
+                    textAlign: TextAlign.right,
+                    textDirection: TextDirection.rtl,
+                  ),
+                  subtitle: Text(
+                    'سورة ${verse['surahName']} - الآية ${verse['ayah']} - صفحة ${verse['page']}',
+                    textAlign: TextAlign.left,
+                  ),
+                  onTap: () {
+                    close(context, verse['page'] as int);
+                  },
+                ),
+              );
+            }),
+          ],
+
+          if (matchedSurahs.isEmpty && matchedVerses.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Center(
+                child: Text('لا توجد نتائج مطابقة لمصطلح البحث.'),
+              ),
+            ),
+        ],
       ),
     );
   }

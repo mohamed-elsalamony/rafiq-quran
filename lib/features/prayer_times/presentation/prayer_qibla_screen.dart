@@ -272,8 +272,12 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                               }),
                             ],
                             onChanged: (val) {
-                              if (val != null && val != 'موقعي الحالي') {
-                                prayerProvider.selectCity(val);
+                              if (val != null) {
+                                if (val == 'موقعي الحالي') {
+                                  prayerProvider.detectLocation();
+                                } else {
+                                  prayerProvider.selectCity(val);
+                                }
                               }
                             },
                           ),

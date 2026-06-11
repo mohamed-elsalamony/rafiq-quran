@@ -11,6 +11,10 @@ class AudioPlayerWidget extends StatelessWidget {
   final ValueChanged<double> onSpeedChanged;
   final ValueChanged<int> onRepeatChanged;
   final VoidCallback onDownload;
+  
+  // New AutoScroll parameters
+  final VoidCallback? onAutoScrollToggle;
+  final bool isAutoScrollOn;
 
   const AudioPlayerWidget({
     super.key,
@@ -24,6 +28,8 @@ class AudioPlayerWidget extends StatelessWidget {
     required this.onSpeedChanged,
     required this.onRepeatChanged,
     required this.onDownload,
+    this.onAutoScrollToggle,
+    this.isAutoScrollOn = false,
   });
 
   @override
@@ -98,11 +104,11 @@ class AudioPlayerWidget extends StatelessWidget {
           ),
           const Divider(height: 8, thickness: 0.5),
 
-          // شريط الضوابط السفلي: سرعة التشغيل، زر التشغيل، التكرار
+          // شريط الضوابط السفلي: سرعة التشغيل، التشغيل التلقائي، زر التشغيل، التكرار
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // خيار سرعة التشغيل
+              // 1. خيار سرعة التشغيل
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -126,7 +132,18 @@ class AudioPlayerWidget extends StatelessWidget {
                 ],
               ),
 
-              // زر التشغيل والتعطيل الرئيسي
+              // 2. زر التشغيل التلقائي/التمرير التلقائي للصفحات (New Placement)
+              if (onAutoScrollToggle != null)
+                IconButton(
+                  icon: Icon(
+                    Icons.swap_vertical_circle,
+                    color: isAutoScrollOn ? accentColor : Colors.grey,
+                  ),
+                  onPressed: onAutoScrollToggle,
+                  tooltip: 'التشغيل والتمرير التلقائي للصفحات',
+                ),
+
+              // 3. زر التشغيل والتعطيل الرئيسي للصوت
               GestureDetector(
                 onTap: onPlayToggle,
                 child: Container(
@@ -143,7 +160,7 @@ class AudioPlayerWidget extends StatelessWidget {
                 ),
               ),
 
-              // خيار تكرار الآية للحفظ
+              // 4. خيار تكرار الآية للحفظ
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

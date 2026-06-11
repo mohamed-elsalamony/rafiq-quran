@@ -10,7 +10,7 @@ class ProphetBlessingService extends ChangeNotifier {
   static const String _keySimulatedGlobalCount = 'prophet_blessing_simulated_global_count';
 
   int _personalCount = 0;
-  int _globalCount = 1254320; // Default simulated/initial count
+  int _globalCount = 0; // Default simulated/initial count
   bool _isUsingFirebase = false;
   Timer? _simulationTimer;
   StreamSubscription? _firestoreSubscription;
@@ -26,7 +26,7 @@ class ProphetBlessingService extends ChangeNotifier {
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
     _personalCount = prefs.getInt(_keyPersonalCount) ?? 0;
-    _globalCount = prefs.getInt(_keySimulatedGlobalCount) ?? 1254320;
+    _globalCount = prefs.getInt(_keySimulatedGlobalCount) ?? 0;
     notifyListeners();
 
     // Check if Firebase is initialized
@@ -55,7 +55,7 @@ class ProphetBlessingService extends ChangeNotifier {
           }
         } else {
           // Create document if it doesn't exist
-          docRef.set({'global_count': 1254320});
+          docRef.set({'global_count': 0});
         }
       }, onError: (error) {
         debugPrint("Firestore listen error: $error. Falling back to simulation.");
@@ -99,7 +99,7 @@ class ProphetBlessingService extends ChangeNotifier {
           if (!snapshot.exists) {
             transaction.set(docRef, {'global_count': _globalCount});
           } else {
-            final currentGlobal = snapshot.data()?['global_count'] as int? ?? 1254320;
+            final currentGlobal = snapshot.data()?['global_count'] as int? ?? 0;
             transaction.update(docRef, {'global_count': currentGlobal + 1});
           }
         });

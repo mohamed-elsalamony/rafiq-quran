@@ -137,12 +137,25 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
       return (((page - 2) ~/ 10) + 1).clamp(1, 60);
     }
 
-    final hasBasmalah = widget.verses.isNotEmpty &&
-        widget.verses.first['ayah'] == 1 &&
-        widget.verses.first['surah'] != 1 &&
-        widget.verses.first['surah'] != 9;
+    // Group verses by surah to display Surah headers and Basmalahs correctly in-line
+    final List<List<Map<String, dynamic>>> surahGroups = [];
+    if (widget.verses.isNotEmpty) {
+      List<Map<String, dynamic>> currentGroup = [widget.verses.first];
+      for (int i = 1; i < widget.verses.length; i++) {
+        final verse = widget.verses[i];
+        final prevVerse = widget.verses[i - 1];
+        if (verse['surah'] == prevVerse['surah']) {
+          currentGroup.add(verse);
+        } else {
+          surahGroups.add(currentGroup);
+          currentGroup = [verse];
+        }
+      }
+      surahGroups.add(currentGroup);
+    }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -175,41 +188,141 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
           ],
         ),
         const Divider(height: 20),
-        if (hasBasmalah)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Text(
-              quran.basmala,
-              style: GoogleFonts.amiri(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: widget.themeMode == 'dark'
-                    ? Colors.amber[100]
-                    : (widget.themeMode == 'sepia' ? const Color(0xFF8C3E15) : primaryColor),
+        
+        ...surahGroups.map((group) {
+          final firstVerse = group.first;
+          final int sNum = firstVerse['surah'] as int;
+          final int aNum = firstVerse['ayah'] as int;
+          
+          // Show Surah header only when a new Surah starts (ayah == 1)
+          final bool showHeader = aNum == 1;
+          final bool showBasmalah = showHeader && sNum != 1 && sNum != 9;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (showHeader)
+                SurahHeaderBanner(
+                  surahNumber: sNum,
+                  themeMode: widget.themeMode,
+                ),
+              if (showBasmalah)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Text(
+                    quran.basmala,
+                    style: GoogleFonts.amiri(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: widget.themeMode == 'dark'
+                          ? Colors.amber[100]
+                          : (widget.themeMode == 'sepia' ? const Color(0xFF8C3E15) : primaryColor),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              RichText(
+                textAlign: TextAlign.justify,
+                textDirection: TextDirection.rtl,
+                text: TextSpan(
+                  children: List.generate(group.length, (idx) {
+                    final verse = group[idx];
+                    final sVal = verse['surah'] as int;
+                    final aVal = verse['ayah'] as int;
+                    final isAudioPlaying = (widget.activePlayingSurah == sVal && widget.activePlayingAyah == aVal);
+                    final isTextSelected = (widget.selectedAyahSurah == sVal && widget.selectedAyahNumber == aVal);
+
+                    // Find index of this verse in global widget.verses to match recognizer
+                    final globalIdx = widget.verses.indexWhere((v) => v['surah'] == sVal && v['ayah'] == aVal);
+
+                    return TextSpan(
+                      text: '${verse['text']} ﴿${quran.getVerseEndSymbol(aVal)}﴾ ',
+                      style: _getQuranTextStyle(isAudioPlaying, isTextSelected),
+                      recognizer: (globalIdx != -1 && globalIdx < _recognizers.length) ? _recognizers[globalIdx] : null,
+                    );
+                  }),
+                ),
               ),
-              textAlign: TextAlign.center,
+              const SizedBox(height: 16),
+            ],
+          );
+        }).toList(),
+      ],
+    );
+  }
+}
+
+class SurahHeaderBanner extends StatelessWidget {
+  final int surahNumber;
+  final String themeMode;
+
+  const SurahHeaderBanner({
+    super.key,
+    required this.surahNumber,
+    required this.themeMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color primaryColor = const Color(0xFF0F5A47);
+    final Color goldColor = const Color(0xFFD4AF37);
+    final isDark = themeMode == 'dark';
+
+    final String surahName = quran.getSurahNameArabic(surahNumber);
+    final String revelationPlace = quran.getPlaceOfRevelation(surahNumber) == 'Makyah' ? 'مكية' : 'مدنية';
+    final int versesCount = quran.getVerseCount(surahNumber);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFFDFBF7),
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(
+          color: goldColor.withOpacity(0.6),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 8.0,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.star, color: goldColor, size: 12),
+              const SizedBox(width: 8),
+              Text(
+                'سورة $surahName',
+                style: GoogleFonts.amiri(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? goldColor : primaryColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.star, color: goldColor, size: 12),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'نزلت في: $revelationPlace | آياتها: $versesCount',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.grey[300] : Colors.grey[700],
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Amiri',
             ),
           ),
-        RichText(
-          textAlign: TextAlign.justify,
-          textDirection: TextDirection.rtl,
-          text: TextSpan(
-            children: List.generate(widget.verses.length, (idx) {
-              final verse = widget.verses[idx];
-              final sNum = verse['surah'] as int;
-              final aNum = verse['ayah'] as int;
-              final isAudioPlaying = (widget.activePlayingSurah == sNum && widget.activePlayingAyah == aNum);
-              final isTextSelected = (widget.selectedAyahSurah == sNum && widget.selectedAyahNumber == aNum);
-
-              return TextSpan(
-                text: '${verse['text']} ﴿${quran.getVerseEndSymbol(aNum)}﴾ ',
-                style: _getQuranTextStyle(isAudioPlaying, isTextSelected),
-                recognizer: idx < _recognizers.length ? _recognizers[idx] : null,
-              );
-            }),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
