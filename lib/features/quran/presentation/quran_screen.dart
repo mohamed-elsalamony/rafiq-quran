@@ -379,6 +379,7 @@ class _QuranScreenState extends State<QuranScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        String modalSearchQuery = '';
         return StatefulBuilder(
           builder: (context, setModalState) {
             final appState = Provider.of<AppState>(context);
@@ -438,7 +439,7 @@ class _QuranScreenState extends State<QuranScreen> {
                           ),
                           onChanged: (val) {
                             setModalState(() {
-                              _searchQuery = val.trim();
+                              modalSearchQuery = val.trim();
                             });
                           },
                         ),
@@ -458,7 +459,7 @@ class _QuranScreenState extends State<QuranScreen> {
                     Expanded(
                       child: TabBarView(
                         children: [
-                          _buildSurahTabList(context, isDark, primaryColor, goldColor, _searchQuery),
+                          _buildSurahTabList(context, isDark, primaryColor, goldColor, modalSearchQuery),
                           _buildJuzTabList(context, isDark, primaryColor, goldColor),
                         ],
                       ),
@@ -559,6 +560,9 @@ class _QuranScreenState extends State<QuranScreen> {
             ),
             onTap: () {
               Navigator.pop(context); // Close bottom sheet instantly to avoid any conflict
+              if (quranProvider.isPlaying) {
+                quranProvider.pauseRecitation();
+              }
               quranProvider.goToPage(startPage);
             },
           ),
@@ -604,6 +608,9 @@ class _QuranScreenState extends State<QuranScreen> {
           child: InkWell(
             onTap: () {
               Navigator.pop(context); // Close bottom sheet instantly
+              if (quranProvider.isPlaying) {
+                quranProvider.pauseRecitation();
+              }
               quranProvider.goToPage(juz['page']);
             },
             borderRadius: BorderRadius.circular(12),
@@ -666,48 +673,47 @@ class _QuranScreenState extends State<QuranScreen> {
             : (themeMode == 'sepia' ? const Color(0xFFE8DECA) : primaryColor),
         foregroundColor: themeMode == 'dark' || themeMode == 'sepia' ? const Color(0xFF5B4636) : Colors.white,
         
-        // Left side: List of Surahs index button (actions inside RTL)
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              )
+            : IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+        
         actions: [
+          IconButton(
+            icon: const Icon(Icons.format_size),
+            onPressed: () => _showReaderSettingsBottomSheet(context),
+            tooltip: 'تخصيص قارئ القرآن',
+          ),
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () async {
+              final int? targetPage = await showSearch<int?>(
+                context: context,
+                delegate: QuranSearchDelegate(
+                  provider: quranProvider,
+                  themeMode: themeMode,
+                ),
+              );
+              if (targetPage != null) {
+                if (quranProvider.isPlaying) {
+                  quranProvider.pauseRecitation();
+                }
+                quranProvider.goToPage(targetPage);
+              }
+            },
+            tooltip: 'بحث في المصحف',
+          ),
           IconButton(
             icon: const Icon(Icons.format_list_bulleted),
             onPressed: () => _showSurahIndexBottomSheet(context),
             tooltip: 'فهرس القرآن الكريم',
           ),
         ],
-
-        // Right side: Back, Search and Font Size buttons (leading inside RTL)
-        leadingWidth: canPop ? 150 : 100,
-        leading: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (canPop)
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
-              ),
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () async {
-                final int? targetPage = await showSearch<int?>(
-                  context: context,
-                  delegate: QuranSearchDelegate(
-                    provider: quranProvider,
-                    themeMode: themeMode,
-                  ),
-                );
-                if (targetPage != null) {
-                  quranProvider.goToPage(targetPage);
-                }
-              },
-              tooltip: 'بحث في المصحف',
-            ),
-            IconButton(
-              icon: const Icon(Icons.format_size),
-              onPressed: () => _showReaderSettingsBottomSheet(context),
-              tooltip: 'تخصيص قارئ القرآن',
-            ),
-          ],
-        ),
 
         // Center: current Surah name with auto-resize
         centerTitle: true,
@@ -739,6 +745,7 @@ class _QuranScreenState extends State<QuranScreen> {
                   scrollDirection: Axis.horizontal,
                   reverse: true, // Swiping RTL
                   physics: const ClampingScrollPhysics(),
+                  allowImplicitScrolling: true,
                   itemCount: 604,
                   onPageChanged: (index) {
                     final targetPage = index + 1;

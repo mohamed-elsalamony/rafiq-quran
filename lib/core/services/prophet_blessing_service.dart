@@ -27,6 +27,12 @@ class ProphetBlessingService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _personalCount = prefs.getInt(_keyPersonalCount) ?? 0;
     _globalCount = prefs.getInt(_keySimulatedGlobalCount) ?? 0;
+    
+    // Reset global counter if it contains old huge simulated data
+    if (_globalCount > 100000) {
+      _globalCount = _personalCount;
+      await prefs.setInt(_keySimulatedGlobalCount, _globalCount);
+    }
     notifyListeners();
 
     // Check if Firebase is initialized
@@ -69,11 +75,11 @@ class ProphetBlessingService extends ChangeNotifier {
 
   void _startSimulation() {
     _simulationTimer?.cancel();
-    // Periodically increment global count to simulate multiple users
+    // Periodically increment global count to simulate multiple users slowly and realistically
     final random = Random();
-    _simulationTimer = Timer.periodic(const Duration(seconds: 4), (timer) async {
-      // Increment by a random number between 3 and 12
-      final increment = random.nextInt(10) + 3;
+    _simulationTimer = Timer.periodic(const Duration(seconds: 20), (timer) async {
+      // Increment by a random number between 1 and 3
+      final increment = random.nextInt(3) + 1;
       _globalCount += increment;
       notifyListeners();
       

@@ -5,6 +5,8 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:adhan/adhan.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'prayer_provider.dart';
 
 class QiblaCompassScreen extends StatefulWidget {
   const QiblaCompassScreen({super.key});
@@ -57,11 +59,31 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-      );
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+        ).timeout(const Duration(seconds: 4));
+      } catch (e) {
+        debugPrint("Error getting current location: $e. Attempting last known position...");
+        try {
+          position = await Geolocator.getLastKnownPosition();
+        } catch (_) {}
+      }
 
-      final coordinates = Coordinates(position.latitude, position.longitude);
+      double lat;
+      double lon;
+      if (position != null) {
+        lat = position.latitude;
+        lon = position.longitude;
+      } else {
+        // Fallback to active city in provider
+        final prayerProvider = Provider.of<PrayerProvider>(context, listen: false);
+        lat = prayerProvider.currentCity.latitude;
+        lon = prayerProvider.currentCity.longitude;
+      }
+
+      final coordinates = Coordinates(lat, lon);
       final qiblaDirection = Qibla(coordinates).direction;
 
       setState(() {

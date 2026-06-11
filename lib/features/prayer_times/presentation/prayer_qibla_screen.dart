@@ -488,32 +488,6 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                         children: [
                           Row(
                             children: [
-                              if (hasAlarm)
-                                IconButton(
-                                  icon: Icon(
-                                    isAlarmOn ? Icons.notifications_active : Icons.notifications_off,
-                                    color: isAlarmOn ? goldColor : Colors.grey,
-                                  ),
-                                  onPressed: () {
-                                    prayerProvider.toggleAlarm(pKey);
-                                  },
-                                  tooltip: isAlarmOn ? 'تعطيل منبه الأذان' : 'تفعيل منبه الأذان',
-                                )
-                              else
-                                const SizedBox(width: 48), // Spacer placeholder for Sunrise
-                              Text(
-                                _formatTime(pr['time']),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: isNext ? FontWeight.bold : FontWeight.normal,
-                                  color: isNext ? goldColor : (isDark ? Colors.white : Colors.black87),
-                                  fontFamily: 'Outfit',
-                                ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
                               Text(
                                 name,
                                 style: TextStyle(
@@ -527,6 +501,32 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                                 pr['icon'],
                                 color: isNext ? goldColor : Colors.grey,
                                 size: 22,
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              if (hasAlarm)
+                                IconButton(
+                                  icon: Icon(
+                                    isAlarmOn ? Icons.notifications_active : Icons.notifications_off,
+                                    color: isAlarmOn ? goldColor : Colors.grey,
+                                  ),
+                                  onPressed: () {
+                                    prayerProvider.toggleAlarm(pKey);
+                                  },
+                                  tooltip: isAlarmOn ? 'تعطيل منبه الأذان' : 'تفعيل منبه الأذان',
+                                )
+                              else
+                                const SizedBox(width: 48),
+                              Text(
+                                _formatTime(pr['time']),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: isNext ? FontWeight.bold : FontWeight.normal,
+                                  color: isNext ? goldColor : (isDark ? Colors.white : Colors.black87),
+                                  fontFamily: 'Outfit',
+                                ),
                               ),
                             ],
                           ),

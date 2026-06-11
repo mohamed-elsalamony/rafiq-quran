@@ -238,6 +238,9 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                                   color: isLastRead ? goldColor : Colors.grey,
                                 ),
                                 onTap: () {
+                                  if (quranProvider.isPlaying) {
+                                    quranProvider.pauseRecitation();
+                                  }
                                   quranProvider.goToPage(startPage);
                                   Navigator.pop(context);
                                 },
@@ -279,6 +282,9 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             child: InkWell(
                               onTap: () {
+                                if (quranProvider.isPlaying) {
+                                  quranProvider.pauseRecitation();
+                                }
                                 quranProvider.goToPage(juz['page']);
                                 Navigator.pop(context);
                               },
@@ -345,6 +351,9 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             child: InkWell(
                               onTap: () {
+                                if (quranProvider.isPlaying) {
+                                  quranProvider.pauseRecitation();
+                                }
                                 quranProvider.goToPage(hizb['page']);
                                 Navigator.pop(context);
                               },

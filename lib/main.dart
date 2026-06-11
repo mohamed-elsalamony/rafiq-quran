@@ -170,6 +170,10 @@ class _MainShellState extends State<MainShell> {
     final Color accentColor = const Color(0xFFD4AF37);
     final isDark = appState.isDarkMode;
 
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double tabWidth = screenWidth / 5;
+    final bool isRtl = Directionality.of(context) == TextDirection.rtl;
+
     // دائماً يفتح على الرئيسية عند الإقلاع الأول، ونلغي الاستعادة التلقائية لآخر شاشة
     if (!_isInit) {
       _currentIndex = 0;
@@ -266,55 +270,239 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
       ),
-      appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+      appBar: _currentIndex == 0
+          ? AppBar(
+              backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              leading: Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    'رفيق القرآن',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            )
+          : null,
+      body: _tabs[_currentIndex],
+      bottomNavigationBar: _buildBottomNavigationBar(
+        screenWidth,
+        tabWidth,
+        isRtl,
+        isDark,
+        primaryColor,
+        accentColor,
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar(
+    double screenWidth,
+    double tabWidth,
+    bool isRtl,
+    bool isDark,
+    Color primaryColor,
+    Color accentColor,
+  ) {
+    final double targetX = isRtl
+        ? screenWidth - (_currentIndex + 0.5) * tabWidth
+        : (_currentIndex + 0.5) * tabWidth;
+
+    return Container(
+      height: 70, // Extra height for the floating active button overflow
+      color: Colors.transparent,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: targetX, end: targetX),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        builder: (context, animX, child) {
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // 1. Notched base background path
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 60,
+                child: CustomPaint(
+                  painter: NotchedBasePainter(
+                    centerX: animX,
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  ),
+                ),
+              ),
+
+              // 2. Floating Circular Active Button
+              Positioned(
+                left: animX - 28,
+                bottom: 14,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: primaryColor,
+                    border: Border.all(color: accentColor, width: 2.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryColor.withOpacity(0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    _getIconForIndex(_currentIndex, isActive: true),
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ),
+              ),
+
+              // 3. Row of tab actions
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 60,
+                child: Row(
+                  children: [
+                    _buildNavItem(0, Icons.home_outlined, 'الرئيسية', isDark, accentColor),
+                    _buildNavItem(1, Icons.menu_book_outlined, 'المصحف', isDark, accentColor),
+                    _buildNavItem(2, Icons.library_books_outlined, 'الأذكار', isDark, accentColor),
+                    _buildNavItem(3, Icons.fingerprint_outlined, 'السبحة', isDark, accentColor),
+                    _buildNavItem(4, Icons.explore_outlined, 'الصلاة', isDark, accentColor),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    String label,
+    bool isDark,
+    Color accentColor,
+  ) {
+    final bool isSelected = _currentIndex == index;
+
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _onTabChanged(index),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (isSelected)
+              const SizedBox(height: 24)
+            else
+              Icon(
+                icon,
+                color: isDark ? Colors.white60 : Colors.grey[600],
+                size: 22,
+              ),
+            const SizedBox(height: 3),
             Text(
-              'رفيق القرآن',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? accentColor
+                    : (isDark ? Colors.white60 : Colors.grey[600]),
+                fontFamily: 'Outfit',
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
-      body: _tabs[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabChanged,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: accentColor,
-        unselectedItemColor: isDark ? Colors.white60 : Colors.grey[600],
-        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        selectedLabelStyle: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-          color: accentColor,
-          fontFamily: 'Outfit',
-        ),
-        unselectedLabelStyle: TextStyle(
-          fontSize: 11,
-          color: isDark ? Colors.white60 : Colors.grey[600],
-          fontFamily: 'Outfit',
-        ),
-        selectedIconTheme: IconThemeData(size: 26, color: accentColor),
-        unselectedIconTheme: IconThemeData(size: 22, color: isDark ? Colors.white60 : Colors.grey[600]),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'الرئيسية'),
-          BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), activeIcon: Icon(Icons.menu_book), label: 'المصحف'),
-          BottomNavigationBarItem(icon: Icon(Icons.library_books_outlined), activeIcon: Icon(Icons.library_books), label: 'الأذكار'),
-          BottomNavigationBarItem(icon: Icon(Icons.fingerprint_outlined), activeIcon: Icon(Icons.fingerprint), label: 'السبحة'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), activeIcon: Icon(Icons.explore), label: 'الصلاة'),
-        ],
-      ),
     );
+  }
+
+  IconData _getIconForIndex(int index, {required bool isActive}) {
+    switch (index) {
+      case 0:
+        return isActive ? Icons.home : Icons.home_outlined;
+      case 1:
+        return isActive ? Icons.menu_book : Icons.menu_book_outlined;
+      case 2:
+        return isActive ? Icons.library_books : Icons.library_books_outlined;
+      case 3:
+        return isActive ? Icons.fingerprint : Icons.fingerprint_outlined;
+      case 4:
+        return isActive ? Icons.explore : Icons.explore_outlined;
+      default:
+        return Icons.home;
+    }
+  }
+}
+
+class NotchedBasePainter extends CustomPainter {
+  final double centerX;
+  final Color color;
+
+  NotchedBasePainter({
+    required this.centerX,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final double notchRadius = 35.0;
+    final double notchDepth = 25.0;
+
+    path.moveTo(0, 0);
+    path.lineTo(centerX - notchRadius - 10, 0);
+
+    path.cubicTo(
+      centerX - notchRadius,
+      0,
+      centerX - notchRadius + 8,
+      notchDepth,
+      centerX,
+      notchDepth,
+    );
+
+    path.cubicTo(
+      centerX + notchRadius - 8,
+      notchDepth,
+      centerX + notchRadius,
+      0,
+      centerX + notchRadius + 10,
+      0,
+    );
+
+    path.lineTo(size.width, 0);
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+
+    canvas.drawShadow(path, Colors.black26, 6.0, true);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant NotchedBasePainter oldDelegate) {
+    return oldDelegate.centerX != centerX || oldDelegate.color != color;
   }
 }
