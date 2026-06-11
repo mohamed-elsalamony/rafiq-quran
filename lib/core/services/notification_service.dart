@@ -130,6 +130,8 @@ class NotificationService {
     required double longitude,
     required Map<String, bool> enabledAlarms,
     required CalculationMethod method,
+    bool preAlarmsEnabled = false,
+    int preAlarmMinutes = 15,
   }) async {
     if (kIsWeb || !_initialized) return;
 
@@ -139,6 +141,17 @@ class NotificationService {
 
       final coords = Coordinates(latitude, longitude);
       final now = DateTime.now();
+
+      // Curated list of prayer-related verses to show in pre-alarms
+      final List<String> prayerVerses = [
+        "﴿ إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَوْقُوتًا ﴾ (النساء - 103)",
+        "﴿ وَأَقِمِ الصَّلَاةَ لِدُلُوكِ الشَّمْسِ إِلَىٰ غَسَقِ اللَّيْلِ ﴾ (الإسراء - 78)",
+        "﴿ حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ وَقُومُوا لِلَّهِ قَانِتِينَ ﴾ (البقرة - 238)",
+        "﴿ وَأَقِمِ الصَّلَاةَ إِنَّ الصَّلَاةَ تَنْهَىٰ عَنِ الْفَحْشَاءِ وَالْمُنْكَرِ ﴾ (العنكبوت - 45)",
+        "﴿ يَا أَيُّهَا الَّذِينَ آمَنُوا اسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ ﴾ (البقرة - 153)",
+        "﴿ وَأْمُرْ أَهْلَكَ بِالصَّلَاةِ وَاصْطَبِرْ عَلَيْهَا ﴾ (طه - 132)",
+        "﴿ وَأَقِيمُوا الصَّلَاةَ وَآتُوا الزَّكَاةَ وَارْكَعُوا مَعَ الرَّاكِعِينَ ﴾ (البقرة - 43)"
+      ];
 
       // Schedule alarms for the next 7 days
       for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
@@ -164,20 +177,37 @@ class NotificationService {
           final String label = prayer['label'];
           final DateTime prayerTime = prayer['time'];
 
-          // Skip if alarm is disabled or the time is in the past
-          if (enabledAlarms[name] != true || prayerTime.isBefore(now)) {
+          // Skip if alarm is disabled
+          if (enabledAlarms[name] != true) {
             continue;
           }
 
-          // Calculate unique ID (e.g., DayOffset 0-6 * 10 + prayerIndex 0-4)
-          final int notificationId = (dayOffset * 10) + i + 1000;
+          // 1. Exact Prayer Time Notification
+          if (prayerTime.isAfter(now)) {
+            final int notificationId = (dayOffset * 10) + i + 1000;
+            await scheduleNotification(
+              id: notificationId,
+              title: 'حان الآن موعد صلاة $label 🕌',
+              body: 'الله أكبر، الله أكبر. حان الآن موعد الأذان لصلاة $label حسب توقيتك المحلي. أقم صلاتك تسعد حياتك 🤲',
+              scheduledDate: prayerTime,
+            );
+          }
 
-          await scheduleNotification(
-            id: notificationId,
-            title: 'حان الآن موعد صلاة $label 🕌',
-            body: 'الله أكبر، الله أكبر. حان الآن موعد الأذان لصلاة $label حسب توقيتك المحلي. أقم صلاتك تسعد حياتك 🤲',
-            scheduledDate: prayerTime,
-          );
+          // 2. Pre-Prayer Preparation Notification (إشعار الاستعداد قبل الصلاة)
+          if (preAlarmsEnabled) {
+            final DateTime preAlarmTime = prayerTime.subtract(Duration(minutes: preAlarmMinutes));
+            if (preAlarmTime.isAfter(now)) {
+              final int preNotificationId = (dayOffset * 10) + i + 2000;
+              final String verse = prayerVerses[i % prayerVerses.length];
+              
+              await scheduleNotification(
+                id: preNotificationId,
+                title: 'تأهب لصلاة $label بعد $preAlarmMinutes دقيقة ⏱️',
+                body: 'استعد للوقوف بين يدي الله سبحانه وتعالى لصلاة $label قريباً.\n$verse',
+                scheduledDate: preAlarmTime,
+              );
+            }
+          }
         }
       }
       debugPrint("Prayer alarms scheduled for the next 7 days.");

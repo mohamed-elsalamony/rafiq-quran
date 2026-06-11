@@ -14,6 +14,10 @@ class PrayerProvider extends ChangeNotifier {
   bool _isDetectingLocation = false;
   String? _errorMessage;
 
+  bool _isAutoGps = false;
+  bool _preAlarmsEnabled = false;
+  int _preAlarmMinutes = 15;
+
   // Alarms state: Fajr, Dhuhr, Asr, Maghrib, Isha
   Map<String, bool> _alarmsEnabled = {
     'Fajr': true,
@@ -32,6 +36,9 @@ class PrayerProvider extends ChangeNotifier {
   bool get isDetectingLocation => _isDetectingLocation;
   String? get errorMessage => _errorMessage;
   Map<String, bool> get alarmsEnabled => _alarmsEnabled;
+  bool get isAutoGps => _isAutoGps;
+  bool get preAlarmsEnabled => _preAlarmsEnabled;
+  int get preAlarmMinutes => _preAlarmMinutes;
 
   PrayerProvider() {
     _currentCity = PrayerService.defaultCities[_selectedCityName]!;
@@ -69,6 +76,10 @@ class PrayerProvider extends ChangeNotifier {
       final savedCity = prefs.getString('prayer_selected_city') ?? 'القاهرة';
       final savedMethodName = prefs.getString('prayer_calculation_method') ?? '';
 
+      _isAutoGps = prefs.getBool('prayer_is_auto_gps') ?? false;
+      _preAlarmsEnabled = prefs.getBool('prayer_pre_alarms_enabled') ?? false;
+      _preAlarmMinutes = prefs.getInt('prayer_pre_alarm_minutes') ?? 15;
+
       // Load alarms
       _alarmsEnabled = {
         'Fajr': prefs.getBool('prayer_alarm_Fajr') ?? true,
@@ -78,7 +89,7 @@ class PrayerProvider extends ChangeNotifier {
         'Isha': prefs.getBool('prayer_alarm_Isha') ?? true,
       };
 
-      if (savedCity == 'موقعي الحالي') {
+      if (savedCity == 'موقعي الحالي' || _isAutoGps) {
         final lat = prefs.getDouble('prayer_loc_lat');
         final lon = prefs.getDouble('prayer_loc_lon');
         if (lat != null && lon != null) {
@@ -96,6 +107,11 @@ class PrayerProvider extends ChangeNotifier {
         } else {
           _selectedCityName = 'القاهرة';
           _currentCity = PrayerService.defaultCities['القاهرة']!;
+        }
+
+        if (_isAutoGps) {
+          // Refresh coordinates in the background silently
+          detectLocation();
         }
       } else if (PrayerService.defaultCities.containsKey(savedCity)) {
         _selectedCityName = savedCity;
@@ -125,6 +141,10 @@ class PrayerProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('prayer_selected_city', _selectedCityName);
       await prefs.setString('prayer_calculation_method', _currentCity.method.name);
+      await prefs.setBool('prayer_is_auto_gps', _isAutoGps);
+      await prefs.setBool('prayer_pre_alarms_enabled', _preAlarmsEnabled);
+      await prefs.setInt('prayer_pre_alarm_minutes', _preAlarmMinutes);
+      
       if (_selectedCityName == 'موقعي الحالي') {
         await prefs.setDouble('prayer_loc_lat', _currentCity.latitude);
         await prefs.setDouble('prayer_loc_lon', _currentCity.longitude);
@@ -141,11 +161,43 @@ class PrayerProvider extends ChangeNotifier {
       longitude: _currentCity.longitude,
       enabledAlarms: _alarmsEnabled,
       method: _currentCity.method,
+      preAlarmsEnabled: _preAlarmsEnabled,
+      preAlarmMinutes: _preAlarmMinutes,
     );
+  }
+
+  void setAutoGps(bool val) {
+    _isAutoGps = val;
+    if (val) {
+      _selectedCityName = 'موقعي الحالي';
+      detectLocation();
+    } else {
+      _selectedCityName = 'القاهرة';
+      _currentCity = PrayerService.defaultCities['القاهرة']!;
+      _calculateTimes();
+      _reschedulePrayerAlarms();
+      notifyListeners();
+      _saveSettings();
+    }
+  }
+
+  void setPreAlarmsEnabled(bool val) {
+    _preAlarmsEnabled = val;
+    _reschedulePrayerAlarms();
+    notifyListeners();
+    _saveSettings();
+  }
+
+  void setPreAlarmMinutes(int mins) {
+    _preAlarmMinutes = mins;
+    _reschedulePrayerAlarms();
+    notifyListeners();
+    _saveSettings();
   }
 
   void selectCity(String cityName) {
     if (cityName == 'موقعي الحالي' || !PrayerService.defaultCities.containsKey(cityName)) return;
+    _isAutoGps = false; // Turn off auto GPS when manually selecting a city
     _selectedCityName = cityName;
     _currentCity = PrayerService.defaultCities[cityName]!;
     _calculateTimes();

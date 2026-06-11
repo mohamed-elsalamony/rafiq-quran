@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:workmanager/workmanager.dart';
 
 class AppState extends ChangeNotifier {
   static const String _keyLastPage = 'last_page';
@@ -21,6 +22,12 @@ class AppState extends ChangeNotifier {
   static const String _keyQuranViewMode = 'quran_view_mode'; // 'page', 'verse'
   static const String _keyShowTranslation = 'show_translation';
 
+  static const String _keyPeriodicDhikrEnabled = 'periodic_dhikr_enabled';
+  static const String _keyPeriodicDhikrInterval = 'periodic_dhikr_interval';
+  static const String _keyPeriodicDhikrType = 'periodic_dhikr_type';
+  static const String _keyPeriodicDhikrSilenceStart = 'periodic_dhikr_silence_start';
+  static const String _keyPeriodicDhikrSilenceEnd = 'periodic_dhikr_silence_end';
+
   int _lastPageRead = 1;
   int _lastSurahRead = 1;
   int _lastAyahRead = 1;
@@ -39,6 +46,12 @@ class AppState extends ChangeNotifier {
   String _quranFontFamily = 'Amiri';
   String _quranViewMode = 'page';
   bool _showTranslation = true;
+
+  bool _periodicDhikrEnabled = false;
+  int _periodicDhikrInterval = 60; // 60, 90, 120 minutes
+  String _periodicDhikrType = 'all'; // 'verse', 'dhikr', 'hadith', 'all'
+  int _periodicDhikrSilenceStart = 22; // 10 PM
+  int _periodicDhikrSilenceEnd = 5; // 5 AM
 
   // Getters
   int get lastPageRead => _lastPageRead;
@@ -59,6 +72,12 @@ class AppState extends ChangeNotifier {
   String get quranFontFamily => _quranFontFamily;
   String get quranViewMode => _quranViewMode;
   bool get showTranslation => _showTranslation;
+
+  bool get periodicDhikrEnabled => _periodicDhikrEnabled;
+  int get periodicDhikrInterval => _periodicDhikrInterval;
+  String get periodicDhikrType => _periodicDhikrType;
+  int get periodicDhikrSilenceStart => _periodicDhikrSilenceStart;
+  int get periodicDhikrSilenceEnd => _periodicDhikrSilenceEnd;
 
   AppState() {
     _loadState();
@@ -84,6 +103,12 @@ class AppState extends ChangeNotifier {
     _quranFontFamily = prefs.getString(_keyQuranFontFamily) ?? 'Amiri';
     _quranViewMode = prefs.getString(_keyQuranViewMode) ?? 'page';
     _showTranslation = prefs.getBool(_keyShowTranslation) ?? true;
+
+    _periodicDhikrEnabled = prefs.getBool(_keyPeriodicDhikrEnabled) ?? false;
+    _periodicDhikrInterval = prefs.getInt(_keyPeriodicDhikrInterval) ?? 60;
+    _periodicDhikrType = prefs.getString(_keyPeriodicDhikrType) ?? 'all';
+    _periodicDhikrSilenceStart = prefs.getInt(_keyPeriodicDhikrSilenceStart) ?? 22;
+    _periodicDhikrSilenceEnd = prefs.getInt(_keyPeriodicDhikrSilenceEnd) ?? 5;
     notifyListeners();
   }
 
@@ -206,9 +231,84 @@ class AppState extends ChangeNotifier {
     await prefs.setBool(_keyNotifications, val);
   }
 
+  Future<void> setPeriodicDhikrEnabled(bool val) async {
+    _periodicDhikrEnabled = val;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyPeriodicDhikrEnabled, val);
+
+    if (val) {
+      await _registerPeriodicTask();
+    } else {
+      await _cancelPeriodicTask();
+    }
+  }
+
+  Future<void> setPeriodicDhikrInterval(int val) async {
+    _periodicDhikrInterval = val;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyPeriodicDhikrInterval, val);
+
+    if (_periodicDhikrEnabled) {
+      await _registerPeriodicTask();
+    }
+  }
+
+  Future<void> setPeriodicDhikrType(String type) async {
+    _periodicDhikrType = type;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyPeriodicDhikrType, type);
+  }
+
+  Future<void> setPeriodicDhikrSilenceStart(int hour) async {
+    _periodicDhikrSilenceStart = hour;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyPeriodicDhikrSilenceStart, hour);
+  }
+
+  Future<void> setPeriodicDhikrSilenceEnd(int hour) async {
+    _periodicDhikrSilenceEnd = hour;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyPeriodicDhikrSilenceEnd, hour);
+  }
+
+  Future<void> _registerPeriodicTask() async {
+    try {
+      await Workmanager().registerPeriodicTask(
+        "periodic_dhikr_task",
+        "periodic_dhikr",
+        frequency: Duration(minutes: _periodicDhikrInterval),
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+      );
+      debugPrint("Workmanager: Registered periodic task with interval $_periodicDhikrInterval mins.");
+    } catch (e) {
+      debugPrint("Workmanager registration failed: $e");
+    }
+  }
+
+  Future<void> _cancelPeriodicTask() async {
+    try {
+      await Workmanager().cancelByUniqueName("periodic_dhikr_task");
+      debugPrint("Workmanager: Cancelled periodic task.");
+    } catch (e) {
+      debugPrint("Workmanager cancellation failed: $e");
+    }
+  }
+
   Future<void> clearAllData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+
+    await _cancelPeriodicTask();
 
     _lastPageRead = 1;
     _lastSurahRead = 1;
@@ -228,6 +328,12 @@ class AppState extends ChangeNotifier {
     _quranFontFamily = 'Amiri';
     _quranViewMode = 'page';
     _showTranslation = true;
+
+    _periodicDhikrEnabled = false;
+    _periodicDhikrInterval = 60;
+    _periodicDhikrType = 'all';
+    _periodicDhikrSilenceStart = 22;
+    _periodicDhikrSilenceEnd = 5;
 
     // Save onboarding completion back to SharedPreferences so onboarding doesn't restart
     await prefs.setBool(_keyOnboarding, true);

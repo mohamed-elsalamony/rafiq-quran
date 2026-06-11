@@ -191,6 +191,183 @@ class SettingsScreen extends StatelessWidget {
                 },
               ),
             ),
+            const SizedBox(height: 12),
+
+            // Periodic Remembrance Card
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    activeColor: accentColor,
+                    title: const Text('تفعيل الإشعارات الدورية (ذكر/آية/حديث)', textAlign: TextAlign.right),
+                    subtitle: const Text(
+                      'تلقي تنبيهات عشوائية تحتوي على ذكر، آية أو حديث على مدار اليوم',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    secondary: Icon(Icons.access_alarm, color: accentColor),
+                    value: appState.periodicDhikrEnabled,
+                    onChanged: (val) {
+                      appState.setPeriodicDhikrEnabled(val);
+                    },
+                  ),
+                  if (appState.periodicDhikrEnabled) ...[
+                    const Divider(indent: 16, endIndent: 16),
+                    // Interval choice
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          DropdownButton<int>(
+                            value: appState.periodicDhikrInterval,
+                            dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                            style: TextStyle(
+                              color: isDark ? Colors.amber[200] : primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            underline: const SizedBox(),
+                            items: const [
+                              DropdownMenuItem(value: 60, child: Text('كل ساعة')),
+                              DropdownMenuItem(value: 90, child: Text('كل ساعة ونصف')),
+                              DropdownMenuItem(value: 120, child: Text('كل ساعتين')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                appState.setPeriodicDhikrInterval(val);
+                              }
+                            },
+                          ),
+                          const Text(
+                            'معدل تكرار التذكير:',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(indent: 16, endIndent: 16),
+                    // Content type choice
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          DropdownButton<String>(
+                            value: appState.periodicDhikrType,
+                            dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                            style: TextStyle(
+                              color: isDark ? Colors.amber[200] : primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            underline: const SizedBox(),
+                            items: const [
+                              DropdownMenuItem(value: 'all', child: Text('الكل (آية / ذكر / حديث)')),
+                              DropdownMenuItem(value: 'hadith', child: Text('أحاديث نبوية فقط')),
+                              DropdownMenuItem(value: 'dhikr', child: Text('أذكار وأدعية فقط')),
+                              DropdownMenuItem(value: 'verse', child: Text('آيات قرآنية فقط')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                appState.setPeriodicDhikrType(val);
+                              }
+                            },
+                          ),
+                          const Text(
+                            'نوع محتوى التنبيه:',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(indent: 16, endIndent: 16),
+                    // Quiet hours settings
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'أوقات الصمت (إيقاف الإشعارات مؤقتاً):',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey),
+                            textAlign: TextAlign.right,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // Silence End Dropdown
+                              Row(
+                                children: [
+                                  DropdownButton<int>(
+                                    value: appState.periodicDhikrSilenceEnd,
+                                    dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                                    style: TextStyle(
+                                      color: isDark ? Colors.amber[200] : primaryColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    underline: const SizedBox(),
+                                    items: List.generate(24, (index) {
+                                      final displayHour = index == 0
+                                          ? '12 منتصف الليل'
+                                          : index == 12
+                                              ? '12 ظهراً'
+                                              : index > 12
+                                                  ? '${index - 12} مساءً'
+                                                  : '$index صباحاً';
+                                      return DropdownMenuItem(value: index, child: Text(displayHour));
+                                    }),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        appState.setPeriodicDhikrSilenceEnd(val);
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text('إلى:', style: TextStyle(fontSize: 12)),
+                                ],
+                              ),
+                              // Silence Start Dropdown
+                              Row(
+                                children: [
+                                  DropdownButton<int>(
+                                    value: appState.periodicDhikrSilenceStart,
+                                    dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                                    style: TextStyle(
+                                      color: isDark ? Colors.amber[200] : primaryColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    underline: const SizedBox(),
+                                    items: List.generate(24, (index) {
+                                      final displayHour = index == 0
+                                          ? '12 منتصف الليل'
+                                          : index == 12
+                                              ? '12 ظهراً'
+                                              : index > 12
+                                                  ? '${index - 12} مساءً'
+                                                  : '$index صباحاً';
+                                      return DropdownMenuItem(value: index, child: Text(displayHour));
+                                    }),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        appState.setPeriodicDhikrSilenceStart(val);
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text('من:', style: TextStyle(fontSize: 12)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
             const SizedBox(height: 20),
 
             // 4. إدارة البيانات والخصوصية

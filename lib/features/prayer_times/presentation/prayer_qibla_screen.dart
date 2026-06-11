@@ -251,36 +251,77 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
+                      // Location Mode Row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          DropdownButton<String>(
-                            value: prayerProvider.selectedCityName == 'موقعي الحالي'
-                                ? 'موقعي الحالي'
-                                : prayerProvider.selectedCityName,
-                            underline: const SizedBox(),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.amber[200] : primaryColor,
-                              fontFamily: 'Outfit',
-                            ),
-                            items: [
-                              const DropdownMenuItem(value: 'موقعي الحالي', child: Text('📍 موقعي الحالي')),
-                              ...PrayerService.defaultCities.keys.map((city) {
-                                return DropdownMenuItem(value: city, child: Text(city));
-                              }),
-                            ],
+                          Switch(
+                            value: prayerProvider.isAutoGps,
+                            activeColor: goldColor,
                             onChanged: (val) {
-                              if (val != null) {
-                                if (val == 'موقعي الحالي') {
-                                  prayerProvider.detectLocation();
-                                } else {
-                                  prayerProvider.selectCity(val);
-                                }
-                              }
+                              prayerProvider.setAutoGps(val);
                             },
                           ),
+                          const Row(
+                            children: [
+                              Text(
+                                'تحديد الموقع تلقائياً (GPS)',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(Icons.location_on, color: Colors.teal),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          if (prayerProvider.isAutoGps)
+                            Row(
+                              children: [
+                                const Icon(Icons.gps_fixed, size: 16, color: Colors.teal),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'الوضع التلقائي نشط',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.teal[200] : primaryColor,
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            DropdownButton<String>(
+                              value: prayerProvider.selectedCityName == 'موقعي الحالي'
+                                  ? 'موقعي الحالي'
+                                  : prayerProvider.selectedCityName,
+                              underline: const SizedBox(),
+                              dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.amber[200] : primaryColor,
+                                  fontFamily: 'Outfit',
+                              ),
+                              items: [
+                                const DropdownMenuItem(value: 'موقعي الحالي', child: Text('📍 موقعي الحالي')),
+                                ...PrayerService.defaultCities.keys.map((city) {
+                                  return DropdownMenuItem(value: city, child: Text(city));
+                                }),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  if (val == 'موقعي الحالي') {
+                                    prayerProvider.detectLocation();
+                                  } else {
+                                    prayerProvider.selectCity(val);
+                                  }
+                                }
+                              },
+                            ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
@@ -299,6 +340,83 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                           ),
                         ],
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Pre-Prayer Alarms Card
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Switch(
+                            value: prayerProvider.preAlarmsEnabled,
+                            activeColor: goldColor,
+                            onChanged: (val) {
+                              prayerProvider.setPreAlarmsEnabled(val);
+                            },
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                'تنبيهات الاستعداد المسبق للصلاة',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(Icons.timer_outlined, color: goldColor),
+                            ],
+                          ),
+                        ],
+                      ),
+                      if (prayerProvider.preAlarmsEnabled) ...[
+                        const Divider(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            DropdownButton<int>(
+                              value: prayerProvider.preAlarmMinutes,
+                              dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                              style: TextStyle(
+                                color: isDark ? Colors.amber[200] : primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              underline: const SizedBox(),
+                              items: const [
+                                DropdownMenuItem(value: 5, child: Text('قبل الصلاة بـ 5 دقائق')),
+                                DropdownMenuItem(value: 10, child: Text('قبل الصلاة بـ 10 دقائق')),
+                                DropdownMenuItem(value: 15, child: Text('قبل الصلاة بـ 15 دقيقة')),
+                                DropdownMenuItem(value: 30, child: Text('قبل الصلاة بـ 30 دقيقة')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  prayerProvider.setPreAlarmMinutes(val);
+                                }
+                              },
+                            ),
+                            Text(
+                              'وقت التنبيه قبل الصلاة:',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.grey[350] : Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -1,10 +1,15 @@
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/services/app_state.dart';
 import 'core/services/prophet_blessing_service.dart';
+import 'core/services/periodic_notification_helper.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/quran/presentation/quran_screen.dart';
 import 'features/adhkar/presentation/adhkar_screen.dart';
@@ -21,8 +26,57 @@ import 'features/onboarding/presentation/splash_screen.dart';
 import 'features/onboarding/presentation/onboarding_screen.dart';
 import 'features/settings/presentation/settings_screen.dart';
 
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('periodic_dhikr_enabled') ?? false;
+      if (!enabled) return true;
+
+      final type = prefs.getString('periodic_dhikr_type') ?? 'all';
+      final silenceStart = prefs.getInt('periodic_dhikr_silence_start') ?? 22;
+      final silenceEnd = prefs.getInt('periodic_dhikr_silence_end') ?? 5;
+
+      final now = DateTime.now();
+      final currentHour = now.hour;
+
+      bool inSilence = false;
+      if (silenceStart < silenceEnd) {
+        inSilence = currentHour >= silenceStart && currentHour < silenceEnd;
+      } else {
+        inSilence = currentHour >= silenceStart || currentHour < silenceEnd;
+      }
+
+      if (inSilence) {
+        debugPrint("Periodic Notification: Skipped due to quiet hours.");
+        return true;
+      }
+
+      final content = PeriodicNotificationHelper.getRandomContent(type);
+      final id = Random().nextInt(10000) + 5000;
+      await PeriodicNotificationHelper.showNotification(
+        id: id,
+        title: content['title'] ?? 'رفيق القرآن',
+        body: content['body'] ?? 'اذكر الله',
+      );
+    } catch (e) {
+      debugPrint("Error in WorkManager execution: $e");
+    }
+    return true;
+  });
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Workmanager().initialize(
+      callbackDispatcher,
+      isInDebugMode: kDebugMode,
+    );
+  } catch (e) {
+    debugPrint("Workmanager initialization failed: $e");
+  }
   try {
     await Firebase.initializeApp();
   } catch (e) {
