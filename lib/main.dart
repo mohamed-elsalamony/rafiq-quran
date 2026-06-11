@@ -69,6 +69,8 @@ void callbackDispatcher() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Disabled Workmanager to prevent startup crash on Android 14+ devices
+  /*
   try {
     await Workmanager().initialize(
       callbackDispatcher,
@@ -77,6 +79,7 @@ void main() async {
   } catch (e) {
     debugPrint("Workmanager initialization failed: $e");
   }
+  */
   try {
     await Firebase.initializeApp();
   } catch (e) {

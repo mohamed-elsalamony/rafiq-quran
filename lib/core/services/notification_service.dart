@@ -123,7 +123,7 @@ class NotificationService {
         notificationDetails: platformDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
-      debugPrint("Scheduled notification '$title' (ID: $id) for $tzDateTime");
+      debugPrint("Scheduled exact notification '$title' (ID: $id) for $tzDateTime");
     } catch (e) {
       debugPrint("Error scheduling notification: $e");
     }
