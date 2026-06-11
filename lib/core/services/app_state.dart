@@ -84,32 +84,36 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _loadState() async {
-    final prefs = await SharedPreferences.getInstance();
-    _lastPageRead = prefs.getInt(_keyLastPage) ?? 1;
-    _lastSurahRead = prefs.getInt(_keyLastSurah) ?? 1;
-    _lastAyahRead = prefs.getInt(_keyLastAyah) ?? 1;
-    _lastScreen = prefs.getString(_keyLastScreen) ?? 'home';
-    _lastAudioReciter = prefs.getString(_keyLastReciter) ?? 'عبد الباسط عبد الصمد';
-    _lastAudioPositionMs = prefs.getInt(_keyLastAudioPos) ?? 0;
-    _lastAudioSurah = prefs.getInt(_keyLastAudioSurah) ?? 1;
-    _lastAudioAyah = prefs.getInt(_keyLastAudioAyah) ?? 1;
-    _fontSize = prefs.getDouble(_keyFontSize) ?? 22.0;
-    _isDarkMode = prefs.getBool(_keyDarkMode) ?? false;
-    _isOnboardingCompleted = prefs.getBool(_keyOnboarding) ?? false;
-    _notificationsEnabled = prefs.getBool(_keyNotifications) ?? true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _lastPageRead = prefs.getInt(_keyLastPage) ?? 1;
+      _lastSurahRead = prefs.getInt(_keyLastSurah) ?? 1;
+      _lastAyahRead = prefs.getInt(_keyLastAyah) ?? 1;
+      _lastScreen = prefs.getString(_keyLastScreen) ?? 'home';
+      _lastAudioReciter = prefs.getString(_keyLastReciter) ?? 'عبد الباسط عبد الصمد';
+      _lastAudioPositionMs = prefs.getInt(_keyLastAudioPos) ?? 0;
+      _lastAudioSurah = prefs.getInt(_keyLastAudioSurah) ?? 1;
+      _lastAudioAyah = prefs.getInt(_keyLastAudioAyah) ?? 1;
+      _fontSize = prefs.getDouble(_keyFontSize) ?? 22.0;
+      _isDarkMode = prefs.getBool(_keyDarkMode) ?? false;
+      _isOnboardingCompleted = prefs.getBool(_keyOnboarding) ?? false;
+      _notificationsEnabled = prefs.getBool(_keyNotifications) ?? true;
 
-    _autoScrollSpeed = prefs.getDouble(_keyAutoScrollSpeed) ?? 30.0;
-    _quranThemeMode = prefs.getString(_keyQuranThemeMode) ?? (_isDarkMode ? 'dark' : 'light');
-    _quranFontFamily = prefs.getString(_keyQuranFontFamily) ?? 'Amiri';
-    _quranViewMode = prefs.getString(_keyQuranViewMode) ?? 'page';
-    _showTranslation = prefs.getBool(_keyShowTranslation) ?? true;
+      _autoScrollSpeed = prefs.getDouble(_keyAutoScrollSpeed) ?? 30.0;
+      _quranThemeMode = prefs.getString(_keyQuranThemeMode) ?? (_isDarkMode ? 'dark' : 'light');
+      _quranFontFamily = prefs.getString(_keyQuranFontFamily) ?? 'Amiri';
+      _quranViewMode = prefs.getString(_keyQuranViewMode) ?? 'page';
+      _showTranslation = prefs.getBool(_keyShowTranslation) ?? true;
 
-    _periodicDhikrEnabled = prefs.getBool(_keyPeriodicDhikrEnabled) ?? false;
-    _periodicDhikrInterval = prefs.getInt(_keyPeriodicDhikrInterval) ?? 60;
-    _periodicDhikrType = prefs.getString(_keyPeriodicDhikrType) ?? 'all';
-    _periodicDhikrSilenceStart = prefs.getInt(_keyPeriodicDhikrSilenceStart) ?? 22;
-    _periodicDhikrSilenceEnd = prefs.getInt(_keyPeriodicDhikrSilenceEnd) ?? 5;
-    notifyListeners();
+      _periodicDhikrEnabled = prefs.getBool(_keyPeriodicDhikrEnabled) ?? false;
+      _periodicDhikrInterval = prefs.getInt(_keyPeriodicDhikrInterval) ?? 60;
+      _periodicDhikrType = prefs.getString(_keyPeriodicDhikrType) ?? 'all';
+      _periodicDhikrSilenceStart = prefs.getInt(_keyPeriodicDhikrSilenceStart) ?? 22;
+      _periodicDhikrSilenceEnd = prefs.getInt(_keyPeriodicDhikrSilenceEnd) ?? 5;
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error loading AppState: $e");
+    }
   }
 
   Future<void> saveReadingPosition({required int page, required int surah, required int ayah}) async {

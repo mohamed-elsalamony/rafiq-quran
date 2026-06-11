@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -77,12 +76,6 @@ void main() async {
     );
   } catch (e) {
     debugPrint("Workmanager initialization failed: $e");
-  }
-
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    debugPrint("Firebase initialization failed: $e. Falling back to simulation mode.");
   }
   runApp(
     MultiProvider(

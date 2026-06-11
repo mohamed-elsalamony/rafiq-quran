@@ -49,8 +49,6 @@ dependencies:
   flutter_local_notifications: any
   workmanager: any
   timezone: any
-  firebase_core: any
-  cloud_firestore: any
 
 dev_dependencies:
   flutter_test:
