@@ -74,6 +74,11 @@ class NotificationService {
         if (androidImplementation != null) {
           await androidImplementation.createNotificationChannel(channel);
           await androidImplementation.requestNotificationsPermission();
+          try {
+            await androidImplementation.requestExactAlarmsPermission();
+          } catch (e) {
+            debugPrint("Error requesting exact alarms permission: $e");
+          }
         }
       }
 
