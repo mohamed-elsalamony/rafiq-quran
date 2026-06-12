@@ -291,7 +291,7 @@ class AppState extends ChangeNotifier {
         "periodic_dhikr_task",
         "periodic_dhikr",
         frequency: Duration(minutes: _periodicDhikrInterval),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+        existingWorkPolicy: ExistingWorkPolicy.replace,
       );
       debugPrint("Workmanager: Registered periodic task with interval $_periodicDhikrInterval mins.");
     } catch (e) {

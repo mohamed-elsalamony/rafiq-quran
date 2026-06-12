@@ -51,7 +51,7 @@ class NotificationService {
       );
 
       await _notificationsPlugin.initialize(
-        settings: initSettings,
+        initSettings,
         onDidReceiveNotificationResponse: (details) {
           debugPrint("Notification Clicked: ${details.payload}");
         },
@@ -116,11 +116,11 @@ class NotificationService {
       );
 
       await _notificationsPlugin.zonedSchedule(
-        id: id,
-        title: title,
-        body: body,
-        scheduledDate: tzDateTime,
-        notificationDetails: platformDetails,
+        id,
+        title,
+        body,
+        tzDateTime,
+        platformDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
       debugPrint("Scheduled exact notification '$title' (ID: $id) for $tzDateTime");

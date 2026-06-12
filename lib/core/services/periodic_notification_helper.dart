@@ -335,7 +335,7 @@ class PeriodicNotificationHelper {
     );
 
     // Initialize inside background isolate context
-    await localNotifications.initialize(settings: initSettings);
+    await localNotifications.initialize(initSettings);
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'periodic_channel_id',
@@ -352,10 +352,10 @@ class PeriodicNotificationHelper {
     );
 
     await localNotifications.show(
-      id: id,
-      title: title,
-      body: body,
-      notificationDetails: platformDetails,
+      id,
+      title,
+      body,
+      platformDetails,
     );
   }
 
