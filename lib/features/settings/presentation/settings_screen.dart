@@ -10,7 +10,9 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('تحذير هام', textAlign: TextAlign.right, style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        title: const Text('تحذير هام',
+            textAlign: TextAlign.right,
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
         content: const Text(
           'هل أنت متأكد تماماً من رغبتك في حذف جميع البيانات المحلية؟ سيؤدي ذلك إلى تصفير المسبحة، وحذف جميع خطط الحفظ والختمة والعلامات المرجعية والعودة للوضع الافتراضي.',
           textAlign: TextAlign.right,
@@ -26,7 +28,8 @@ class SettingsScreen extends StatelessWidget {
               Navigator.pop(context);
               _showDoubleResetConfirmation(context, appState);
             },
-            child: const Text('نعم، استمر', style: TextStyle(color: Colors.white)),
+            child:
+                const Text('نعم، استمر', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -37,7 +40,9 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('تأكيد أخير', textAlign: TextAlign.right, style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        title: const Text('تأكيد أخير',
+            textAlign: TextAlign.right,
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
         content: const Text(
           'هذه الخطوة لا يمكن التراجع عنها! هل تؤكد حذف كل التقدم المحرز في الحفظ والورد اليومي بشكل نهائي؟',
           textAlign: TextAlign.right,
@@ -48,20 +53,24 @@ class SettingsScreen extends StatelessWidget {
             child: const Text('إلغاء وتراجع'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade900),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.red.shade900),
             onPressed: () async {
               Navigator.pop(context);
               await appState.clearAllData();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('تم تهيئة التطبيق بنجاح وحذف جميع البيانات المحلية!', textAlign: TextAlign.right),
+                    content: Text(
+                        'تم تهيئة التطبيق بنجاح وحذف جميع البيانات المحلية!',
+                        textAlign: TextAlign.right),
                     backgroundColor: Colors.green,
                   ),
                 );
               }
             },
-            child: const Text('حذف نهائي للملفات', style: TextStyle(color: Colors.white)),
+            child: const Text('حذف نهائي للملفات',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -72,16 +81,23 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final isDark = appState.isDarkMode;
-    final primaryColor = const Color(0xFF0F5A47);
-    final Color accentColor = const Color(0xFFD4AF37);
+    const primaryColor = Color(0xFF0F5A47);
+    const Color accentColor = Color(0xFFD4AF37);
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
-        title: const Text(
-          'إعدادات التطبيق',
-          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: const Text(
+            'إعدادات التطبيق',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Outfit',
+              fontSize: 16,
+            ),
+          ),
         ),
         centerTitle: true,
       ),
@@ -91,31 +107,61 @@ class SettingsScreen extends StatelessWidget {
           padding: const EdgeInsets.all(20.0),
           children: [
             // 1. المظهر والسمات
-            _buildSectionHeader(title: 'المظهر والسمات', isDark: isDark, accentColor: accentColor),
+            _buildSectionHeader(
+                title: 'المظهر والسمات',
+                isDark: isDark,
+                accentColor: accentColor),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              child: SwitchListTile(
-                activeColor: accentColor,
-                title: const Text('الوضع الليلي (Dark Mode)', textAlign: TextAlign.right),
-                subtitle: Text(
-                  isDark ? 'تفعيل المظهر الداكن المريح للعين ليلاً' : 'تفعيل المظهر الفاتح والساطع',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                child: Row(
+                  children: [
+                    Icon(isDark ? Icons.dark_mode : Icons.light_mode,
+                        color: accentColor),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'الوضع الليلي (Dark Mode)',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          Text(
+                            isDark
+                                ? 'تفعيل المظهر الداكن المريح للعين ليلاً'
+                                : 'تفعيل المظهر الفاتح والساطع',
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            textAlign: TextAlign.right,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Switch(
+                      value: isDark,
+                      activeColor: accentColor,
+                      onChanged: (val) {
+                        appState.toggleDarkMode(val);
+                      },
+                    ),
+                  ],
                 ),
-                secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode, color: accentColor),
-                value: isDark,
-                onChanged: (val) {
-                  appState.toggleDarkMode(val);
-                },
               ),
             ),
             const SizedBox(height: 20),
 
             // 2. خط المصحف والتصفح
-            _buildSectionHeader(title: 'إعدادات خط المصحف', isDark: isDark, accentColor: accentColor),
+            _buildSectionHeader(
+                title: 'إعدادات خط المصحف',
+                isDark: isDark,
+                accentColor: accentColor),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -143,6 +189,76 @@ class SettingsScreen extends StatelessWidget {
                       },
                     ),
                     const Divider(),
+                    const Text('نوع الخط العربي:',
+                        style:
+                            TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        textAlign: TextAlign.right),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => appState.setQuranFontFamily('Amiri'),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: appState.quranFontFamily == 'Amiri'
+                                  ? primaryColor.withOpacity(0.1)
+                                  : Colors.transparent,
+                              side: BorderSide(
+                                  color: appState.quranFontFamily == 'Amiri'
+                                      ? primaryColor
+                                      : Colors.grey[300]!),
+                            ),
+                            child: Text('خط Amiri',
+                                style: GoogleFonts.amiri(
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () =>
+                                appState.setQuranFontFamily('Scheherazade'),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor:
+                                  appState.quranFontFamily == 'Scheherazade'
+                                      ? primaryColor.withOpacity(0.1)
+                                      : Colors.transparent,
+                              side: BorderSide(
+                                  color:
+                                      appState.quranFontFamily == 'Scheherazade'
+                                          ? primaryColor
+                                          : Colors.grey[300]!),
+                            ),
+                            child: Text('خط Scheherazade',
+                                style: GoogleFonts.scheherazadeNew(
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    const Text('سمة خلفية المصحف:',
+                        style:
+                            TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        textAlign: TextAlign.right),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildThemeOption(context, appState, 'light', 'فاتح',
+                            const Color(0xFFFDFBF7), Colors.black87),
+                        _buildThemeOption(
+                            context,
+                            appState,
+                            'sepia',
+                            'دافئ (Sepia)',
+                            const Color(0xFFF4ECD8),
+                            const Color(0xFF5B4636)),
+                        _buildThemeOption(context, appState, 'dark', 'مظلم',
+                            const Color(0xFF1E1E1E), Colors.grey[200]!),
+                      ],
+                    ),
+                    const Divider(),
                     const Text(
                       'معاينة الخط العربي للآيات:',
                       style: TextStyle(fontSize: 12, color: Colors.grey),
@@ -152,16 +268,34 @@ class SettingsScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.black26 : const Color(0xFFF9F7F3),
+                        color: appState.quranThemeMode == 'dark'
+                            ? const Color(0xFF1E1E1E)
+                            : (appState.quranThemeMode == 'sepia'
+                                ? const Color(0xFFF4ECD8)
+                                : const Color(0xFFFDFBF7)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
-                        style: GoogleFonts.amiri(
-                          fontSize: appState.fontSize,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.amber[100] : primaryColor,
-                        ),
+                        style: appState.quranFontFamily == 'Scheherazade'
+                            ? GoogleFonts.scheherazadeNew(
+                                fontSize: appState.fontSize + 4,
+                                fontWeight: FontWeight.bold,
+                                color: appState.quranThemeMode == 'dark'
+                                    ? Colors.amber[100]
+                                    : (appState.quranThemeMode == 'sepia'
+                                        ? const Color(0xFF5B4636)
+                                        : primaryColor),
+                              )
+                            : GoogleFonts.amiri(
+                                fontSize: appState.fontSize,
+                                fontWeight: FontWeight.bold,
+                                color: appState.quranThemeMode == 'dark'
+                                    ? Colors.amber[100]
+                                    : (appState.quranThemeMode == 'sepia'
+                                        ? const Color(0xFF5B4636)
+                                        : primaryColor),
+                              ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -172,77 +306,126 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // 3. التنبيهات والإشعارات
-            _buildSectionHeader(title: 'التنبيهات والإشعارات', isDark: isDark, accentColor: accentColor),
+            _buildSectionHeader(
+                title: 'التنبيهات والإشعارات',
+                isDark: isDark,
+                accentColor: accentColor),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              child: SwitchListTile(
-                activeColor: accentColor,
-                title: const Text('تفعيل إشعارات التذكير اليومي', textAlign: TextAlign.right),
-                subtitle: const Text(
-                  'تذكير بقراءة الورد اليومي وأذكار الصباح والمساء',
-                  textAlign: TextAlign.right,
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'تفعيل إشعارات التذكير اليومي',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const Text(
+                            'تذكير بقراءة الورد اليومي وأذكار الصباح والمساء',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Switch(
+                      value: appState.notificationsEnabled,
+                      activeColor: accentColor,
+                      onChanged: (val) {
+                        appState.toggleNotifications(val);
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.notifications_active, color: accentColor),
+                  ],
                 ),
-                secondary: Icon(Icons.notifications_active, color: accentColor),
-                value: appState.notificationsEnabled,
-                onChanged: (val) {
-                  appState.toggleNotifications(val);
-                },
               ),
             ),
             const SizedBox(height: 12),
 
             // Periodic Remembrance Card
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               child: Column(
                 children: [
-                  SwitchListTile(
-                    activeColor: accentColor,
-                    title: const Text('تفعيل الإشعارات الدورية (ذكر/آية/حديث)', textAlign: TextAlign.right),
-                    subtitle: const Text(
-                      'تلقي تنبيهات عشوائية تحتوي على ذكر، آية أو حديث على مدار اليوم',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'تفعيل الإشعارات الدورية (ذكر/آية/حديث)',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              const Text(
+                                'تلقي تنبيهات عشوائية تحتوي على ذكر، آية أو حديث على مدار اليوم',
+                                style: TextStyle(fontSize: 11, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Switch(
+                          value: appState.periodicDhikrEnabled,
+                          activeColor: accentColor,
+                          onChanged: (val) {
+                            appState.setPeriodicDhikrEnabled(val);
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        Icon(Icons.access_alarm, color: accentColor),
+                      ],
                     ),
-                    secondary: Icon(Icons.access_alarm, color: accentColor),
-                    value: appState.periodicDhikrEnabled,
-                    onChanged: (val) {
-                      appState.setPeriodicDhikrEnabled(val);
-                    },
                   ),
                   if (appState.periodicDhikrEnabled) ...[
                     const Divider(indent: 16, endIndent: 16),
                     // Interval choice
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          DropdownButton<int>(
-                            value: appState.periodicDhikrInterval,
-                            dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-                            style: TextStyle(
-                              color: isDark ? Colors.amber[200] : primaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            underline: const SizedBox(),
-                            items: const [
-                              DropdownMenuItem(value: 60, child: Text('كل ساعة')),
-                              DropdownMenuItem(value: 90, child: Text('كل ساعة ونصف')),
-                              DropdownMenuItem(value: 120, child: Text('كل ساعتين')),
-                            ],
-                            onChanged: (val) {
-                              if (val != null) {
-                                appState.setPeriodicDhikrInterval(val);
-                              }
-                            },
-                          ),
                           const Text(
                             'معدل تكرار التذكير:',
-                            style: TextStyle(fontSize: 14),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButton<int>(
+                              isExpanded: true,
+                              value: appState.periodicDhikrInterval,
+                              dropdownColor:
+                                  isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                              style: TextStyle(
+                                color: isDark ? Colors.amber[200] : primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              underline: const SizedBox(),
+                              items: const [
+                                DropdownMenuItem(
+                                    value: 60, child: Text('كل ساعة', textAlign: TextAlign.left)),
+                                DropdownMenuItem(
+                                    value: 90, child: Text('كل ساعة ونصف', textAlign: TextAlign.left)),
+                                DropdownMenuItem(
+                                    value: 120, child: Text('كل ساعتين', textAlign: TextAlign.left)),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  appState.setPeriodicDhikrInterval(val);
+                                }
+                              },
+                            ),
                           ),
                         ],
                       ),
@@ -250,33 +433,46 @@ class SettingsScreen extends StatelessWidget {
                     const Divider(indent: 16, endIndent: 16),
                     // Content type choice
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          DropdownButton<String>(
-                            value: appState.periodicDhikrType,
-                            dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-                            style: TextStyle(
-                              color: isDark ? Colors.amber[200] : primaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            underline: const SizedBox(),
-                            items: const [
-                              DropdownMenuItem(value: 'all', child: Text('الكل (آية / ذكر / حديث)')),
-                              DropdownMenuItem(value: 'hadith', child: Text('أحاديث نبوية فقط')),
-                              DropdownMenuItem(value: 'dhikr', child: Text('أذكار وأدعية فقط')),
-                              DropdownMenuItem(value: 'verse', child: Text('آيات قرآنية فقط')),
-                            ],
-                            onChanged: (val) {
-                              if (val != null) {
-                                appState.setPeriodicDhikrType(val);
-                              }
-                            },
-                          ),
                           const Text(
                             'نوع محتوى التنبيه:',
-                            style: TextStyle(fontSize: 14),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              value: appState.periodicDhikrType,
+                              dropdownColor:
+                                  isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                              style: TextStyle(
+                                color: isDark ? Colors.amber[200] : primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              underline: const SizedBox(),
+                              items: const [
+                                DropdownMenuItem(
+                                    value: 'all',
+                                    child: Text('الكل (آية / ذكر / حديث)', textAlign: TextAlign.left)),
+                                DropdownMenuItem(
+                                    value: 'hadith',
+                                    child: Text('أحاديث نبوية فقط', textAlign: TextAlign.left)),
+                                DropdownMenuItem(
+                                    value: 'dhikr',
+                                    child: Text('أذكار وأدعية فقط', textAlign: TextAlign.left)),
+                                DropdownMenuItem(
+                                    value: 'verse',
+                                    child: Text('آيات قرآنية فقط', textAlign: TextAlign.left)),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  appState.setPeriodicDhikrType(val);
+                                }
+                              },
+                            ),
                           ),
                         ],
                       ),
@@ -284,80 +480,108 @@ class SettingsScreen extends StatelessWidget {
                     const Divider(indent: 16, endIndent: 16),
                     // Quiet hours settings
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const Text(
                             'أوقات الصمت (إيقاف الإشعارات مؤقتاً):',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey),
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey),
                             textAlign: TextAlign.right,
                           ),
                           const SizedBox(height: 8),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // Silence End Dropdown
-                              Row(
-                                children: [
-                                  DropdownButton<int>(
-                                    value: appState.periodicDhikrSilenceEnd,
-                                    dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-                                    style: TextStyle(
-                                      color: isDark ? Colors.amber[200] : primaryColor,
-                                      fontWeight: FontWeight.bold,
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    const Text('من:',
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: DropdownButton<int>(
+                                        isExpanded: true,
+                                        value: appState.periodicDhikrSilenceStart,
+                                        dropdownColor: isDark
+                                            ? const Color(0xFF2C2C2C)
+                                            : Colors.white,
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? Colors.amber[200]
+                                              : primaryColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        underline: const SizedBox(),
+                                        items: List.generate(24, (index) {
+                                          final displayHour = index == 0
+                                              ? '12 ص'
+                                              : index == 12
+                                                  ? '12 م'
+                                                  : index > 12
+                                                      ? '${index - 12} م'
+                                                      : '$index ص';
+                                          return DropdownMenuItem(
+                                              value: index,
+                                              child: Text(displayHour));
+                                        }),
+                                        onChanged: (val) {
+                                          if (val != null) {
+                                            appState
+                                                .setPeriodicDhikrSilenceStart(val);
+                                          }
+                                        },
+                                      ),
                                     ),
-                                    underline: const SizedBox(),
-                                    items: List.generate(24, (index) {
-                                      final displayHour = index == 0
-                                          ? '12 منتصف الليل'
-                                          : index == 12
-                                              ? '12 ظهراً'
-                                              : index > 12
-                                                  ? '${index - 12} مساءً'
-                                                  : '$index صباحاً';
-                                      return DropdownMenuItem(value: index, child: Text(displayHour));
-                                    }),
-                                    onChanged: (val) {
-                                      if (val != null) {
-                                        appState.setPeriodicDhikrSilenceEnd(val);
-                                      }
-                                    },
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Text('إلى:', style: TextStyle(fontSize: 12)),
-                                ],
+                                  ],
+                                ),
                               ),
-                              // Silence Start Dropdown
-                              Row(
-                                children: [
-                                  DropdownButton<int>(
-                                    value: appState.periodicDhikrSilenceStart,
-                                    dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-                                    style: TextStyle(
-                                      color: isDark ? Colors.amber[200] : primaryColor,
-                                      fontWeight: FontWeight.bold,
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    const Text('إلى:',
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: DropdownButton<int>(
+                                        isExpanded: true,
+                                        value: appState.periodicDhikrSilenceEnd,
+                                        dropdownColor: isDark
+                                            ? const Color(0xFF2C2C2C)
+                                            : Colors.white,
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? Colors.amber[200]
+                                              : primaryColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        underline: const SizedBox(),
+                                        items: List.generate(24, (index) {
+                                          final displayHour = index == 0
+                                              ? '12 ص'
+                                              : index == 12
+                                                  ? '12 م'
+                                                  : index > 12
+                                                      ? '${index - 12} م'
+                                                      : '$index ص';
+                                          return DropdownMenuItem(
+                                              value: index,
+                                              child: Text(displayHour));
+                                        }),
+                                        onChanged: (val) {
+                                          if (val != null) {
+                                            appState
+                                                .setPeriodicDhikrSilenceEnd(val);
+                                          }
+                                        },
+                                      ),
                                     ),
-                                    underline: const SizedBox(),
-                                    items: List.generate(24, (index) {
-                                      final displayHour = index == 0
-                                          ? '12 منتصف الليل'
-                                          : index == 12
-                                              ? '12 ظهراً'
-                                              : index > 12
-                                                  ? '${index - 12} مساءً'
-                                                  : '$index صباحاً';
-                                      return DropdownMenuItem(value: index, child: Text(displayHour));
-                                    }),
-                                    onChanged: (val) {
-                                      if (val != null) {
-                                        appState.setPeriodicDhikrSilenceStart(val);
-                                      }
-                                    },
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Text('من:', style: TextStyle(fontSize: 12)),
-                                ],
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -371,28 +595,36 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // 4. إدارة البيانات والخصوصية
-            _buildSectionHeader(title: 'إدارة البيانات المحلية', isDark: isDark, accentColor: accentColor),
+            _buildSectionHeader(
+                title: 'إدارة البيانات المحلية',
+                isDark: isDark,
+                accentColor: accentColor),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               child: ListTile(
-                leading: const Icon(Icons.delete_forever, color: Colors.red),
-                title: const Text('تهيئة التطبيق بالكامل (Factory Reset)', textAlign: TextAlign.right),
+                title: const Text('تهيئة التطبيق بالكامل (Factory Reset)',
+                    textAlign: TextAlign.right),
                 subtitle: const Text(
                   'حذف كافة البيانات والتقدم والعودة للوضع الأصلي',
                   textAlign: TextAlign.right,
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                trailing: const Icon(Icons.delete_forever, color: Colors.red),
                 onTap: () => _showResetConfirmation(context, appState),
               ),
             ),
             const SizedBox(height: 20),
 
             // 5. حول التطبيق
-            _buildSectionHeader(title: 'حول رفيق القرآن', isDark: isDark, accentColor: accentColor),
+            _buildSectionHeader(
+                title: 'حول رفيق القرآن',
+                isDark: isDark,
+                accentColor: accentColor),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -401,22 +633,30 @@ class SettingsScreen extends StatelessWidget {
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('1.1.0', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('إصدار التطبيق', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('1.1.0',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('إصدار التطبيق',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const Divider(),
                     const SizedBox(height: 8),
                     Text(
                       'رفيق القرآن هو تطبيق إسلامي متكامل يهدف إلى مساعدتك في قراءة وتلاوة القرآن الكريم وحفظه وتدبر آياته، ومتابعة الورد اليومي والختمات مع المسبحة الإلكترونية والأذكار اليومية بطابع مريح وجميل وعملي.',
-                      style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[300] : Colors.grey[700], height: 1.5),
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? Colors.grey[300] : Colors.grey[700],
+                          height: 1.5),
                       textAlign: TextAlign.justify,
                       textDirection: TextDirection.rtl,
                     ),
                     const SizedBox(height: 12),
                     const Text(
                       'صدقة جارية لكل من ساهم في نشره واستخدمه 🤲',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal),
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -441,7 +681,10 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader({required String title, required bool isDark, required Color accentColor}) {
+  Widget _buildSectionHeader(
+      {required String title,
+      required bool isDark,
+      required Color accentColor}) {
     return Padding(
       padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
       child: Row(
@@ -462,6 +705,58 @@ class SettingsScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: accentColor,
               borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThemeOption(
+    BuildContext context,
+    AppState appState,
+    String mode,
+    String label,
+    Color bg,
+    Color fg,
+  ) {
+    final isSelected = appState.quranThemeMode == mode;
+    return GestureDetector(
+      onTap: () => appState.setQuranThemeMode(mode),
+      child: Column(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: bg,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFFD4AF37)
+                    : Colors.grey.withOpacity(0.3),
+                width: isSelected ? 3.0 : 1.0,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                          color: const Color(0xFFD4AF37).withOpacity(0.4),
+                          blurRadius: 6)
+                    ]
+                  : null,
+            ),
+            child: Icon(Icons.check,
+                color: isSelected ? fg : Colors.transparent, size: 18),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white70
+                  : Colors.black87,
             ),
           ),
         ],

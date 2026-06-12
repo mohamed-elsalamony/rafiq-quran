@@ -59,7 +59,12 @@ class QuranProvider extends ChangeNotifier {
 
   QuranProvider({required this.appState}) {
     _currentPage = appState.lastPageRead;
-    _precomputeQuranPages();
+    // Load the initial page and prefetch neighbors
+    _loadPageVerses(_currentPage);
+    Future.microtask(() {
+      _loadPageVerses(_currentPage + 1);
+      _loadPageVerses(_currentPage - 1);
+    });
     
     // Listen to audio player events
     _audioPlayer.onPlayerComplete.listen((event) {
@@ -88,23 +93,30 @@ class QuranProvider extends ChangeNotifier {
     });
   }
 
-  void _precomputeQuranPages() {
+  void _loadPageVerses(int pageNum) {
+    if (pageNum < 1 || pageNum > 604) return;
+    if (_pageVersesCache.containsKey(pageNum)) return;
+
     try {
-      for (int s = 1; s <= 114; s++) {
-        int count = quran.getVerseCount(s);
-        String surahName = quran.getSurahNameArabic(s);
-        for (int v = 1; v <= count; v++) {
-          int pageNum = quran.getPageNumber(s, v);
-          _pageVersesCache.putIfAbsent(pageNum, () => []).add({
-            'surah': s,
+      final List<Map<String, dynamic>> pageVerses = [];
+      final pageData = quran.getPageData(pageNum);
+      for (var data in pageData) {
+        final int surah = data['surah'];
+        final int start = data['start'];
+        final int end = data['end'];
+        final String surahName = quran.getSurahNameArabic(surah);
+        for (int v = start; v <= end; v++) {
+          pageVerses.add({
+            'surah': surah,
             'ayah': v,
-            'text': quran.getVerse(s, v),
+            'text': quran.getVerse(surah, v),
             'surahName': surahName,
           });
         }
       }
+      _pageVersesCache[pageNum] = pageVerses;
     } catch (e) {
-      debugPrint("Error precomputing Quran pages: $e");
+      debugPrint("Error loading verses for page $pageNum: $e");
     }
   }
 
@@ -144,6 +156,14 @@ class QuranProvider extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> getVersesOnPage(int pageNum) {
+    if (pageNum < 1 || pageNum > 604) return [];
+    if (!_pageVersesCache.containsKey(pageNum)) {
+      _loadPageVerses(pageNum);
+    }
+    Future.microtask(() {
+      _loadPageVerses(pageNum + 1);
+      _loadPageVerses(pageNum - 1);
+    });
     return _pageVersesCache[pageNum] ?? [];
   }
 

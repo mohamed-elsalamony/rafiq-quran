@@ -11,7 +11,7 @@ class AudioPlayerWidget extends StatelessWidget {
   final ValueChanged<double> onSpeedChanged;
   final ValueChanged<int> onRepeatChanged;
   final VoidCallback onDownload;
-  
+
   // New AutoScroll parameters
   final VoidCallback? onAutoScrollToggle;
   final bool isAutoScrollOn;
@@ -34,8 +34,8 @@ class AudioPlayerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = const Color(0xFF0F5A47);
-    final Color accentColor = const Color(0xFFD4AF37);
+    const Color primaryColor = Color(0xFF0F5A47);
+    const Color accentColor = Color(0xFFD4AF37);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -82,7 +82,10 @@ class AudioPlayerWidget extends StatelessWidget {
                         items: reciters.map((r) {
                           return DropdownMenuItem<String>(
                             value: r['id'],
-                            child: Text(r['name']!, textAlign: Alignment.centerRight.x > 0 ? TextAlign.left : TextAlign.right),
+                            child: Text(r['name']!,
+                                textAlign: Alignment.centerRight.x > 0
+                                    ? TextAlign.left
+                                    : TextAlign.right),
                           );
                         }).toList(),
                         onChanged: (val) {
@@ -96,7 +99,8 @@ class AudioPlayerWidget extends StatelessWidget {
               const SizedBox(width: 12),
               // تحميل الصوت محلياً
               IconButton(
-                icon: const Icon(Icons.download_for_offline, color: Colors.teal),
+                icon:
+                    const Icon(Icons.download_for_offline, color: Colors.teal),
                 onPressed: onDownload,
                 tooltip: 'تحميل تلاوات الصفحة',
               ),
@@ -117,7 +121,9 @@ class AudioPlayerWidget extends StatelessWidget {
                   DropdownButton<double>(
                     value: playbackSpeed,
                     underline: const SizedBox(),
-                    style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black87),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white : Colors.black87),
                     items: const [
                       DropdownMenuItem(value: 0.75, child: Text('0.75x')),
                       DropdownMenuItem(value: 1.0, child: Text('1.0x')),
@@ -169,7 +175,9 @@ class AudioPlayerWidget extends StatelessWidget {
                   DropdownButton<int>(
                     value: repeatTimes,
                     underline: const SizedBox(),
-                    style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black87),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white : Colors.black87),
                     items: const [
                       DropdownMenuItem(value: 1, child: Text('تكرار: 1')),
                       DropdownMenuItem(value: 2, child: Text('تكرار: 2')),

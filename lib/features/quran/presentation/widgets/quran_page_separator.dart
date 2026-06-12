@@ -14,8 +14,8 @@ class QuranPageSeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = const Color(0xFF0F5A47);
-    final Color goldColor = const Color(0xFFD4AF37);
+    const Color primaryColor = Color(0xFF0F5A47);
+    const Color goldColor = Color(0xFFD4AF37);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final String surahName = quran.getSurahNameArabic(nextSurahNumber);
@@ -86,10 +86,11 @@ class QuranPageSeparator extends StatelessWidget {
               ),
             ],
           ),
-          
+
           // Surah Name Title Banner
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF121212) : Colors.white,
               borderRadius: BorderRadius.circular(30.0),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/services/app_state.dart';
 import 'core/services/prophet_blessing_service.dart';
@@ -82,8 +83,10 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (context) => AppState()),
         ChangeNotifierProxyProvider<AppState, QuranProvider>(
-          create: (context) => QuranProvider(appState: Provider.of<AppState>(context, listen: false)),
-          update: (context, appState, previous) => previous ?? QuranProvider(appState: appState),
+          create: (context) => QuranProvider(
+              appState: Provider.of<AppState>(context, listen: false)),
+          update: (context, appState, previous) =>
+              previous ?? QuranProvider(appState: appState),
         ),
         ChangeNotifierProvider(create: (context) => TasbihProvider()),
         ChangeNotifierProvider(create: (context) => PrayerProvider()),
@@ -101,14 +104,28 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
-    final Color primaryColor = const Color(0xFF0F5A47);
-    final Color accentColor = const Color(0xFFD4AF37);
+    const Color primaryColor = Color(0xFF0F5A47);
+    const Color accentColor = Color(0xFFD4AF37);
 
     return MaterialApp(
       title: 'رفيق القرآن',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar', 'AE'), // تشغيل التطبيق باللغة العربية RTL افتراضياً
-      
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ar', 'AE'),
+      ],
+      builder: (context, child) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: child!,
+        );
+      },
+
       // السمة الفاتحة الفاخرة
       theme: ThemeData(
         useMaterial3: true,
@@ -174,9 +191,9 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _tabs.addAll([
-      HomeScreen(onTabChanged: _onTabChanged),
       const QuranScreen(),
       const AdhkarScreen(),
+      HomeScreen(onTabChanged: _onTabChanged),
       const TasbihScreen(),
       const PrayerQiblaScreen(),
     ]);
@@ -192,31 +209,43 @@ class _MainShellState extends State<MainShell> {
 
   String _getScreenNameFromIndex(int index) {
     switch (index) {
-      case 0: return 'home';
-      case 1: return 'quran';
-      case 2: return 'adhkar';
-      case 3: return 'tasbih';
-      case 4: return 'prayer';
-      default: return 'home';
+      case 0:
+        return 'quran';
+      case 1:
+        return 'adhkar';
+      case 2:
+        return 'home';
+      case 3:
+        return 'tasbih';
+      case 4:
+        return 'prayer';
+      default:
+        return 'home';
     }
   }
 
   int _getIndexFromScreenName(String name) {
     switch (name) {
-      case 'home': return 0;
-      case 'quran': return 1;
-      case 'adhkar': return 2;
-      case 'tasbih': return 3;
-      case 'prayer': return 4;
-      default: return 0;
+      case 'quran':
+        return 0;
+      case 'adhkar':
+        return 1;
+      case 'home':
+        return 2;
+      case 'tasbih':
+        return 3;
+      case 'prayer':
+        return 4;
+      default:
+        return 2;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
-    final Color primaryColor = const Color(0xFF0F5A47);
-    final Color accentColor = const Color(0xFFD4AF37);
+    const Color primaryColor = Color(0xFF0F5A47);
+    const Color accentColor = Color(0xFFD4AF37);
     final isDark = appState.isDarkMode;
 
     final double screenWidth = MediaQuery.of(context).size.width;
@@ -225,7 +254,7 @@ class _MainShellState extends State<MainShell> {
 
     // دائماً يفتح على الرئيسية عند الإقلاع الأول، ونلغي الاستعادة التلقائية لآخر شاشة
     if (!_isInit) {
-      _currentIndex = 0;
+      _currentIndex = 2;
       _isInit = true;
     }
 
@@ -266,40 +295,51 @@ class _MainShellState extends State<MainShell> {
 
               // خيارات التنقل والخدمات المساعدة
               ListTile(
-                leading: const Icon(Icons.cloud_sync, color: Colors.teal),
-                title: const Text('الحساب والمزامنة السحابية', textAlign: TextAlign.right),
+                title: const Text('الحساب والمزامنة السحابية',
+                    textAlign: TextAlign.right),
+                trailing: const Icon(Icons.cloud_sync, color: Colors.teal),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const AuthScreen()));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const AuthScreen()));
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.assignment, color: Colors.teal),
-                title: const Text('الورد وحفظ القرآن', textAlign: TextAlign.right),
+                title:
+                    const Text('الورد وحفظ القرآن', textAlign: TextAlign.right),
+                trailing: const Icon(Icons.assignment, color: Colors.teal),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HifzKhatmaScreen()));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const HifzKhatmaScreen()));
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.settings, color: Colors.teal),
-                title: const Text('إعدادات التطبيق', textAlign: TextAlign.right),
+                title:
+                    const Text('إعدادات التطبيق', textAlign: TextAlign.right),
+                trailing: const Icon(Icons.settings, color: Colors.teal),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, '/settings');
                 },
               ),
               const Divider(),
-              
+
               // التحكم بحجم خط المصحف في القائمة الجانبية مباشرة
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
                       'حجم خط المصحف (${appState.fontSize.toInt()})',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13),
                       textAlign: TextAlign.right,
                     ),
                     Slider(
@@ -319,7 +359,7 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
       ),
-      appBar: _currentIndex == 0
+      appBar: _currentIndex == 2
           ? AppBar(
               backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
               foregroundColor: Colors.white,
@@ -333,9 +373,15 @@ class _MainShellState extends State<MainShell> {
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(
-                    'رفيق القرآن',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'رفيق القرآن',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -361,81 +407,35 @@ class _MainShellState extends State<MainShell> {
     Color primaryColor,
     Color accentColor,
   ) {
-    final double targetX = isRtl
-        ? screenWidth - (_currentIndex + 0.5) * tabWidth
-        : (_currentIndex + 0.5) * tabWidth;
-
     return Container(
-      height: 70, // Extra height for the floating active button overflow
-      color: Colors.transparent,
-      child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(begin: targetX, end: targetX),
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        builder: (context, animX, child) {
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // 1. Notched base background path
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: 60,
-                child: CustomPaint(
-                  painter: NotchedBasePainter(
-                    centerX: animX,
-                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  ),
-                ),
-              ),
-
-              // 2. Floating Circular Active Button
-              Positioned(
-                left: animX - 28,
-                bottom: 14,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: primaryColor,
-                    border: Border.all(color: accentColor, width: 2.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryColor.withOpacity(0.35),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    _getIconForIndex(_currentIndex, isActive: true),
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                ),
-              ),
-
-              // 3. Row of tab actions
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: 60,
-                child: Row(
-                  children: [
-                    _buildNavItem(0, Icons.home_outlined, 'الرئيسية', isDark, accentColor),
-                    _buildNavItem(1, Icons.menu_book_outlined, 'المصحف', isDark, accentColor),
-                    _buildNavItem(2, Icons.library_books_outlined, 'الأذكار', isDark, accentColor),
-                    _buildNavItem(3, Icons.fingerprint_outlined, 'السبحة', isDark, accentColor),
-                    _buildNavItem(4, Icons.explore_outlined, 'الصلاة', isDark, accentColor),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      height: 72,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E).withOpacity(0.95) : Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : primaryColor.withOpacity(0.08),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Row(
+          children: [
+            _buildNavItem(0, Icons.menu_book_outlined, 'المصحف', isDark, primaryColor, accentColor),
+            _buildNavItem(1, Icons.library_books_outlined, 'الأذكار', isDark, primaryColor, accentColor),
+            _buildNavItem(2, Icons.home_outlined, 'الرئيسية', isDark, primaryColor, accentColor),
+            _buildNavItem(3, Icons.fingerprint_outlined, 'السبحة', isDark, primaryColor, accentColor),
+            _buildNavItem(4, Icons.explore_outlined, 'الصلاة', isDark, primaryColor, accentColor),
+          ],
+        ),
       ),
     );
   }
@@ -445,6 +445,7 @@ class _MainShellState extends State<MainShell> {
     IconData icon,
     String label,
     bool isDark,
+    Color primaryColor,
     Color accentColor,
   ) {
     final bool isSelected = _currentIndex == index;
@@ -456,26 +457,38 @@ class _MainShellState extends State<MainShell> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (isSelected)
-              const SizedBox(height: 24)
-            else
-              Icon(
-                icon,
-                color: isDark ? Colors.white60 : Colors.grey[600],
-                size: 22,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              transform: isSelected ? (Matrix4.identity()..translate(0.0, -2.0)) : Matrix4.identity(),
+              child: Icon(
+                isSelected ? _getIconForIndex(index, isActive: true) : icon,
+                color: isSelected ? accentColor : (isDark ? Colors.white54 : Colors.grey[500]),
+                size: isSelected ? 24 : 20,
               ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? accentColor
-                    : (isDark ? Colors.white60 : Colors.grey[600]),
-                fontFamily: 'Outfit',
+            ),
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? accentColor : (isDark ? Colors.white54 : Colors.grey[600]),
+                  fontFamily: 'Amiri',
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 2),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: isSelected ? 6 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                color: accentColor,
+                borderRadius: BorderRadius.circular(1.5),
+              ),
             ),
           ],
         ),
@@ -486,11 +499,11 @@ class _MainShellState extends State<MainShell> {
   IconData _getIconForIndex(int index, {required bool isActive}) {
     switch (index) {
       case 0:
-        return isActive ? Icons.home : Icons.home_outlined;
-      case 1:
         return isActive ? Icons.menu_book : Icons.menu_book_outlined;
-      case 2:
+      case 1:
         return isActive ? Icons.library_books : Icons.library_books_outlined;
+      case 2:
+        return isActive ? Icons.home : Icons.home_outlined;
       case 3:
         return isActive ? Icons.fingerprint : Icons.fingerprint_outlined;
       case 4:
@@ -498,60 +511,5 @@ class _MainShellState extends State<MainShell> {
       default:
         return Icons.home;
     }
-  }
-}
-
-class NotchedBasePainter extends CustomPainter {
-  final double centerX;
-  final Color color;
-
-  NotchedBasePainter({
-    required this.centerX,
-    required this.color,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    final double notchRadius = 35.0;
-    final double notchDepth = 25.0;
-
-    path.moveTo(0, 0);
-    path.lineTo(centerX - notchRadius - 10, 0);
-
-    path.cubicTo(
-      centerX - notchRadius,
-      0,
-      centerX - notchRadius + 8,
-      notchDepth,
-      centerX,
-      notchDepth,
-    );
-
-    path.cubicTo(
-      centerX + notchRadius - 8,
-      notchDepth,
-      centerX + notchRadius,
-      0,
-      centerX + notchRadius + 10,
-      0,
-    );
-
-    path.lineTo(size.width, 0);
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-
-    canvas.drawShadow(path, Colors.black26, 6.0, true);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant NotchedBasePainter oldDelegate) {
-    return oldDelegate.centerX != centerX || oldDelegate.color != color;
   }
 }

@@ -104,9 +104,16 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen> with Sing
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          'مليونية الصلاة على النبي ﷺ',
-          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Amiri', fontSize: 22),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: const Text(
+            'مليونية الصلاة على النبي ﷺ',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Amiri',
+              fontSize: 18,
+            ),
+          ),
         ),
         actions: [
           PopupMenuButton<int>(
@@ -137,14 +144,11 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen> with Sing
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                       // Banner/Header
                       Container(
                         padding: const EdgeInsets.all(18),
@@ -191,7 +195,7 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen> with Sing
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
 
                       // Global Counter Card
                       Container(
@@ -248,14 +252,17 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen> with Sing
                               ],
                             ),
                             const SizedBox(height: 10),
-                            Text(
-                              _formatNumber(service.globalCount),
-                              style: TextStyle(
-                                fontSize: 42,
-                                fontWeight: FontWeight.bold,
-                                color: accentColor,
-                                fontFamily: 'Outfit',
-                                letterSpacing: 1.5,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                _formatNumber(service.globalCount),
+                                style: TextStyle(
+                                  fontSize: 42,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentColor,
+                                  fontFamily: 'Outfit',
+                                  letterSpacing: 1.5,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -269,7 +276,7 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen> with Sing
                           ],
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 20),
 
                       // Interactive Tap Button & Progress Ring
                       Center(
@@ -278,8 +285,8 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen> with Sing
                           children: [
                             // Glowing aura
                             Container(
-                              width: 250,
-                              height: 250,
+                              width: 230,
+                              height: 230,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: primaryColor.withOpacity(0.04),
@@ -287,8 +294,8 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen> with Sing
                             ),
                             // Progress Indicator
                             SizedBox(
-                              width: 210,
-                              height: 210,
+                              width: 190,
+                              height: 190,
                               child: CircularProgressIndicator(
                                 value: progress,
                                 strokeWidth: 10,
@@ -304,8 +311,8 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen> with Sing
                                 duration: const Duration(milliseconds: 100),
                                 curve: Curves.easeOutBack,
                                 child: Container(
-                                  width: 180,
-                                  height: 180,
+                                  width: 160,
+                                  height: 160,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: LinearGradient(
@@ -328,38 +335,44 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen> with Sing
                                       width: 2,
                                     ),
                                   ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        'ﷺ',
-                                        style: TextStyle(
-                                          fontSize: 56,
-                                          color: accentColor,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Amiri',
-                                        ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'ﷺ',
+                                            style: TextStyle(
+                                              fontSize: 52,
+                                              color: accentColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Amiri',
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          const Text(
+                                            'صَلِّ على النبي',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.white70,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${service.personalCount}',
+                                            style: const TextStyle(
+                                              fontSize: 22,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Outfit',
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(height: 2),
-                                      const Text(
-                                        'صَلِّ على النبي',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.white70,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        '${service.personalCount}',
-                                        style: const TextStyle(
-                                          fontSize: 24,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Outfit',
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -377,108 +390,107 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen> with Sing
                         ),
                         textAlign: TextAlign.center,
                       ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Control panel at bottom
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                decoration: BoxDecoration(
+                const SizedBox(height: 16),
+                // Control panel styled as Card inside ScrollView
+                Card(
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   color: cardBgColor,
-                  border: Border(
-                    top: BorderSide(
-                      color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Vibration Toggle
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            _isVibrationEnabled ? Icons.vibration : Icons.videogame_asset_off_outlined,
-                            color: _isVibrationEnabled ? primaryColor : Colors.grey,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isVibrationEnabled = !_isVibrationEnabled;
-                            });
-                          },
-                        ),
-                        Text(
-                          'الاهتزاز',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white70 : Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Sound Toggle
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            _isSoundEnabled ? Icons.volume_up : Icons.volume_off,
-                            color: _isSoundEnabled ? primaryColor : Colors.grey,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isSoundEnabled = !_isSoundEnabled;
-                            });
-                          },
-                        ),
-                        Text(
-                          'الصوت',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white70 : Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Reset Button
-                    TextButton.icon(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('تصفير العداد', textAlign: TextAlign.right),
-                            content: const Text(
-                              'هل تريد تصفير عدادك الشخصي الحالي؟ (لن يؤثر ذلك على العداد العالمي)',
-                              textAlign: TextAlign.right,
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('إلغاء'),
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  Navigator.pop(context);
-                                  await service.resetPersonalCount();
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Vibration Toggle
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  _isVibrationEnabled ? Icons.vibration : Icons.videogame_asset_off_outlined,
+                                  color: _isVibrationEnabled ? primaryColor : Colors.grey,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isVibrationEnabled = !_isVibrationEnabled;
+                                  });
                                 },
-                                child: const Text('تصفير العداد', style: TextStyle(color: Colors.red)),
+                              ),
+                              Text(
+                                'الاهتزاز',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white70 : Colors.black87,
+                                ),
                               ),
                             ],
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.refresh, color: Colors.red, size: 18),
-                      label: const Text('تصفير', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 12),
+                          // Sound Toggle
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  _isSoundEnabled ? Icons.volume_up : Icons.volume_off,
+                                  color: _isSoundEnabled ? primaryColor : Colors.grey,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isSoundEnabled = !_isSoundEnabled;
+                                  });
+                                },
+                              ),
+                              Text(
+                                'الصوت',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white70 : Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 12),
+                          // Reset Button
+                          TextButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('تصفير العداد', textAlign: TextAlign.right),
+                                  content: const Text(
+                                    'هل تريد تصفير عدادك الشخصي الحالي؟ (لن يؤثر ذلك على العداد العالمي)',
+                                    textAlign: TextAlign.right,
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('إلغاء'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () async {
+                                        Navigator.pop(context);
+                                        await service.resetPersonalCount();
+                                      },
+                                      child: const Text('تصفير العداد', style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.refresh, color: Colors.red, size: 18),
+                            label: const Text('تصفير', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                 const SizedBox(height: 100), // navigation clearance
+              ],
+            ),
           ),
         ),
       ),

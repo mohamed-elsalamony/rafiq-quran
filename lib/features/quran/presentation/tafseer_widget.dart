@@ -41,7 +41,7 @@ class _TafseerWidgetState extends State<TafseerWidget> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFF0F5A47);
+    const primaryColor = Color(0xFF0F5A47);
 
     return Container(
       width: double.maxFinite,

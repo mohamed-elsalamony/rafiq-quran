@@ -129,8 +129,8 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = const Color(0xFF0F5A47);
-    final Color goldColor = const Color(0xFFD4AF37);
+    const Color primaryColor = Color(0xFF0F5A47);
+    const Color goldColor = Color(0xFFD4AF37);
 
     int getHizbNumber(int page) {
       if (page <= 1) return 1;
@@ -164,7 +164,9 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
               'الجزء ${quran.getJuzNumber(widget.verses.first['surah'], widget.verses.first['ayah'])}',
               style: TextStyle(
                 fontSize: 12,
-                color: widget.themeMode == 'sepia' ? const Color(0xFF8C7565) : Colors.grey,
+                color: widget.themeMode == 'sepia'
+                    ? const Color(0xFF8C7565)
+                    : Colors.grey,
                 fontFamily: 'Outfit',
               ),
             ),
@@ -172,7 +174,9 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
               'صفحة ${widget.pageNumber}',
               style: TextStyle(
                 fontSize: 12,
-                color: widget.themeMode == 'sepia' ? const Color(0xFF8C7565) : Colors.grey,
+                color: widget.themeMode == 'sepia'
+                    ? const Color(0xFF8C7565)
+                    : Colors.grey,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Outfit',
               ),
@@ -181,19 +185,20 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
               'الحزب ${getHizbNumber(widget.pageNumber)}',
               style: TextStyle(
                 fontSize: 12,
-                color: widget.themeMode == 'sepia' ? const Color(0xFF8C7565) : Colors.grey,
+                color: widget.themeMode == 'sepia'
+                    ? const Color(0xFF8C7565)
+                    : Colors.grey,
                 fontFamily: 'Outfit',
               ),
             ),
           ],
         ),
         const Divider(height: 20),
-        
         ...surahGroups.map((group) {
           final firstVerse = group.first;
           final int sNum = firstVerse['surah'] as int;
           final int aNum = firstVerse['ayah'] as int;
-          
+
           // Show Surah header only when a new Surah starts (ayah == 1)
           final bool showHeader = aNum == 1;
           final bool showBasmalah = showHeader && sNum != 1 && sNum != 9;
@@ -216,7 +221,9 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
                       fontWeight: FontWeight.bold,
                       color: widget.themeMode == 'dark'
                           ? Colors.amber[100]
-                          : (widget.themeMode == 'sepia' ? const Color(0xFF8C3E15) : primaryColor),
+                          : (widget.themeMode == 'sepia'
+                              ? const Color(0xFF8C3E15)
+                              : primaryColor),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -229,16 +236,23 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
                     final verse = group[idx];
                     final sVal = verse['surah'] as int;
                     final aVal = verse['ayah'] as int;
-                    final isAudioPlaying = (widget.activePlayingSurah == sVal && widget.activePlayingAyah == aVal);
-                    final isTextSelected = (widget.selectedAyahSurah == sVal && widget.selectedAyahNumber == aVal);
+                    final isAudioPlaying = (widget.activePlayingSurah == sVal &&
+                        widget.activePlayingAyah == aVal);
+                    final isTextSelected = (widget.selectedAyahSurah == sVal &&
+                        widget.selectedAyahNumber == aVal);
 
                     // Find index of this verse in global widget.verses to match recognizer
-                    final globalIdx = widget.verses.indexWhere((v) => v['surah'] == sVal && v['ayah'] == aVal);
+                    final globalIdx = widget.verses.indexWhere(
+                        (v) => v['surah'] == sVal && v['ayah'] == aVal);
 
                     return TextSpan(
-                      text: '${verse['text']} ﴿${quran.getVerseEndSymbol(aVal)}﴾ ',
+                      text:
+                          '${verse['text']} ﴿${quran.getVerseEndSymbol(aVal)}﴾ ',
                       style: _getQuranTextStyle(isAudioPlaying, isTextSelected),
-                      recognizer: (globalIdx != -1 && globalIdx < _recognizers.length) ? _recognizers[globalIdx] : null,
+                      recognizer:
+                          (globalIdx != -1 && globalIdx < _recognizers.length)
+                              ? _recognizers[globalIdx]
+                              : null,
                     );
                   }),
                 ),
@@ -246,7 +260,8 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
               const SizedBox(height: 16),
             ],
           );
-        }).toList(),
+        }),
+        const SizedBox(height: 120),
       ],
     );
   }
@@ -264,12 +279,13 @@ class SurahHeaderBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = const Color(0xFF0F5A47);
-    final Color goldColor = const Color(0xFFD4AF37);
+    const Color primaryColor = Color(0xFF0F5A47);
+    const Color goldColor = Color(0xFFD4AF37);
     final isDark = themeMode == 'dark';
 
     final String surahName = quran.getSurahNameArabic(surahNumber);
-    final String revelationPlace = quran.getPlaceOfRevelation(surahNumber) == 'Makyah' ? 'مكية' : 'مدنية';
+    final String revelationPlace =
+        quran.getPlaceOfRevelation(surahNumber) == 'Makyah' ? 'مكية' : 'مدنية';
     final int versesCount = quran.getVerseCount(surahNumber);
 
     return Container(

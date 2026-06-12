@@ -12,7 +12,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   bool _isLoggedIn = false;
   String _userEmail = '';
   bool _isSyncing = false;
@@ -31,7 +31,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الرجاء إدخال البريد الإلكتروني وكلمة المرور.')),
+        const SnackBar(
+            content: Text('الرجاء إدخال البريد الإلكتروني وكلمة المرور.')),
       );
       return;
     }
@@ -63,7 +64,9 @@ class _AuthScreenState extends State<AuthScreen> {
   void _startCloudSync() async {
     if (!_isLoggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الرجاء تسجيل الدخول أولاً لتفعيل المزامنة السحابية.')),
+        const SnackBar(
+            content:
+                Text('الرجاء تسجيل الدخول أولاً لتفعيل المزامنة السحابية.')),
       );
       return;
     }
@@ -88,7 +91,9 @@ class _AuthScreenState extends State<AuthScreen> {
         _isSyncing = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تمت مزامنة العلامات المرجعية وخطط الحفظ والإحصائيات بنجاح مع خادم "رفيق"! ☁️')),
+        const SnackBar(
+            content: Text(
+                'تمت مزامنة العلامات المرجعية وخطط الحفظ والإحصائيات بنجاح مع خادم "رفيق"! ☁️')),
       );
     }
   }
@@ -97,16 +102,23 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final isDark = appState.isDarkMode;
-    final primaryColor = const Color(0xFF0F5A47);
-    final Color accentColor = const Color(0xFFD4AF37);
+    const primaryColor = Color(0xFF0F5A47);
+    const Color accentColor = Color(0xFFD4AF37);
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
-        title: const Text(
-          'الحساب والمزامنة السحابية',
-          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: const Text(
+            'الحساب والمزامنة السحابية',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Outfit',
+              fontSize: 16,
+            ),
+          ),
         ),
         centerTitle: true,
       ),
@@ -133,10 +145,12 @@ class _AuthScreenState extends State<AuthScreen> {
               Text(
                 'قم بتسجيل الدخول لمزامنة آخر موضع قراءة، والعلامات المرجعية، والإعدادات الخاصة بك تلقائياً بين أجهزتك المختلفة.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : Colors.grey[600], height: 1.4),
+                style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    height: 1.4),
               ),
               const SizedBox(height: 30),
-
               if (!_isLoggedIn) ...[
                 // واجهة تسجيل الدخول
                 TextField(
@@ -165,10 +179,12 @@ class _AuthScreenState extends State<AuthScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: const Text('تسجيل الدخول / إنشاء حساب', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('تسجيل الدخول / إنشاء حساب',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
@@ -178,14 +194,16 @@ class _AuthScreenState extends State<AuthScreen> {
                       _userEmail = 'user.tester@gmail.com';
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم تسجيل الدخول السريع بحساب Google')),
+                      const SnackBar(
+                          content: Text('تم تسجيل الدخول السريع بحساب Google')),
                     );
                   },
                   icon: const Icon(Icons.g_mobiledata, size: 28),
                   label: const Text('تسجيل الدخول السريع بحساب Google'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: isDark ? Colors.white70 : Colors.black87,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                 ),
@@ -194,23 +212,27 @@ class _AuthScreenState extends State<AuthScreen> {
                 Card(
                   elevation: 2,
                   color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
                       children: [
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.account_circle, size: 48, color: Colors.teal),
-                          title: const Text('المستخدم الحالي', style: TextStyle(fontWeight: FontWeight.bold)),
+                          leading: const Icon(Icons.account_circle,
+                              size: 48, color: Colors.teal),
+                          title: const Text('المستخدم الحالي',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text(_userEmail),
                         ),
                         const Divider(),
                         const SizedBox(height: 12),
-                        
+
                         // مؤشر المزامنة
                         if (_isSyncing) ...[
-                          Text('جاري مزامنة البيانات السحابية... ${(_syncProgress * 100).toInt()}%'),
+                          Text(
+                              'جاري مزامنة البيانات السحابية... ${(_syncProgress * 100).toInt()}%'),
                           const SizedBox(height: 12),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(6),
@@ -218,7 +240,8 @@ class _AuthScreenState extends State<AuthScreen> {
                               value: _syncProgress,
                               minHeight: 8,
                               backgroundColor: Colors.grey[200],
-                              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(primaryColor),
                             ),
                           ),
                         ] else ...[
@@ -229,8 +252,10 @@ class _AuthScreenState extends State<AuthScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 12),
                             ),
                           ),
                         ],
@@ -240,7 +265,8 @@ class _AuthScreenState extends State<AuthScreen> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                             side: const BorderSide(color: Colors.red),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
                           ),
                           child: const Text('تسجيل الخروج'),
                         ),

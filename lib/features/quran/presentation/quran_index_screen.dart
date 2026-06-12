@@ -12,7 +12,8 @@ class QuranIndexScreen extends StatefulWidget {
   State<QuranIndexScreen> createState() => _QuranIndexScreenState();
 }
 
-class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerProviderStateMixin {
+class _QuranIndexScreenState extends State<QuranIndexScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -22,16 +23,44 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
     final juzNum = index + 1;
     // Approximated Quran Juz starting pages
     final List<int> juzStartPages = [
-      1, 22, 42, 62, 82, 102, 121, 142, 162, 182, 
-      201, 221, 242, 262, 282, 302, 322, 342, 362, 382, 
-      402, 422, 442, 462, 482, 502, 522, 542, 562, 582
+      1,
+      22,
+      42,
+      62,
+      82,
+      102,
+      121,
+      142,
+      162,
+      182,
+      201,
+      221,
+      242,
+      262,
+      282,
+      302,
+      322,
+      342,
+      362,
+      382,
+      402,
+      422,
+      442,
+      462,
+      482,
+      502,
+      522,
+      542,
+      562,
+      582
     ];
     final page = juzStartPages[index];
     return {
       'number': juzNum,
       'name': 'الجزء $juzNum',
       'page': page,
-      'surahName': quran.getSurahNameArabic(quran.getPageData(page).first['surah']),
+      'surahName':
+          quran.getSurahNameArabic(quran.getPageData(page).first['surah']),
     };
   });
 
@@ -40,19 +69,74 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
     final hizbNum = index + 1;
     // Estimated Hizb starting pages
     final List<int> hizbStartPages = [
-      1, 11, 22, 32, 42, 52, 62, 72, 82, 92,
-      102, 111, 121, 131, 142, 151, 162, 172, 182, 192,
-      201, 211, 221, 231, 242, 252, 262, 272, 282, 292,
-      302, 312, 322, 332, 342, 352, 362, 372, 382, 392,
-      402, 412, 422, 432, 442, 452, 462, 472, 482, 492,
-      502, 512, 522, 532, 542, 552, 562, 572, 582, 592
+      1,
+      11,
+      22,
+      32,
+      42,
+      52,
+      62,
+      72,
+      82,
+      92,
+      102,
+      111,
+      121,
+      131,
+      142,
+      151,
+      162,
+      172,
+      182,
+      192,
+      201,
+      211,
+      221,
+      231,
+      242,
+      252,
+      262,
+      272,
+      282,
+      292,
+      302,
+      312,
+      322,
+      332,
+      342,
+      352,
+      362,
+      372,
+      382,
+      392,
+      402,
+      412,
+      422,
+      432,
+      442,
+      452,
+      462,
+      472,
+      482,
+      492,
+      502,
+      512,
+      522,
+      532,
+      542,
+      552,
+      562,
+      572,
+      582,
+      592
     ];
     final page = hizbStartPages[index];
     return {
       'number': hizbNum,
       'name': 'الحزب $hizbNum',
       'page': page,
-      'surahName': quran.getSurahNameArabic(quran.getPageData(page).first['surah']),
+      'surahName':
+          quran.getSurahNameArabic(quran.getPageData(page).first['surah']),
     };
   });
 
@@ -74,8 +158,8 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
     final appState = Provider.of<AppState>(context);
     final quranProvider = Provider.of<QuranProvider>(context);
     final isDark = appState.isDarkMode;
-    final primaryColor = const Color(0xFF0F5A47);
-    final Color goldColor = const Color(0xFFD4AF37);
+    const primaryColor = Color(0xFF0F5A47);
+    const Color goldColor = Color(0xFFD4AF37);
 
     // List of Surahs filtered by search
     final List<int> filteredSurahs = [];
@@ -93,9 +177,16 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
-        title: const Text(
-          'فهرس القرآن الكريم',
-          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: const Text(
+            'فهرس القرآن الكريم',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Outfit',
+              fontSize: 16,
+            ),
+          ),
         ),
         centerTitle: true,
         bottom: TabBar(
@@ -118,16 +209,18 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
               padding: const EdgeInsets.all(16.0),
               child: Card(
                 elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 child: TextField(
                   controller: _searchController,
                   textAlign: TextAlign.right,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: 'البحث باسم السورة أو رقمها...',
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    prefixIcon: Icon(Icons.search, color: Colors.grey),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   onChanged: (val) {
                     setState(() {
@@ -137,7 +230,7 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                 ),
               ),
             ),
-            
+
             // Tab contents
             Expanded(
               child: TabBarView(
@@ -151,28 +244,37 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                           itemCount: filteredSurahs.length,
                           itemBuilder: (context, index) {
                             final sNum = filteredSurahs[index];
-                            final isMeccan = quran.getPlaceOfRevelation(sNum) == 'Makkah';
+                            final isMeccan =
+                                quran.getPlaceOfRevelation(sNum) == 'Makkah';
                             final totalAyahs = quran.getVerseCount(sNum);
                             final startPage = quran.getPageNumber(sNum, 1);
-                            
+
                             // Check if this Surah contains the last read position
                             final isLastRead = appState.lastSurahRead == sNum;
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12.0),
-                              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              color: isDark
+                                  ? const Color(0xFF1E1E1E)
+                                  : Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
                               borderOnForeground: true,
                               child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0, vertical: 8.0),
                                 leading: Container(
                                   width: 44,
                                   height: 44,
                                   decoration: BoxDecoration(
-                                    color: isDark ? Colors.teal.withOpacity(0.1) : primaryColor.withOpacity(0.06),
+                                    color: isDark
+                                        ? Colors.teal.withOpacity(0.1)
+                                        : primaryColor.withOpacity(0.06),
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: isLastRead ? goldColor : primaryColor.withOpacity(0.2),
+                                      color: isLastRead
+                                          ? goldColor
+                                          : primaryColor.withOpacity(0.2),
                                       width: 1.5,
                                     ),
                                   ),
@@ -181,7 +283,9 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                                       '$sNum',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: isLastRead ? goldColor : primaryColor,
+                                        color: isLastRead
+                                            ? goldColor
+                                            : primaryColor,
                                         fontFamily: 'Outfit',
                                       ),
                                     ),
@@ -193,14 +297,19 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                                     if (isLastRead)
                                       Container(
                                         margin: const EdgeInsets.only(right: 8),
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
                                           color: goldColor.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           'آخر قراءة',
-                                          style: TextStyle(fontSize: 10, color: goldColor, fontWeight: FontWeight.bold),
+                                          style: TextStyle(
+                                              fontSize: 10,
+                                              color: goldColor,
+                                              fontWeight: FontWeight.bold),
                                         ),
                                       ),
                                     Text(
@@ -208,7 +317,9 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                                       style: GoogleFonts.amiri(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 20,
-                                        color: isDark ? Colors.white : Colors.black87,
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black87,
                                       ),
                                     ),
                                   ],
@@ -218,12 +329,16 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                                   children: [
                                     Text(
                                       'صفحة $startPage',
-                                      style: TextStyle(color: goldColor, fontSize: 12, fontWeight: FontWeight.w600),
+                                      style: TextStyle(
+                                          color: goldColor,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600),
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
                                       '$totalAyahs آية',
-                                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                      style: const TextStyle(
+                                          color: Colors.grey, fontSize: 12),
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
@@ -259,7 +374,10 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                         children: [
                           Text(
                             'فهرس الأجزاء (30 جزءاً)',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 15),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                                fontSize: 15),
                           ),
                         ],
                       ),
@@ -267,7 +385,8 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           childAspectRatio: 2.2,
                           crossAxisSpacing: 12,
@@ -278,8 +397,10 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                           final juz = _juzList[index];
                           return Card(
                             margin: EdgeInsets.zero,
-                            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            color:
+                                isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             child: InkWell(
                               onTap: () {
                                 if (quranProvider.isPlaying) {
@@ -297,18 +418,25 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                                   children: [
                                     Text(
                                       juz['name'],
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13),
                                     ),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
                                           'ص ${juz['page']}',
-                                          style: TextStyle(color: goldColor, fontSize: 11, fontWeight: FontWeight.bold),
+                                          style: TextStyle(
+                                              color: goldColor,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold),
                                         ),
                                         Text(
                                           'سورة ${juz['surahName']}',
-                                          style: const TextStyle(color: Colors.grey, fontSize: 10),
+                                          style: const TextStyle(
+                                              color: Colors.grey, fontSize: 10),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
@@ -328,7 +456,10 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                         children: [
                           Text(
                             'فهرس الأحزاب (60 حزباً)',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 15),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                                fontSize: 15),
                           ),
                         ],
                       ),
@@ -336,7 +467,8 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           childAspectRatio: 2.2,
                           crossAxisSpacing: 12,
@@ -347,8 +479,10 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                           final hizb = _hizbList[index];
                           return Card(
                             margin: EdgeInsets.zero,
-                            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            color:
+                                isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             child: InkWell(
                               onTap: () {
                                 if (quranProvider.isPlaying) {
@@ -366,18 +500,25 @@ class _QuranIndexScreenState extends State<QuranIndexScreen> with SingleTickerPr
                                   children: [
                                     Text(
                                       hizb['name'],
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13),
                                     ),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
                                           'ص ${hizb['page']}',
-                                          style: TextStyle(color: goldColor, fontSize: 11, fontWeight: FontWeight.bold),
+                                          style: TextStyle(
+                                              color: goldColor,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold),
                                         ),
                                         Text(
                                           'سورة ${hizb['surahName']}',
-                                          style: const TextStyle(color: Colors.grey, fontSize: 10),
+                                          style: const TextStyle(
+                                              color: Colors.grey, fontSize: 10),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ],

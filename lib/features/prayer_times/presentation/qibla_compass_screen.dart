@@ -33,7 +33,8 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         setState(() {
-          _errorMsg = 'خدمات تحديد الموقع (GPS) مغلقة. يرجى تفعيلها من إعدادات الهاتف.';
+          _errorMsg =
+              'خدمات تحديد الموقع (GPS) مغلقة. يرجى تفعيلها من إعدادات الهاتف.';
           _isLoading = false;
         });
         return;
@@ -44,7 +45,8 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           setState(() {
-            _errorMsg = 'صلاحية تحديد الموقع مرفوضة. لا يمكن تحديد اتجاه القبلة بدقة دون موقعك.';
+            _errorMsg =
+                'صلاحية تحديد الموقع مرفوضة. لا يمكن تحديد اتجاه القبلة بدقة دون موقعك.';
             _isLoading = false;
           });
           return;
@@ -53,7 +55,8 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
 
       if (permission == LocationPermission.deniedForever) {
         setState(() {
-          _errorMsg = 'صلاحية الموقع مرفوضة بشكل دائم. يرجى تفعيل الصلاحية من إعدادات الهاتف.';
+          _errorMsg =
+              'صلاحية الموقع مرفوضة بشكل دائم. يرجى تفعيل الصلاحية من إعدادات الهاتف.';
           _isLoading = false;
         });
         return;
@@ -65,7 +68,8 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
           desiredAccuracy: LocationAccuracy.low,
         ).timeout(const Duration(seconds: 4));
       } catch (e) {
-        debugPrint("Error getting current location: $e. Attempting last known position...");
+        debugPrint(
+            "Error getting current location: $e. Attempting last known position...");
         try {
           position = await Geolocator.getLastKnownPosition();
         } catch (_) {}
@@ -78,7 +82,8 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
         lon = position.longitude;
       } else {
         // Fallback to active city in provider
-        final prayerProvider = Provider.of<PrayerProvider>(context, listen: false);
+        final prayerProvider =
+            Provider.of<PrayerProvider>(context, listen: false);
         lat = prayerProvider.currentCity.latitude;
         lon = prayerProvider.currentCity.longitude;
       }
@@ -102,18 +107,25 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = const Color(0xFF0F5A47);
-    final Color goldColor = const Color(0xFFD4AF37);
-    
+    const Color primaryColor = Color(0xFF0F5A47);
+    const Color goldColor = Color(0xFFD4AF37);
+
     return Scaffold(
       backgroundColor: const Color(0xFF0B1412), // Premium dark background
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'بوصلة القبلة التفاعلية',
-          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: const Text(
+            'بوصلة القبلة التفاعلية',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Outfit',
+              fontSize: 16,
+            ),
+          ),
         ),
         centerTitle: true,
       ),
@@ -150,7 +162,8 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: goldColor),
+                      style:
+                          ElevatedButton.styleFrom(backgroundColor: goldColor),
                       onPressed: () {
                         setState(() {
                           _isLoading = true;
@@ -158,7 +171,10 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                         });
                         _checkLocationAndCalculateQibla();
                       },
-                      child: const Text('إعادة المحاولة', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                      child: const Text('إعادة المحاولة',
+                          style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -178,7 +194,9 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                     }
 
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37)));
+                      return const Center(
+                          child: CircularProgressIndicator(
+                              color: Color(0xFFD4AF37)));
                     }
 
                     double? heading = snapshot.data?.heading;
@@ -195,7 +213,8 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
 
                     // Calculate rotation angles
                     final double compassRotation = -heading * pi / 180;
-                    final double qiblaRotation = (_qiblaAngle - heading) * pi / 180;
+                    final double qiblaRotation =
+                        (_qiblaAngle - heading) * pi / 180;
 
                     // Check if phone is aligned with Mecca (within 5 degrees)
                     final double diff = (heading - _qiblaAngle).abs();
@@ -212,14 +231,18 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                         // Details
                         Text(
                           'زاوية القبلة: ${_qiblaAngle.toInt()}° من الشمال',
-                          style: TextStyle(color: goldColor, fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: goldColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _currentPosition != null
                               ? 'إحداثياتك: ${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)}'
                               : '',
-                          style: const TextStyle(color: Colors.white38, fontSize: 12),
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 12),
                         ),
                         const SizedBox(height: 32),
 
@@ -237,12 +260,16 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                                   shape: BoxShape.circle,
                                   color: const Color(0xFF162220),
                                   border: Border.all(
-                                    color: isAligned ? Colors.teal : primaryColor,
+                                    color:
+                                        isAligned ? Colors.teal : primaryColor,
                                     width: 4,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: (isAligned ? Colors.teal : primaryColor).withOpacity(0.3),
+                                      color: (isAligned
+                                              ? Colors.teal
+                                              : primaryColor)
+                                          .withOpacity(0.3),
                                       blurRadius: 24,
                                     ),
                                   ],
@@ -250,14 +277,39 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
-                                    const Positioned(top: 10, child: Text('N', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18))),
-                                    const Positioned(bottom: 10, child: Text('S', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))),
-                                    const Positioned(left: 10, child: Text('W', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))),
-                                    const Positioned(right: 10, child: Text('E', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))),
-                                    
+                                    const Positioned(
+                                        top: 10,
+                                        child: Text('N',
+                                            style: TextStyle(
+                                                color: Colors.red,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18))),
+                                    const Positioned(
+                                        bottom: 10,
+                                        child: Text('S',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16))),
+                                    const Positioned(
+                                        left: 10,
+                                        child: Text('W',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16))),
+                                    const Positioned(
+                                        right: 10,
+                                        child: Text('E',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16))),
+
                                     // Degrees markings
                                     ...List.generate(12, (index) {
-                                      final double angle = index * 30 * pi / 180;
+                                      final double angle =
+                                          index * 30 * pi / 180;
                                       return Transform.rotate(
                                         angle: angle,
                                         child: Align(
@@ -265,7 +317,10 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                                           child: Column(
                                             children: [
                                               const SizedBox(height: 25),
-                                              Container(width: 2, height: 6, color: Colors.white30),
+                                              Container(
+                                                  width: 2,
+                                                  height: 6,
+                                                  color: Colors.white30),
                                             ],
                                           ),
                                         ),
@@ -287,7 +342,8 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                                     size: 100,
                                     color: goldColor,
                                   ),
-                                  const SizedBox(height: 100), // Push the center pivot
+                                  const SizedBox(
+                                      height: 100), // Push the center pivot
                                 ],
                               ),
                             ),
@@ -299,9 +355,13 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.black,
-                                boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 6)],
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.black54, blurRadius: 6)
+                                ],
                               ),
-                              child: Icon(Icons.mosque, color: goldColor, size: 24),
+                              child: Icon(Icons.mosque,
+                                  color: goldColor, size: 24),
                             ),
                           ],
                         ),
@@ -309,9 +369,12 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
 
                         // Alignment Indicator Text
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
                           decoration: BoxDecoration(
-                            color: isAligned ? Colors.teal.withOpacity(0.2) : Colors.white.withOpacity(0.04),
+                            color: isAligned
+                                ? Colors.teal.withOpacity(0.2)
+                                : Colors.white.withOpacity(0.04),
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
                               color: isAligned ? Colors.teal : Colors.white12,
@@ -319,9 +382,12 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                             ),
                           ),
                           child: Text(
-                            isAligned ? 'أنت الآن باتجاه الكعبة المشرّفة 🕋' : 'قم بتدوير الهاتف لتوجيه السهم الذهبي للأعلى',
+                            isAligned
+                                ? 'أنت الآن باتجاه الكعبة المشرّفة 🕋'
+                                : 'قم بتدوير الهاتف لتوجيه السهم الذهبي للأعلى',
                             style: TextStyle(
-                              color: isAligned ? Colors.teal[100] : Colors.white70,
+                              color:
+                                  isAligned ? Colors.teal[100] : Colors.white70,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),

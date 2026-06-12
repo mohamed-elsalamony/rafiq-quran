@@ -10,7 +10,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
 
@@ -51,11 +52,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFF0F5A47);
-    final Color accentColor = const Color(0xFFD4AF37);
+    const primaryColor = Color(0xFF0F5A47);
+    const Color accentColor = Color(0xFFD4AF37);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B1412) : const Color(0xFFF4F7F5),
+      backgroundColor:
+          isDark ? const Color(0xFF0B1412) : const Color(0xFFF4F7F5),
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -65,7 +67,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withOpacity(0.04) : primaryColor.withOpacity(0.05),
+                  color: isDark
+                      ? Colors.white.withOpacity(0.04)
+                      : primaryColor.withOpacity(0.05),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: accentColor.withOpacity(0.3),

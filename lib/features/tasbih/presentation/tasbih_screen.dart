@@ -158,9 +158,16 @@ class _TasbihScreenState extends State<TasbihScreen> {
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
-        title: const Text(
-          'المسبحة الإلكترونية',
-          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: const Text(
+            'المسبحة الإلكترونية',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Outfit',
+              fontSize: 16,
+            ),
+          ),
         ),
         centerTitle: true,
         actions: [
@@ -219,10 +226,10 @@ class _TasbihScreenState extends State<TasbihScreen> {
                       ),
                       const Divider(height: 20),
                       // Target chips & vibration/sound control
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Column(
                         children: [
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [33, 100, 1000].map((t) {
                               final isSelected = tasbihProvider.target == t;
                               return Padding(
@@ -245,7 +252,9 @@ class _TasbihScreenState extends State<TasbihScreen> {
                               );
                             }).toList(),
                           ),
+                          const SizedBox(height: 10),
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               IconButton(
                                 icon: Icon(
@@ -255,6 +264,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                                 onPressed: tasbihProvider.toggleSound,
                                 tooltip: 'تفعيل الصوت',
                               ),
+                              const SizedBox(width: 24),
                               IconButton(
                                 icon: Icon(
                                   tasbihProvider.isVibrationEnabled ? Icons.vibration : Icons.phone_android,
@@ -281,8 +291,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
                   child: GestureDetector(
                     onTap: tasbihProvider.increment,
                     child: Container(
-                      width: 250,
-                      height: 250,
+                      width: 220,
+                      height: 220,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
@@ -309,33 +319,40 @@ class _TasbihScreenState extends State<TasbihScreen> {
                           width: 6,
                         ),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '${tasbihProvider.counter}',
-                            style: const TextStyle(
-                              fontSize: 64,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              fontFamily: 'Outfit',
-                            ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '${tasbihProvider.counter}',
+                                style: const TextStyle(
+                                  fontSize: 60,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontFamily: 'Outfit',
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'الهدف: ${tasbihProvider.target}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.teal[100],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Icon(
+                                Icons.touch_app,
+                                color: Colors.white54,
+                                size: 20,
+                              ),
+                            ],
                           ),
-                          Text(
-                            'الهدف: ${tasbihProvider.target}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.teal[100],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Icon(
-                            Icons.touch_app,
-                            color: Colors.white54,
-                            size: 24,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -379,38 +396,48 @@ class _TasbihScreenState extends State<TasbihScreen> {
                       ),
                       const SizedBox(height: 20),
                       SizedBox(
-                        height: 120,
+                        height: 140,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: weeklyStats.map((stat) {
                             final count = stat['count'] as int;
                             final percent = maxStatCount > 0 ? (count / maxStatCount).clamp(0.0, 1.0) : 0.0;
-                            return Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  count > 0 ? '$count' : '',
-                                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  width: 14,
-                                  height: (percent * 80).clamp(4.0, 80.0),
-                                  decoration: BoxDecoration(
-                                    color: count > 0 ? primaryColor : Colors.grey.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(3),
+                            return Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  count > 0
+                                      ? FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            '$count',
+                                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+                                          ),
+                                        )
+                                      : const SizedBox(height: 11),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    width: 14,
+                                    height: (percent * 80).clamp(4.0, 80.0),
+                                    decoration: BoxDecoration(
+                                      color: count > 0 ? primaryColor : Colors.grey.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  stat['day'],
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                  const SizedBox(height: 6),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      stat['day'],
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             );
                           }).toList(),
                         ),
@@ -419,7 +446,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 100),
             ],
           ),
         ),

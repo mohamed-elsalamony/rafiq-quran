@@ -17,19 +17,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<Map<String, dynamic>> _slides = [
     {
       'title': 'مرحباً بك في رفيق القرآن',
-      'description': 'رفيقك الأمثل لقراءة وتدبر آيات كتاب الله الكريم بتصميم متناسق وتجربة قراءة مريحة وهادئة.',
+      'description':
+          'رفيقك الأمثل لقراءة وتدبر آيات كتاب الله الكريم بتصميم متناسق وتجربة قراءة مريحة وهادئة.',
       'icon': Icons.menu_book_rounded,
       'color': const Color(0xFF0F5A47),
     },
     {
       'title': 'تلاوات عذبة وتفاسير ميسرة',
-      'description': 'استمع لكبار القراء مع ميزة المتابعة الذكية، واطلع على تفسير الآيات وتدبرها بلمسة واحدة.',
+      'description':
+          'استمع لكبار القراء مع ميزة المتابعة الذكية، واطلع على تفسير الآيات وتدبرها بلمسة واحدة.',
       'icon': Icons.music_note_rounded,
       'color': const Color(0xFF156E58),
     },
     {
       'title': 'الختمات والأذكار اليومية',
-      'description': 'نظم أورادك اليومية وأذكارك، وتابع تقدم ختمتك وحفظك للمصحف الشريف خطوة بخطوة وبكل سهولة.',
+      'description':
+          'نظم أورادك اليومية وأذكارك، وتابع تقدم ختمتك وحفظك للمصحف الشريف خطوة بخطوة وبكل سهولة.',
       'icon': Icons.assignment_turned_in_rounded,
       'color': const Color(0xFF1C826A),
     },
@@ -52,11 +55,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFF0F5A47);
-    final Color accentColor = const Color(0xFFD4AF37);
+    const primaryColor = Color(0xFF0F5A47);
+    const Color accentColor = Color(0xFFD4AF37);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B1412) : const Color(0xFFF9FBF9),
+      backgroundColor:
+          isDark ? const Color(0xFF0B1412) : const Color(0xFFF9FBF9),
       body: SafeArea(
         child: Column(
           children: [
@@ -160,7 +164,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                         side: BorderSide(color: accentColor.withOpacity(0.5)),
@@ -168,8 +173,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       elevation: 2,
                     ),
                     child: Text(
-                      _currentPage == _slides.length - 1 ? 'ابدأ الآن' : 'التالي',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      _currentPage == _slides.length - 1
+                          ? 'ابدأ الآن'
+                          : 'التالي',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ),
 
@@ -183,7 +191,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         width: isSelected ? 24.0 : 8.0,
                         height: 8.0,
                         decoration: BoxDecoration(
-                          color: isSelected ? accentColor : (isDark ? Colors.grey[700] : Colors.grey[300]),
+                          color: isSelected
+                              ? accentColor
+                              : (isDark ? Colors.grey[700] : Colors.grey[300]),
                           borderRadius: BorderRadius.circular(4.0),
                         ),
                       );

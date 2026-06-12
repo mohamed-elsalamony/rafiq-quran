@@ -32,7 +32,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
     final appState = Provider.of<AppState>(context);
     final adhkarProvider = Provider.of<AdhkarProvider>(context);
     final isDark = appState.isDarkMode;
-    final primaryColor = const Color(0xFF0F5A47);
+    const primaryColor = Color(0xFF0F5A47);
     final filteredItems = adhkarProvider.getFilteredItems();
 
     return Scaffold(
@@ -50,9 +50,16 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                 ),
                 onChanged: adhkarProvider.setSearchQuery,
               )
-            : const Text(
-                'الأذكار اليومية',
-                style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+            : FittedBox(
+                fit: BoxFit.scaleDown,
+                child: const Text(
+                  'الأذكار اليومية',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Outfit',
+                    fontSize: 16,
+                  ),
+                ),
               ),
         centerTitle: true,
         actions: [
@@ -100,13 +107,17 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                       label: Text(
                         cat,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : (isDark ? Colors.grey[300] : Colors.black87),
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? Colors.white
+                              : (isDark ? Colors.grey[300] : Colors.black87),
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       selected: isSelected,
                       selectedColor: primaryColor,
-                      backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.grey[200],
+                      backgroundColor:
+                          isDark ? const Color(0xFF2C2C2C) : Colors.grey[200],
                       onSelected: (val) {
                         if (val) {
                           adhkarProvider.setCategory(cat);
@@ -137,27 +148,35 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                 : 'عذراً، لم يتم العثور على أذكار مطابقة.',
                             style: TextStyle(
                               fontSize: 15,
-                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                              color:
+                                  isDark ? Colors.grey[400] : Colors.grey[600],
                             ),
                           ),
                         ],
                       ),
                     )
                   : ListView.builder(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.only(
+                          left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
                       itemCount: filteredItems.length,
                       itemBuilder: (context, index) {
                         final item = filteredItems[index];
-                        final remaining = adhkarProvider.getRemainingCount(item);
+                        final remaining =
+                            adhkarProvider.getRemainingCount(item);
                         final isCompleted = remaining == 0;
-                        final isFavorited = adhkarProvider.favTexts.contains(item.text);
+                        final isFavorited =
+                            adhkarProvider.favTexts.contains(item.text);
 
                         return Card(
                           elevation: 3,
                           shadowColor: Colors.black.withOpacity(0.05),
                           color: isDark
-                              ? (isCompleted ? const Color(0xFF1B2621) : const Color(0xFF1E1E1E))
-                              : (isCompleted ? const Color(0xFFEDF5F1) : Colors.white),
+                              ? (isCompleted
+                                  ? const Color(0xFF1B2621)
+                                  : const Color(0xFF1E1E1E))
+                              : (isCompleted
+                                  ? const Color(0xFFEDF5F1)
+                                  : Colors.white),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                             side: BorderSide(
@@ -177,41 +196,58 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Row(
                                         children: [
                                           IconButton(
                                             icon: Icon(
-                                              isFavorited ? Icons.favorite : Icons.favorite_border,
-                                              color: isFavorited ? Colors.red : Colors.grey,
+                                              isFavorited
+                                                  ? Icons.favorite
+                                                  : Icons.favorite_border,
+                                              color: isFavorited
+                                                  ? Colors.red
+                                                  : Colors.grey,
                                             ),
                                             iconSize: 20,
-                                            onPressed: () => adhkarProvider.toggleFavorite(item.text),
+                                            onPressed: () => adhkarProvider
+                                                .toggleFavorite(item.text),
                                           ),
                                           IconButton(
-                                            icon: const Icon(Icons.copy, color: Colors.grey),
+                                            icon: const Icon(Icons.copy,
+                                                color: Colors.grey),
                                             iconSize: 20,
                                             onPressed: () {
-                                              Clipboard.setData(ClipboardData(text: item.text));
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('تم نسخ الذكر إلى الحافظة!')),
+                                              Clipboard.setData(ClipboardData(
+                                                  text: item.text));
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                    content: Text(
+                                                        'تم نسخ الذكر إلى الحافظة!')),
                                               );
                                             },
                                           ),
                                         ],
                                       ),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: isDark ? const Color(0xFF2C2C2C) : Colors.grey[100],
-                                          borderRadius: BorderRadius.circular(20),
+                                          color: isDark
+                                              ? const Color(0xFF2C2C2C)
+                                              : Colors.grey[100],
+                                          borderRadius:
+                                              BorderRadius.circular(20),
                                         ),
                                         child: Text(
                                           'المطلوب: ${item.count}',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: isDark ? Colors.grey[400] : Colors.grey[700],
+                                            color: isDark
+                                                ? Colors.grey[400]
+                                                : Colors.grey[700],
                                           ),
                                         ),
                                       ),
@@ -226,7 +262,9 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                       fontSize: 16.5,
                                       height: 1.6,
                                       fontWeight: FontWeight.w500,
-                                      color: isDark ? Colors.grey[100] : Colors.black87,
+                                      color: isDark
+                                          ? Colors.grey[100]
+                                          : Colors.black87,
                                     ),
                                     textAlign: TextAlign.justify,
                                     textDirection: TextDirection.rtl,
@@ -238,14 +276,18 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF182220) : const Color(0xFFF1F6F3),
+                                        color: isDark
+                                            ? const Color(0xFF182220)
+                                            : const Color(0xFFF1F6F3),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
                                         item.fadl,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: isDark ? Colors.teal[200] : primaryColor,
+                                          color: isDark
+                                              ? Colors.teal[200]
+                                              : primaryColor,
                                           height: 1.4,
                                         ),
                                         textDirection: TextDirection.rtl,
@@ -256,14 +298,21 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
 
                                   // Count decrements indicators
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        isCompleted ? 'تم إنجازه بنجاح!' : 'انقر على البطاقة للتسبيح',
+                                        isCompleted
+                                            ? 'تم إنجازه بنجاح!'
+                                            : 'انقر على البطاقة للتسبيح',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: isCompleted ? Colors.teal : Colors.grey,
-                                          fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
+                                          color: isCompleted
+                                              ? Colors.teal
+                                              : Colors.grey,
+                                          fontWeight: isCompleted
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
                                         ),
                                       ),
                                       Container(
@@ -274,9 +323,13 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                           shape: BoxShape.circle,
                                           color: isCompleted
                                               ? Colors.teal
-                                              : (isDark ? const Color(0xFF2C2C2C) : Colors.grey[200]),
+                                              : (isDark
+                                                  ? const Color(0xFF2C2C2C)
+                                                  : Colors.grey[200]),
                                           border: Border.all(
-                                            color: isCompleted ? Colors.teal : Colors.transparent,
+                                            color: isCompleted
+                                                ? Colors.teal
+                                                : Colors.transparent,
                                             width: 2,
                                           ),
                                         ),
@@ -287,7 +340,9 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                                             fontWeight: FontWeight.bold,
                                             color: isCompleted
                                                 ? Colors.white
-                                                : (isDark ? Colors.white : Colors.black87),
+                                                : (isDark
+                                                    ? Colors.white
+                                                    : Colors.black87),
                                             fontFamily: 'Outfit',
                                           ),
                                         ),

@@ -117,9 +117,16 @@ class _HadithLibraryScreenState extends State<HadithLibraryScreen> with SingleTi
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
-        title: const Text(
-          'مكتبة الأحاديث الشريفة',
-          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: const Text(
+            'مكتبة الأحاديث الشريفة',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Outfit',
+              fontSize: 16,
+            ),
+          ),
         ),
         centerTitle: true,
         bottom: TabBar(

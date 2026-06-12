@@ -11,7 +11,8 @@ class HifzKhatmaScreen extends StatefulWidget {
   State<HifzKhatmaScreen> createState() => _HifzKhatmaScreenState();
 }
 
-class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerProviderStateMixin {
+class _HifzKhatmaScreenState extends State<HifzKhatmaScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Map<String, dynamic>> _khatmaPlans = [];
   List<Map<String, dynamic>> _hifzPlans = [];
@@ -65,7 +66,8 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                 controller: durationController,
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                decoration: const InputDecoration(labelText: 'المدة بالأيام (مثلاً: 30 يوماً)'),
+                decoration: const InputDecoration(
+                    labelText: 'المدة بالأيام (مثلاً: 30 يوماً)'),
               ),
               const SizedBox(height: 10),
               Row(
@@ -98,13 +100,14 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
             child: const Text('إلغاء'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F5A47)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F5A47)),
             onPressed: () async {
               final title = titleController.text.trim();
               final duration = int.tryParse(durationController.text) ?? 30;
               final start = int.tryParse(startPageController.text) ?? 1;
               final end = int.tryParse(endPageController.text) ?? 604;
-              
+
               if (title.isNotEmpty && end >= start) {
                 await DbHelper.addKhatmaPlan(
                   title: title,
@@ -128,7 +131,7 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
     final titleController = TextEditingController(text: 'خطة حفظ جزء عمَّ');
     final dailyTargetController = TextEditingController(text: '5');
     int startSurah = 78; // النبأ
-    int endSurah = 114;  // الناس
+    int endSurah = 114; // الناس
 
     showDialog(
       context: context,
@@ -152,7 +155,9 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                     DropdownButton<int>(
                       value: endSurah,
                       items: List.generate(114, (i) => i + 1).map((sNum) {
-                        return DropdownMenuItem(value: sNum, child: Text(quran.getSurahNameArabic(sNum)));
+                        return DropdownMenuItem(
+                            value: sNum,
+                            child: Text(quran.getSurahNameArabic(sNum)));
                       }).toList(),
                       onChanged: (val) {
                         if (val != null) {
@@ -164,7 +169,9 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                     DropdownButton<int>(
                       value: startSurah,
                       items: List.generate(114, (i) => i + 1).map((sNum) {
-                        return DropdownMenuItem(value: sNum, child: Text(quran.getSurahNameArabic(sNum)));
+                        return DropdownMenuItem(
+                            value: sNum,
+                            child: Text(quran.getSurahNameArabic(sNum)));
                       }).toList(),
                       onChanged: (val) {
                         if (val != null) {
@@ -180,7 +187,8 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                   controller: dailyTargetController,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  decoration: const InputDecoration(labelText: 'الورد اليومي (عدد الآيات)'),
+                  decoration: const InputDecoration(
+                      labelText: 'الورد اليومي (عدد الآيات)'),
                 ),
               ],
             ),
@@ -192,11 +200,12 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
             child: const Text('إلغاء'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F5A47)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F5A47)),
             onPressed: () async {
               final title = titleController.text.trim();
               final target = int.tryParse(dailyTargetController.text) ?? 5;
-              
+
               // حساب إجمالي الآيات المراد حفظها
               int total = 0;
               for (int s = startSurah; s <= endSurah; s++) {
@@ -228,7 +237,9 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
       _loadPlans();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تهانينا! لقد أتممت هذه الختمة بالكامل مبارك لك! 🎉')),
+        const SnackBar(
+            content:
+                Text('تهانينا! لقد أتممت هذه الختمة بالكامل مبارك لك! 🎉')),
       );
     }
   }
@@ -239,7 +250,9 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
       _loadPlans();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('أحسنت! أتممت حفظ هذه الخطة بالكامل جعله الله شفيعاً لك! 🌟')),
+        const SnackBar(
+            content: Text(
+                'أحسنت! أتممت حفظ هذه الخطة بالكامل جعله الله شفيعاً لك! 🌟')),
       );
     }
   }
@@ -251,10 +264,11 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
         title: Text(
           isKhatma ? 'حذف خطة الختمة' : 'حذف خطة الحفظ',
           textAlign: TextAlign.right,
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+          style:
+              const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
         ),
         content: Text(
-          isKhatma 
+          isKhatma
               ? 'هل أنت متأكد من رغبتك في حذف خطة الختمة هذه؟ سيتم مسح كل التقدم المرتبط بها.'
               : 'هل أنت متأكد من رغبتك في حذف خطة الحفظ هذه؟ سيتم مسح كل التقدم المرتبط بها.',
           textAlign: TextAlign.right,
@@ -265,7 +279,8 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
             child: const Text('إلغاء'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade900),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.red.shade900),
             onPressed: () async {
               Navigator.pop(context);
               if (isKhatma) {
@@ -275,7 +290,8 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
               }
               _loadPlans();
             },
-            child: const Text('نعم، احذف', style: TextStyle(color: Colors.white)),
+            child:
+                const Text('نعم، احذف', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -286,16 +302,23 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final isDark = appState.isDarkMode;
-    final primaryColor = const Color(0xFF0F5A47);
-    final Color accentColor = const Color(0xFFD4AF37);
+    const primaryColor = Color(0xFF0F5A47);
+    const Color accentColor = Color(0xFFD4AF37);
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
-        title: const Text(
-          'الورد والحفظ والختمات',
-          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: const Text(
+            'الورد والحفظ والختمات',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Outfit',
+              fontSize: 16,
+            ),
+          ),
         ),
         centerTitle: true,
         bottom: TabBar(
@@ -336,7 +359,8 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
@@ -346,7 +370,8 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
               ? Center(
                   child: Text(
                     'لا توجد خطط ختمة نشطة حالياً.',
-                    style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                    style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[600]),
                   ),
                 )
               : ListView.builder(
@@ -356,15 +381,18 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                     final plan = _khatmaPlans[index];
                     final total = plan['endPage'] - plan['startPage'] + 1;
                     final current = plan['currentPage'] - plan['startPage'] + 1;
-                    final double percent = total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
-                    
+                    final double percent =
+                        total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
+
                     // حساب الصفحات المطلوبة يومياً
-                    final dailyTarget = (total / (plan['daysDuration'] ?? 30)).ceil();
+                    final dailyTarget =
+                        (total / (plan['daysDuration'] ?? 30)).ceil();
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 16.0),
                       color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -374,12 +402,16 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                  onPressed: () => _deletePlan(plan['id'], true),
+                                  icon: const Icon(Icons.delete_outline,
+                                      color: Colors.red),
+                                  onPressed: () =>
+                                      _deletePlan(plan['id'], true),
                                 ),
                                 Text(
                                   plan['title'] ?? 'ختمة القرآن الكبرى',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
                                 ),
                               ],
                             ),
@@ -389,8 +421,11 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                               child: LinearProgressIndicator(
                                 value: percent,
                                 minHeight: 10,
-                                backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
-                                valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                                backgroundColor: isDark
+                                    ? Colors.grey[800]
+                                    : Colors.grey[200],
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(accentColor),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -399,11 +434,14 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                               children: [
                                 Text(
                                   '${(percent * 100).toInt()}% منجز',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: accentColor),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: accentColor),
                                 ),
                                 Text(
                                   'الهدف اليومي: $dailyTarget صفحات',
-                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                  style: const TextStyle(
+                                      fontSize: 12, color: Colors.grey),
                                 ),
                               ],
                             ),
@@ -412,14 +450,20 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 TextButton.icon(
-                                  style: TextButton.styleFrom(foregroundColor: primaryColor),
+                                  style: TextButton.styleFrom(
+                                      foregroundColor: primaryColor),
                                   icon: const Icon(Icons.check_circle_outline),
                                   label: const Text('قراءة صفحة جديدة'),
-                                  onPressed: () => _updateKhatmaPage(plan['id'], plan['currentPage'], plan['endPage']),
+                                  onPressed: () => _updateKhatmaPage(plan['id'],
+                                      plan['currentPage'], plan['endPage']),
                                 ),
                                 Text(
                                   'الصفحة الحالية: ${plan['currentPage']} من ${plan['endPage']}',
-                                  style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: isDark
+                                          ? Colors.grey[300]
+                                          : Colors.grey[700]),
                                 ),
                               ],
                             ),
@@ -446,7 +490,8 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
@@ -456,7 +501,8 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
               ? Center(
                   child: Text(
                     'لا توجد خطط حفظ نشطة حالياً.',
-                    style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                    style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[600]),
                   ),
                 )
               : ListView.builder(
@@ -466,12 +512,14 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                     final plan = _hifzPlans[index];
                     final current = plan['currentProgress'] as int;
                     final total = plan['totalAyahs'] as int;
-                    final double percent = total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
+                    final double percent =
+                        total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 16.0),
                       color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -481,12 +529,16 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                  onPressed: () => _deletePlan(plan['id'], false),
+                                  icon: const Icon(Icons.delete_outline,
+                                      color: Colors.red),
+                                  onPressed: () =>
+                                      _deletePlan(plan['id'], false),
                                 ),
                                 Text(
                                   plan['title'] ?? 'خطة حفظ جديدة',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
                                 ),
                               ],
                             ),
@@ -496,8 +548,11 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                               child: LinearProgressIndicator(
                                 value: percent,
                                 minHeight: 10,
-                                backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
-                                valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                                backgroundColor: isDark
+                                    ? Colors.grey[800]
+                                    : Colors.grey[200],
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(primaryColor),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -506,11 +561,15 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                               children: [
                                 Text(
                                   'تم حفظ $current من أصل $total آية (${(percent * 100).toInt()}%)',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 12),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryColor,
+                                      fontSize: 12),
                                 ),
                                 Text(
                                   'المستهدف: ${plan['dailyTarget']} آيات/يوم',
-                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                  style: const TextStyle(
+                                      fontSize: 11, color: Colors.grey),
                                 ),
                               ],
                             ),
@@ -519,14 +578,20 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen> with SingleTickerPr
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 TextButton.icon(
-                                  style: TextButton.styleFrom(foregroundColor: accentColor),
+                                  style: TextButton.styleFrom(
+                                      foregroundColor: accentColor),
                                   icon: const Icon(Icons.add_task),
                                   label: const Text('حفظ آية جديدة'),
-                                  onPressed: () => _updateHifzProgress(plan['id'], current, total),
+                                  onPressed: () => _updateHifzProgress(
+                                      plan['id'], current, total),
                                 ),
                                 Text(
                                   'النطاق: ${quran.getSurahNameArabic(plan['startSurah'])} - ${quran.getSurahNameArabic(plan['endSurah'])}',
-                                  style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? Colors.grey[300]
+                                          : Colors.grey[700]),
                                 ),
                               ],
                             ),
