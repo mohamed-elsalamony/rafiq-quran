@@ -12,6 +12,13 @@ void main() {
   final List<dynamic> data = json.decode(content);
   print('Total prophets: ${data.length}');
   for (var p in data) {
-    print('ID: ${p['id']}, Name: ${p['name']}');
+    final chapters = p['chapters'] as List<dynamic>;
+    print('Prophet: ${p['name']} (${p['id']})');
+    print('  Summary: ${p['summary']}');
+    print('  Chapters count: ${chapters.length}');
+    for (var c in chapters) {
+      final textLen = (c['content'] as String).length;
+      print('    - Title: "${c['title']}" (Length: $textLen chars)');
+    }
   }
 }
