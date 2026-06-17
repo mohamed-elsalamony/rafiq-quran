@@ -52,6 +52,7 @@ dependencies:
   workmanager: any
   timezone: any
   flutter_timezone: ^5.1.0
+  home_widget: ^0.4.1
 
 dev_dependencies:
   flutter_test:

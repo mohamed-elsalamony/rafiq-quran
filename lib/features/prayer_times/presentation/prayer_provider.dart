@@ -3,6 +3,8 @@ import 'package:adhan/adhan.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/services/prayer_service.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/services/widget_update_service.dart';
+import '../../../core/services/hadith_service.dart';
 
 class PrayerProvider extends ChangeNotifier {
   String _selectedCityName = 'القاهرة';
@@ -69,6 +71,25 @@ class PrayerProvider extends ChangeNotifier {
       _prayerTimes = PrayerService.getPrayerTimes(coords, _currentCity.method);
       _qiblaAngle = PrayerService.calculateQiblaDirection(
           _currentCity.latitude, _currentCity.longitude);
+
+      // Update widget in background
+      HadithService().getHadithOfDay().then((hadith) {
+        WidgetUpdateService.updateWidget(
+          coordinates: coords,
+          method: _currentCity.method,
+          cityName: _currentCity.nameArabic,
+          dailyAyah: "إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ",
+          dailyHadith: hadith?.text ?? "خيركم من تعلم القرآن وعلمه",
+        );
+      }).catchError((e) {
+        WidgetUpdateService.updateWidget(
+          coordinates: coords,
+          method: _currentCity.method,
+          cityName: _currentCity.nameArabic,
+          dailyAyah: "إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ",
+          dailyHadith: "خيركم من تعلم القرآن وعلمه",
+        );
+      });
     } catch (e) {
       debugPrint("Error calculating prayer times: $e");
     }

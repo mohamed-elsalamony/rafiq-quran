@@ -11,6 +11,10 @@ import 'core/services/app_state.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/prophet_blessing_service.dart';
 import 'core/services/periodic_notification_helper.dart';
+import 'core/services/prayer_service.dart';
+import 'core/services/hadith_service.dart';
+import 'core/services/widget_update_service.dart';
+import 'package:adhan/adhan.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/quran/presentation/quran_screen.dart';
 import 'features/adhkar/presentation/adhkar_screen.dart';
@@ -31,6 +35,51 @@ import 'features/settings/presentation/settings_screen.dart';
 void callbackDispatcher() {
   WidgetsFlutterBinding.ensureInitialized();
   Workmanager().executeTask((task, inputData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Update widget first in background task
+      final savedCity = prefs.getString('prayer_selected_city') ?? 'القاهرة';
+      final savedMethodName =
+          prefs.getString('prayer_calculation_method') ?? '';
+
+      double? lat;
+      double? lon;
+      CalculationMethod method = CalculationMethod.egyptian;
+
+      if (savedCity == 'موقعي الحالي') {
+        lat = prefs.getDouble('prayer_loc_lat');
+        lon = prefs.getDouble('prayer_loc_lon');
+      } else if (PrayerService.defaultCities.containsKey(savedCity)) {
+        final defaultCity = PrayerService.defaultCities[savedCity]!;
+        lat = defaultCity.latitude;
+        lon = defaultCity.longitude;
+        method = defaultCity.method;
+      }
+
+      if (savedMethodName.isNotEmpty) {
+        method = CalculationMethod.values
+            .firstWhere((m) => m.name == savedMethodName, orElse: () => method);
+      }
+
+      if (lat != null && lon != null) {
+        final coords = Coordinates(lat, lon);
+        final hadithService = HadithService();
+        await hadithService.loadHadiths();
+        final hadith = await hadithService.getHadithOfDay();
+
+        await WidgetUpdateService.updateWidget(
+          coordinates: coords,
+          method: method,
+          cityName: savedCity,
+          dailyAyah: "إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ",
+          dailyHadith: hadith?.text ?? "خيركم من تعلم القرآن وعلمه",
+        );
+      }
+    } catch (e) {
+      debugPrint("Error updating widget in background task: $e");
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final enabled = prefs.getBool('periodic_dhikr_enabled') ?? false;

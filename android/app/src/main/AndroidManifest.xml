@@ -50,6 +50,37 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
             </intent-filter>
         </receiver>
+
+        <!-- Home Widgets -->
+        <receiver android:name=".WidgetSmallProvider" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                       android:resource="@xml/widget_small_info"/>
+        </receiver>
+
+        <receiver android:name=".WidgetMediumProvider" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                       android:resource="@xml/widget_medium_info"/>
+        </receiver>
+
+        <receiver android:name=".WidgetLargeProvider" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                       android:resource="@xml/widget_large_info"/>
+        </receiver>
+
+        <receiver android:name=".WidgetUpdateReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.rafiqquran.rafiq_quran.WIDGET_UPDATE"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
