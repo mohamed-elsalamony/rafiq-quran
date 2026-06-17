@@ -43,12 +43,15 @@ jobs:
           name: rafiq-quran-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Create Automatic Release
-        uses: marvinpinto/action-automatic-releases@latest
+      - name: Create or Update Release
+        uses: softprops/action-gh-release@v2
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
+          tag_name: v1.1.0-latest
+          name: "النسخة الأحدث من التطبيق (Latest Release)"
+          body: "النسخة الأحدث من تطبيق رفيق القرآن، خالية من العيوب والنسخ التجريبية وتم تجميعها بنجاح بواسطة GitHub Actions."
+          draft: false
           prerelease: false
-          title: "النسخة الأحدث من التطبيق (Latest Release)"
           files: |
             build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
