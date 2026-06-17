@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../../../core/services/app_state.dart';
 import '../../../core/services/gemini_service.dart';
-import '../../settings/presentation/settings_screen.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -23,17 +22,16 @@ class _AiChatScreenState extends State<AiChatScreen> {
     'شرح حديث: "إنما الأعمال بالنيات"',
     'ما هي شروط وأوقات إجابة الدعاء؟',
     'كيف يساعدني هذا التطبيق في ختم القرآن؟',
+    'ما فضل سورة الكهف وما يتعلق بها؟',
+    'ما حكم صلاة الجماعة؟',
   ];
 
   @override
   void initState() {
     super.initState();
-    // Initialize Gemini service with existing API key if available
+    // تهيئة المساعد تلقائياً دون الحاجة لمفتاح من المستخدم
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final appState = Provider.of<AppState>(context, listen: false);
-      if (appState.geminiApiKey.isNotEmpty) {
-        GeminiService().initialize(appState.geminiApiKey);
-      }
+      GeminiService().isInitialized; // يستدعي _ensureInitialized داخلياً
     });
   }
 
@@ -85,7 +83,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final isDark = appState.isDarkMode;
     const primaryColor = Color(0xFF0F5A47);
     const accentColor = Color(0xFFD4AF37);
-    final hasKey = appState.geminiApiKey.isNotEmpty;
 
     // Build chat history representation
     final history = GeminiService().getChatHistory();
@@ -168,71 +165,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
               ),
             ),
             Expanded(
-              child: !hasKey
-                  ? _buildMissingKeyView(
-                      context, isDark, primaryColor, accentColor)
-                  : (history.isEmpty && !_isLoading)
-                      ? _buildEmptyWelcomeView(
-                          isDark, primaryColor, accentColor)
-                      : _buildChatListView(
-                          history, isDark, primaryColor, accentColor),
+              child: (history.isEmpty && !_isLoading)
+                  ? _buildEmptyWelcomeView(isDark, primaryColor, accentColor)
+                  : _buildChatListView(
+                      history, isDark, primaryColor, accentColor),
             ),
-            if (hasKey) _buildInputArea(isDark, primaryColor, accentColor),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMissingKeyView(BuildContext context, bool isDark,
-      Color primaryColor, Color accentColor) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.05),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.lock_outline, size: 60, color: accentColor),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'تفعيل المساعد الذكي',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'لتشغيل المساعد الذكي، يرجى إدخال مفتاح Gemini API المجاني الخاص بك أولاً في إعدادات التطبيق. هذا يحافظ على أمان وخصوصية استخدامك.',
-              style:
-                  TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const SettingsScreen()),
-                );
-              },
-              icon: const Icon(Icons.settings),
-              label: const Text('انتقل إلى الإعدادات الآن',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
+            _buildInputArea(isDark, primaryColor, accentColor),
           ],
         ),
       ),
@@ -252,17 +190,17 @@ class _AiChatScreenState extends State<AiChatScreen> {
               color: primaryColor.withOpacity(0.05),
               shape: BoxShape.circle,
             ),
-            child:
-                Icon(Icons.chat_bubble_outline, size: 50, color: primaryColor),
+            child: Icon(Icons.auto_awesome, size: 50, color: accentColor),
           ),
           const SizedBox(height: 16),
           const Text(
-            'مرحباً بك في المساعد الذكي',
+            'مرحباً بك في المساعد الإسلامي الذكي',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           const Text(
-            'اسألني عن تفسير الآيات وشرح الأحاديث والمسائل الدينية البسيطة وسأجيبك من المصادر الإسلامية المعتمدة.',
+            'اسألني عن تفسير الآيات وشرح الأحاديث والمسائل الدينية البسيطة وسأجيبك من المصادر الإسلامية المعتمدة بإذن الله.',
             style: TextStyle(fontSize: 12, color: Colors.grey, height: 1.5),
             textAlign: TextAlign.center,
           ),

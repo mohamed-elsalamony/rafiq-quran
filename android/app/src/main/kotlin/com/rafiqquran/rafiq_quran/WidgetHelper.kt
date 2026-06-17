@@ -12,10 +12,8 @@ import android.widget.RemoteViews
 import java.util.*
 
 object WidgetHelper {
-    private const val PREFS_NAME = "home_widget"
-
     fun updateAllWidgets(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = es.antonborri.home_widget.HomeWidgetPlugin.getData(context)
         val appWidgetManager = AppWidgetManager.getInstance(context)
 
         // 1. Calculate Next Prayer Info

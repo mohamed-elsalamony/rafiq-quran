@@ -122,6 +122,15 @@ void callbackDispatcher() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // تهيئة خدمة الإشعارات — ضرورية لعمل جميع التنبيهات
+  try {
+    await NotificationService().init();
+    debugPrint("NotificationService initialized in main()");
+  } catch (e) {
+    debugPrint("NotificationService initialization failed: $e");
+  }
+
   try {
     await Workmanager().initialize(
       callbackDispatcher,
