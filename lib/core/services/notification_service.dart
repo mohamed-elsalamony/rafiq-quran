@@ -21,6 +21,37 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
+  Future<bool> requestPermission() async {
+    if (kIsWeb) return true;
+    try {
+      if (Platform.isAndroid) {
+        final androidImplementation =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        if (androidImplementation != null) {
+          final bool? granted = await androidImplementation.requestNotificationsPermission();
+          await androidImplementation.requestExactAlarmsPermission();
+          return (granted ?? false);
+        }
+      } else if (Platform.isIOS) {
+        final iosImplementation =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>();
+        if (iosImplementation != null) {
+          final bool? granted = await iosImplementation.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
+          return granted ?? false;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error requesting permissions: $e");
+    }
+    return false;
+  }
+
   Future<void> init() async {
     if (_initialized) return;
 

@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 class ProphetVerse {
   final String text;
   final String surah;
-  final int number;
+  final String number;
 
   ProphetVerse({
     required this.text,
@@ -16,7 +16,7 @@ class ProphetVerse {
     return ProphetVerse(
       text: json['text'] as String,
       surah: json['surah'] as String,
-      number: json['number'] as int,
+      number: json['number'].toString(),
     );
   }
 }

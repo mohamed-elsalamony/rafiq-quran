@@ -1085,14 +1085,53 @@ class SettingsScreen extends StatelessWidget {
 
             // 4. المساعد الذكي (AI)
             _buildSectionHeader(
-                title: 'إعدادات المساعد الذكي (AI)',
+                title: 'المساعد الذكي (AI)',
                 isDark: isDark,
                 accentColor: accentColor),
-            _GeminiApiKeySettings(
-              appState: appState,
-              isDark: isDark,
-              primaryColor: primaryColor,
-              accentColor: accentColor,
+            Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'المساعد الذكي (AI)',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'يعمل المساعد الذكي الآن محلياً وتلقائياً بالكامل في التطبيق لخدمتك والإجابة على أسئلتك دون الحاجة لإدخال أي مفاتيح تشغيل أو الاتصال بالإنترنت.',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                height: 1.4),
+                            textAlign: TextAlign.right,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: isDark
+                          ? const Color(0xFF1D3C34)
+                          : const Color(0xFFE8F3EF),
+                      child: Icon(
+                        Icons.auto_awesome,
+                        color: isDark ? accentColor : primaryColor,
+                        size: 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -1267,174 +1306,4 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-class _GeminiApiKeySettings extends StatefulWidget {
-  final AppState appState;
-  final bool isDark;
-  final Color primaryColor;
-  final Color accentColor;
 
-  const _GeminiApiKeySettings({
-    required this.appState,
-    required this.isDark,
-    required this.primaryColor,
-    required this.accentColor,
-  });
-
-  @override
-  State<_GeminiApiKeySettings> createState() => _GeminiApiKeySettingsState();
-}
-
-class _GeminiApiKeySettingsState extends State<_GeminiApiKeySettings> {
-  late TextEditingController _controller;
-  bool _obscureText = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.appState.geminiApiKey);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: widget.isDark ? const Color(0xFF1E1E1E) : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'مفتاح Gemini API Key',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      Text(
-                        'لتشغيل المساعد الذكي "اسأل عن دينك"',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                        textAlign: TextAlign.right,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Icon(Icons.key, color: widget.accentColor),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _controller,
-              obscureText: _obscureText,
-              textAlign: TextAlign.left,
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 14,
-                color: widget.isDark ? Colors.white : Colors.black87,
-              ),
-              decoration: InputDecoration(
-                hintText: 'أدخل مفتاح Gemini API هنا...',
-                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
-                prefixIcon: IconButton(
-                  icon: Icon(
-                    _obscureText ? Icons.visibility_off : Icons.visibility,
-                    color: Colors.grey,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _obscureText = !_obscureText;
-                    });
-                  },
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      BorderSide(color: widget.primaryColor.withOpacity(0.3)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: widget.primaryColor, width: 2),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton.icon(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('كيفية الحصول على مفتاح مجاني؟',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        content: const Text(
-                          '1. اذهب لموقع Google AI Studio (aistudio.google.com)\n'
-                          '2. قم بتسجيل الدخول بحساب Google الخاص بك.\n'
-                          '3. اضغط على زر "Get API key" ثم قم بإنشاء مفتاح جديد.\n'
-                          '4. انسخ المفتاح والصقه هنا في هذا الحقل لتفعيل المساعد الذكي.',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(height: 1.5, fontSize: 13),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('حسناً فهمت'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.help_outline,
-                      size: 16, color: Colors.blue),
-                  label: const Text('كيف أحصل على مفتاح مجاني؟',
-                      style: TextStyle(fontSize: 11, color: Colors.blue)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: widget.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                  ),
-                  onPressed: () async {
-                    final newKey = _controller.text.trim();
-                    await widget.appState.setGeminiApiKey(newKey);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('تم حفظ مفتاح API بنجاح!',
-                              textAlign: TextAlign.right),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text('حفظ المفتاح',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

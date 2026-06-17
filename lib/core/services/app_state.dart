@@ -382,6 +382,9 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> toggleNotifications(bool val) async {
+    if (val) {
+      await NotificationService().requestPermission();
+    }
     _notificationsEnabled = val;
     notifyListeners();
 
@@ -392,6 +395,9 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> setPeriodicDhikrEnabled(bool val) async {
+    if (val) {
+      await NotificationService().requestPermission();
+    }
     _periodicDhikrEnabled = val;
     notifyListeners();
 
