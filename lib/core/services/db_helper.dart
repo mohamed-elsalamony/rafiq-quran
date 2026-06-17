@@ -34,7 +34,8 @@ class DbHelper {
     }
   }
 
-  static Future<void> saveBookmarks(List<Map<String, dynamic>> bookmarks) async {
+  static Future<void> saveBookmarks(
+      List<Map<String, dynamic>> bookmarks) async {
     try {
       final prefs = await _getPrefs();
       if (prefs == null) return;
@@ -55,7 +56,8 @@ class DbHelper {
     try {
       final list = await getBookmarks();
       // تجنب التكرار لنفس الآية
-      list.removeWhere((item) => item['surah'] == surah && item['ayah'] == ayah);
+      list.removeWhere(
+          (item) => item['surah'] == surah && item['ayah'] == ayah);
       list.add({
         'page': page,
         'surah': surah,
@@ -74,7 +76,8 @@ class DbHelper {
   static Future<void> deleteBookmark(int surah, int ayah) async {
     try {
       final list = await getBookmarks();
-      list.removeWhere((item) => item['surah'] == surah && item['ayah'] == ayah);
+      list.removeWhere(
+          (item) => item['surah'] == surah && item['ayah'] == ayah);
       await saveBookmarks(list);
     } catch (e) {
       debugPrint("DbHelper deleteBookmark error: $e");
@@ -108,10 +111,12 @@ class DbHelper {
   static Future<void> addTasbihLog(String dhikrName, int count) async {
     try {
       final logs = await getTasbihLogs();
-      final todayStr = DateTime.now().toIso8601String().substring(0, 10); // YYYY-MM-DD
-      
+      final todayStr =
+          DateTime.now().toIso8601String().substring(0, 10); // YYYY-MM-DD
+
       // البحث عن سجل اليوم لهذا الذكر
-      int idx = logs.indexWhere((log) => log['date'] == todayStr && log['dhikr'] == dhikrName);
+      int idx = logs.indexWhere(
+          (log) => log['date'] == todayStr && log['dhikr'] == dhikrName);
       if (idx != -1) {
         logs[idx]['count'] = (logs[idx]['count'] ?? 0) + count;
       } else {
@@ -327,7 +332,8 @@ class DbHelper {
     }
   }
 
-  static Future<void> updateKhatmaProgress(String planId, int currentPage) async {
+  static Future<void> updateKhatmaProgress(
+      String planId, int currentPage) async {
     try {
       final plans = await getKhatmaPlans();
       int idx = plans.indexWhere((plan) => plan['id'] == planId);
@@ -348,6 +354,56 @@ class DbHelper {
       await saveKhatmaPlans(plans);
     } catch (e) {
       debugPrint("DbHelper deleteKhatmaPlan error: $e");
+    }
+  }
+
+  static const String _keyKhatmHistory = 'khatm_history';
+
+  // --- سجلات ختم القرآن (Khatm History Logs) ---
+  static Future<List<Map<String, dynamic>>> getKhatmHistory() async {
+    try {
+      final prefs = await _getPrefs();
+      if (prefs == null) return [];
+      final data = prefs.getString(_keyKhatmHistory);
+      if (data == null) return [];
+      return List<Map<String, dynamic>>.from(json.decode(data));
+    } catch (e) {
+      debugPrint("DbHelper getKhatmHistory error: $e");
+      return [];
+    }
+  }
+
+  static Future<void> saveKhatmHistory(
+      List<Map<String, dynamic>> history) async {
+    try {
+      final prefs = await _getPrefs();
+      if (prefs == null) return;
+      await prefs.setString(_keyKhatmHistory, json.encode(history));
+    } catch (e) {
+      debugPrint("DbHelper saveKhatmHistory error: $e");
+    }
+  }
+
+  static Future<void> addKhatmLog() async {
+    try {
+      final history = await getKhatmHistory();
+      history.add({
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'date': DateTime.now().toIso8601String(),
+      });
+      await saveKhatmHistory(history);
+    } catch (e) {
+      debugPrint("DbHelper addKhatmLog error: $e");
+    }
+  }
+
+  static Future<void> clearKhatmHistory() async {
+    try {
+      final prefs = await _getPrefs();
+      if (prefs == null) return;
+      await prefs.remove(_keyKhatmHistory);
+    } catch (e) {
+      debugPrint("DbHelper clearKhatmHistory error: $e");
     }
   }
 }

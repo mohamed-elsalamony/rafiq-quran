@@ -92,11 +92,13 @@ class PrayerService {
   }
 
   // حساب مواقيت الصلاة لموقع معين وتاريخ معين
-  static PrayerTimes getPrayerTimes(Coordinates coordinates, CalculationMethod method, {DateTime? date}) {
+  static PrayerTimes getPrayerTimes(
+      Coordinates coordinates, CalculationMethod method,
+      {DateTime? date}) {
     final targetDate = DateComponents.from(date ?? DateTime.now());
     final params = method.getParameters();
     params.madhab = Madhab.shafi; // المذهب الافتراضي الشافعي
-    
+
     return PrayerTimes(coordinates, targetDate, params);
   }
 

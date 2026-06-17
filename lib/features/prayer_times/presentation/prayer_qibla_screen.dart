@@ -325,13 +325,15 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                           Expanded(
                             child: Row(
                               children: [
-                                const Icon(Icons.location_on, color: Colors.teal),
+                                const Icon(Icons.location_on,
+                                    color: Colors.teal),
                                 const SizedBox(width: 8),
                                 const Expanded(
                                   child: Text(
                                     'تحديد الموقع تلقائياً (GPS)',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.bold, fontSize: 14),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14),
                                   ),
                                 ),
                               ],
@@ -459,7 +461,9 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
-                                      color: isDark ? Colors.white : Colors.black87,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
                                     ),
                                   ),
                                 ),
@@ -686,7 +690,8 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontFamily: 'Outfit',
-                                      color: isCurrent ? goldColor : Colors.grey,
+                                      color:
+                                          isCurrent ? goldColor : Colors.grey,
                                       fontWeight: isCurrent
                                           ? FontWeight.bold
                                           : FontWeight.normal,

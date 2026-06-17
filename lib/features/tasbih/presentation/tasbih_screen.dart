@@ -17,7 +17,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_isInit) {
-      final tasbihProvider = Provider.of<TasbihProvider>(context, listen: false);
+      final tasbihProvider =
+          Provider.of<TasbihProvider>(context, listen: false);
       tasbihProvider.addListener(_onProviderChange);
       _isInit = true;
     }
@@ -26,7 +27,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
   @override
   void dispose() {
     try {
-      final tasbihProvider = Provider.of<TasbihProvider>(context, listen: false);
+      final tasbihProvider =
+          Provider.of<TasbihProvider>(context, listen: false);
       tasbihProvider.removeListener(_onProviderChange);
     } catch (_) {}
     super.dispose();
@@ -61,20 +63,26 @@ class _TasbihScreenState extends State<TasbihScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('تأكيد إعادة التعيين', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('هل أنت متأكد من رغبتك في إعادة تعيين عداد التسبيح الحالي إلى الصفر؟', textAlign: TextAlign.right),
+        title: const Text('تأكيد إعادة التعيين',
+            textAlign: TextAlign.right,
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text(
+            'هل أنت متأكد من رغبتك في إعادة تعيين عداد التسبيح الحالي إلى الصفر؟',
+            textAlign: TextAlign.right),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('إلغاء'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade900),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.red.shade900),
             onPressed: () {
               provider.reset();
               Navigator.pop(context);
             },
-            child: const Text('نعم، تصفير', style: TextStyle(color: Colors.white)),
+            child:
+                const Text('نعم، تصفير', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -118,7 +126,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
             child: const Text('إلغاء'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F5A47)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F5A47)),
             onPressed: () async {
               final text = textController.text.trim();
               if (text.isNotEmpty) {
@@ -143,15 +152,20 @@ class _TasbihScreenState extends State<TasbihScreen> {
     final Color accentColor = const Color(0xFFD4AF37);
 
     final weeklyStats = tasbihProvider.getWeeklyStats();
-    final maxStatCount = weeklyStats.map<int>((e) => e['count'] as int).fold(0, (max, e) => e > max ? e : max);
+    final maxStatCount = weeklyStats
+        .map<int>((e) => e['count'] as int)
+        .fold(0, (max, e) => e > max ? e : max);
 
     // Merge predefined & custom list items
     List<DropdownMenuItem<String>> dropdownItems = [];
     for (var d in tasbihProvider.predefinedDhikrs) {
-      dropdownItems.add(DropdownMenuItem(value: d, child: Text(d, textAlign: TextAlign.right)));
+      dropdownItems.add(DropdownMenuItem(
+          value: d, child: Text(d, textAlign: TextAlign.right)));
     }
     for (var cd in tasbihProvider.customDhikrs) {
-      dropdownItems.add(DropdownMenuItem(value: cd['text'], child: Text('👤 ${cd['text']}', textAlign: TextAlign.right)));
+      dropdownItems.add(DropdownMenuItem(
+          value: cd['text'],
+          child: Text('👤 ${cd['text']}', textAlign: TextAlign.right)));
     }
 
     return Scaffold(
@@ -190,7 +204,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
               // Zekr selector and options panel
               Card(
                 elevation: 3,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -200,7 +215,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+                          const Icon(Icons.keyboard_arrow_down,
+                              color: Colors.grey),
                           Expanded(
                             child: DropdownButton<String>(
                               value: tasbihProvider.selectedDhikr,
@@ -210,7 +226,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.amber[200] : primaryColor,
+                                color:
+                                    isDark ? Colors.amber[200] : primaryColor,
                               ),
                               items: dropdownItems,
                               onChanged: (val) {
@@ -233,15 +250,22 @@ class _TasbihScreenState extends State<TasbihScreen> {
                             children: [33, 100, 1000].map((t) {
                               final isSelected = tasbihProvider.target == t;
                               return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 4.0),
                                 child: ChoiceChip(
                                   label: Text('$t'),
                                   selected: isSelected,
                                   selectedColor: primaryColor,
-                                  backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.grey[200],
+                                  backgroundColor: isDark
+                                      ? const Color(0xFF2C2C2C)
+                                      : Colors.grey[200],
                                   labelStyle: TextStyle(
                                     fontSize: 12,
-                                    color: isSelected ? Colors.white : (isDark ? Colors.grey[300] : Colors.black87),
+                                    color: isSelected
+                                        ? Colors.white
+                                        : (isDark
+                                            ? Colors.grey[300]
+                                            : Colors.black87),
                                   ),
                                   onSelected: (val) {
                                     if (val) {
@@ -258,8 +282,12 @@ class _TasbihScreenState extends State<TasbihScreen> {
                             children: [
                               IconButton(
                                 icon: Icon(
-                                  tasbihProvider.isSoundEnabled ? Icons.volume_up : Icons.volume_off,
-                                  color: tasbihProvider.isSoundEnabled ? Colors.teal : Colors.grey,
+                                  tasbihProvider.isSoundEnabled
+                                      ? Icons.volume_up
+                                      : Icons.volume_off,
+                                  color: tasbihProvider.isSoundEnabled
+                                      ? Colors.teal
+                                      : Colors.grey,
                                 ),
                                 onPressed: tasbihProvider.toggleSound,
                                 tooltip: 'تفعيل الصوت',
@@ -267,8 +295,12 @@ class _TasbihScreenState extends State<TasbihScreen> {
                               const SizedBox(width: 24),
                               IconButton(
                                 icon: Icon(
-                                  tasbihProvider.isVibrationEnabled ? Icons.vibration : Icons.phone_android,
-                                  color: tasbihProvider.isVibrationEnabled ? Colors.teal : Colors.grey,
+                                  tasbihProvider.isVibrationEnabled
+                                      ? Icons.vibration
+                                      : Icons.phone_android,
+                                  color: tasbihProvider.isVibrationEnabled
+                                      ? Colors.teal
+                                      : Colors.grey,
                                 ),
                                 onPressed: tasbihProvider.toggleVibration,
                                 tooltip: 'تفعيل الاهتزاز',
@@ -299,8 +331,14 @@ class _TasbihScreenState extends State<TasbihScreen> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: isDark
-                              ? [const Color(0xFF0F5A47), const Color(0xFF073A2F)]
-                              : [const Color(0xFF127F65), const Color(0xFF0A4F3E)],
+                              ? [
+                                  const Color(0xFF0F5A47),
+                                  const Color(0xFF073A2F)
+                                ]
+                              : [
+                                  const Color(0xFF127F65),
+                                  const Color(0xFF0A4F3E)
+                                ],
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -365,14 +403,17 @@ class _TasbihScreenState extends State<TasbihScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ElevatedButton.icon(
-                    onPressed: () => _showResetConfirmation(context, tasbihProvider),
+                    onPressed: () =>
+                        _showResetConfirmation(context, tasbihProvider),
                     icon: const Icon(Icons.refresh),
                     label: const Text('إعادة تعيين'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade900,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                     ),
                   ),
                 ],
@@ -382,7 +423,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
               // Weekly statistics chart panel
               Card(
                 elevation: 3,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -391,7 +433,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
                     children: [
                       const Text(
                         'إحصائيات التسبيح الأسبوعية',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15),
                         textAlign: TextAlign.right,
                       ),
                       const SizedBox(height: 20),
@@ -402,7 +445,9 @@ class _TasbihScreenState extends State<TasbihScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: weeklyStats.map((stat) {
                             final count = stat['count'] as int;
-                            final percent = maxStatCount > 0 ? (count / maxStatCount).clamp(0.0, 1.0) : 0.0;
+                            final percent = maxStatCount > 0
+                                ? (count / maxStatCount).clamp(0.0, 1.0)
+                                : 0.0;
                             return Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.end,
@@ -412,7 +457,9 @@ class _TasbihScreenState extends State<TasbihScreen> {
                                           fit: BoxFit.scaleDown,
                                           child: Text(
                                             '$count',
-                                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+                                            style: const TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold),
                                           ),
                                         )
                                       : const SizedBox(height: 11),
@@ -421,7 +468,9 @@ class _TasbihScreenState extends State<TasbihScreen> {
                                     width: 14,
                                     height: (percent * 80).clamp(4.0, 80.0),
                                     decoration: BoxDecoration(
-                                      color: count > 0 ? primaryColor : Colors.grey.withOpacity(0.2),
+                                      color: count > 0
+                                          ? primaryColor
+                                          : Colors.grey.withOpacity(0.2),
                                       borderRadius: BorderRadius.circular(3),
                                     ),
                                   ),
@@ -432,7 +481,9 @@ class _TasbihScreenState extends State<TasbihScreen> {
                                       stat['day'],
                                       style: TextStyle(
                                         fontSize: 10,
-                                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                        color: isDark
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
                                       ),
                                     ),
                                   ),

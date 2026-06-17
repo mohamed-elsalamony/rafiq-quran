@@ -94,7 +94,7 @@ class TasbihProvider extends ChangeNotifier {
             data.setUint8(12, 0x66); // f
             data.setUint8(13, 0x6D); // m
             data.setUint8(14, 0x74); // t
-            data.setUint8(15, 0x20); // 
+            data.setUint8(15, 0x20); //
             data.setUint32(16, 16, Endian.little);
             data.setUint16(20, 1, Endian.little); // PCM
             data.setUint16(22, 1, Endian.little); // Mono
@@ -116,7 +116,8 @@ class TasbihProvider extends ChangeNotifier {
               final double t = i / sampleRate;
               final double sine = sin(2 * pi * frequency * t);
               final double envelope = exp(-t * 90.0);
-              final int sampleValue = (128 + 127 * sine * envelope).round().clamp(0, 255);
+              final int sampleValue =
+                  (128 + 127 * sine * envelope).round().clamp(0, 255);
               bytes[44 + i] = sampleValue;
             }
             await file.writeAsBytes(bytes);

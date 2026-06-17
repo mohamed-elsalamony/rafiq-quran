@@ -6,11 +6,25 @@ import '../../../core/services/db_helper.dart';
 import '../../../core/services/prayer_service.dart';
 import '../../../core/services/hadith_service.dart';
 import '../../../core/services/prophet_blessing_service.dart';
+import '../../../core/services/prophets_stories_service.dart';
+import '../../../core/services/seerah_service.dart';
+import '../../../core/services/companions_service.dart';
 import '../../quran/presentation/quran_screen.dart';
 import '../../hifz_khatma/presentation/hifz_khatma_screen.dart';
 import '../../hadith/presentation/hadith_library_screen.dart';
 import '../../prayer_times/presentation/qibla_compass_screen.dart';
 import '../../prayer_times/presentation/prayer_provider.dart';
+import '../../prophets_stories/presentation/prophets_stories_screen.dart';
+import '../../prophets_stories/presentation/prophet_story_detail_screen.dart';
+import '../../seerah/presentation/seerah_screen.dart';
+import '../../seerah/presentation/seerah_detail_screen.dart';
+import '../../auth/presentation/auth_screen.dart';
+import '../../ai_assistant/presentation/ai_chat_screen.dart';
+import '../../aldaa_wadawaa/presentation/aldaa_wadawaa_screen.dart';
+import '../../aldaa_wadawaa/presentation/aldaa_wadawaa_detail_screen.dart';
+import '../../../core/services/aldaa_wadawaa_service.dart';
+import '../../companions/presentation/companions_list_screen.dart';
+import '../../companions/presentation/companion_detail_screen.dart';
 import 'prophet_blessing_screen.dart';
 import 'package:adhan/adhan.dart';
 import 'dart:async';
@@ -30,6 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? _lastBookmark;
   List<Map<String, dynamic>> _khatmaPlans = [];
   Hadith? _hadithOfDay;
+  SeerahEvent? _seerahEventOfDay;
+  Companion? _companionOfDay;
 
   @override
   void initState() {
@@ -51,6 +67,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final hadithService = HadithService();
     final hadith = await hadithService.getHadithOfDay();
 
+    final seerahService = SeerahService();
+    final seerahEvent = await seerahService.getEventOfDay();
+
+    final companionsService = CompanionsService();
+    await companionsService.loadCompanions();
+    final companionOfDay = companionsService.getCompanionOfDay();
+
     if (mounted) {
       setState(() {
         if (bookmarks.isNotEmpty) {
@@ -60,6 +83,8 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         _khatmaPlans = khatmas;
         _hadithOfDay = hadith;
+        _seerahEventOfDay = seerahEvent;
+        _companionOfDay = companionOfDay;
       });
     }
   }
@@ -177,12 +202,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // 2. Next Prayer Card with Live Ticking Countdown
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF162A25) : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isDark ? const Color(0xFF23443B) : const Color(0xFFE2ECE9),
+                      color: isDark
+                          ? const Color(0xFF23443B)
+                          : const Color(0xFFE2ECE9),
                       width: 1.5,
                     ),
                     boxShadow: [
@@ -195,40 +223,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF23443B) : const Color(0xFFE2ECE9),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.mosque_outlined,
-                          size: 32,
-                          color: isDark ? accentColor : primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 20),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
                               children: [
+                                Text(
+                                  'الصلاة القادمة: $_nextPrayerName',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: isDark
+                                        ? Colors.grey[300]
+                                        : Colors.grey[700],
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
                                 Container(
                                   width: 6,
                                   height: 6,
                                   decoration: BoxDecoration(
                                     color: isDark ? accentColor : primaryColor,
                                     shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'الصلاة القادمة: $_nextPrayerName',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: isDark ? Colors.grey[300] : Colors.grey[700],
-                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
@@ -254,10 +272,28 @@ class _HomeScreenState extends State<HomeScreen> {
                               'التوقيت لمدينة: ${prayerProvider.currentCity.nameArabic}',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
                               ),
+                              textAlign: TextAlign.right,
                             ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF23443B)
+                              : const Color(0xFFE2ECE9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.mosque_outlined,
+                          size: 32,
+                          color: isDark ? accentColor : primaryColor,
                         ),
                       ),
                     ],
@@ -323,6 +359,69 @@ class _HomeScreenState extends State<HomeScreen> {
                                 MaterialPageRoute(
                                     builder: (context) =>
                                         const ProphetBlessingScreen()))
+                            .then((_) => _loadDashboardData()),
+                        isDark),
+                    _buildGridItem(
+                        context,
+                        'قصص الأنبياء',
+                        Icons.auto_stories,
+                        () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ProphetsStoriesScreen()))
+                            .then((_) => _loadDashboardData()),
+                        isDark),
+                    _buildGridItem(
+                        context,
+                        'السيرة النبوية',
+                        Icons.history_edu,
+                        () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const SeerahScreen()))
+                            .then((_) => _loadDashboardData()),
+                        isDark),
+                    _buildGridItem(
+                        context,
+                        'الصحابة الكرام',
+                        Icons.group_outlined,
+                        () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const CompanionsListScreen()))
+                            .then((_) => _loadDashboardData()),
+                        isDark),
+                    _buildGridItem(
+                        context,
+                        'اسأل عن دينك',
+                        Icons.auto_awesome,
+                        () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const AiChatScreen()))
+                            .then((_) => _loadDashboardData()),
+                        isDark),
+                    _buildGridItem(
+                        context,
+                        'الداء والدواء',
+                        Icons.menu_book,
+                        () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const AldaaWadawaaScreen()))
+                            .then((_) => _loadDashboardData()),
+                        isDark),
+                    _buildGridItem(
+                        context,
+                        'حساب ومزامنة',
+                        Icons.cloud_sync,
+                        () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const AuthScreen()))
                             .then((_) => _loadDashboardData()),
                         isDark),
                     _buildGridItem(
@@ -410,7 +509,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           'رواه: ${_hadithOfDay!.source}',
                           style:
                               const TextStyle(fontSize: 11, color: Colors.grey),
-                          textAlign: TextAlign.left,
+                          textAlign: TextAlign.right,
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
@@ -439,6 +538,160 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: isDark
                         ? const Color(0xFF15222E)
                         : const Color(0xFFEDF5FA),
+                  ),
+                const SizedBox(height: 24),
+
+                // حدث اليوم من السيرة النبوية
+                if (_seerahEventOfDay != null)
+                  _buildSectionCard(
+                    title: 'حدث اليوم من السيرة النبوية 👑',
+                    isDark: isDark,
+                    accentColor: accentColor,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 8),
+                        Text(
+                          _seerahEventOfDay!.title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? accentColor : primaryColor,
+                            fontFamily: 'Amiri',
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _seerahEventOfDay!.content,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.grey[200] : Colors.black87,
+                            height: 1.6,
+                          ),
+                          textAlign: TextAlign.justify,
+                          textDirection: TextDirection.rtl,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'المصدر: ${_seerahEventOfDay!.source}',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                              fontStyle: FontStyle.italic),
+                          textAlign: TextAlign.right,
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const SeerahScreen()),
+                            ).then((_) => _loadDashboardData());
+                          },
+                          icon: const Icon(Icons.history_edu,
+                              size: 16, color: Colors.teal),
+                          label: const Text('تصفح السيرة النبوية الكاملة',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.teal)),
+                          style: OutlinedButton.styleFrom(
+                            side:
+                                BorderSide(color: accentColor.withOpacity(0.5)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    color: isDark
+                        ? const Color(0xFF2E2215)
+                        : const Color(0xFFFAF5ED),
+                  ),
+                const SizedBox(height: 24),
+
+                // صحابي اليوم
+                if (_companionOfDay != null)
+                  _buildSectionCard(
+                    title: 'صحابي اليوم 🌟',
+                    isDark: isDark,
+                    accentColor: accentColor,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _companionOfDay!.name,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? accentColor : primaryColor,
+                                  fontFamily: 'Amiri',
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: accentColor.withOpacity(0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.person_outlined,
+                                  color: accentColor, size: 22),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _companionOfDay!.virtues.isNotEmpty
+                              ? (_companionOfDay!.virtues.length > 200
+                                  ? '${_companionOfDay!.virtues.substring(0, 200)}...'
+                                  : _companionOfDay!.virtues)
+                              : _companionOfDay!.moments.isNotEmpty
+                                  ? (_companionOfDay!.moments.length > 200
+                                      ? '${_companionOfDay!.moments.substring(0, 200)}...'
+                                      : _companionOfDay!.moments)
+                                  : '',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.grey[200] : Colors.black87,
+                            height: 1.6,
+                          ),
+                          textAlign: TextAlign.justify,
+                          textDirection: TextDirection.rtl,
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => CompanionDetailScreen(
+                                      companion: _companionOfDay!)),
+                            ).then((_) => _loadDashboardData());
+                          },
+                          icon: const Icon(Icons.group,
+                              size: 16, color: Colors.teal),
+                          label: const Text('قرأ السيرة الكاملة والأحاديث',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.teal)),
+                          style: OutlinedButton.styleFrom(
+                            side:
+                                BorderSide(color: accentColor.withOpacity(0.5)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    color: isDark
+                        ? const Color(0xFF1E2A22)
+                        : const Color(0xFFF0FAF5),
                   ),
                 const SizedBox(height: 24),
 
@@ -732,6 +985,548 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
+
+                      // Prophets Stories progress restoration
+                      if (appState.lastProphetStoryId > 0) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.03)
+                                : Colors.grey.withOpacity(0.03),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.black.withOpacity(0.05),
+                              width: 1,
+                            ),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              final service = ProphetsStoriesService();
+                              service.loadStories().then((_) {
+                                final story = service
+                                    .getStoryById(appState.lastProphetStoryId);
+                                if (story != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          ProphetStoryDetailScreen(
+                                        story: story,
+                                        initialChapterId:
+                                            appState.lastProphetChapterId,
+                                      ),
+                                    ),
+                                  ).then((_) => _loadDashboardData());
+                                }
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: accentColor.withOpacity(0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.auto_stories,
+                                        color: accentColor, size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'آخر ما قرأت في قصص الأنبياء',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        FutureBuilder(
+                                          future: ProphetsStoriesService()
+                                              .loadStories()
+                                              .then((_) =>
+                                                  ProphetsStoriesService()
+                                                      .getStoryById(appState
+                                                          .lastProphetStoryId)),
+                                          builder: (context, snapshot) {
+                                            if (snapshot.hasData &&
+                                                snapshot.data != null) {
+                                              final story =
+                                                  snapshot.data as ProphetStory;
+                                              final chap = story.chapters
+                                                  .firstWhere(
+                                                      (c) =>
+                                                          c.id ==
+                                                          appState
+                                                              .lastProphetChapterId,
+                                                      orElse: () =>
+                                                          story.chapters.first);
+                                              return Text(
+                                                'قصة ${story.name} - ${chap.title}',
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: isDark
+                                                        ? Colors.grey[400]
+                                                        : Colors.grey[600]),
+                                                textAlign: TextAlign.right,
+                                              );
+                                            }
+                                            return const SizedBox();
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      final service = ProphetsStoriesService();
+                                      service.loadStories().then((_) {
+                                        final story = service.getStoryById(
+                                            appState.lastProphetStoryId);
+                                        if (story != null) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  ProphetStoryDetailScreen(
+                                                story: story,
+                                                initialChapterId: appState
+                                                    .lastProphetChapterId,
+                                              ),
+                                            ),
+                                          ).then((_) => _loadDashboardData());
+                                        }
+                                      });
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                    ),
+                                    child: const Text('تابع الآن',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      // Seerah progress restoration
+                      if (appState.lastSeerahEventId > 0) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.03)
+                                : Colors.grey.withOpacity(0.03),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.black.withOpacity(0.05),
+                              width: 1,
+                            ),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              final service = SeerahService();
+                              service.loadEvents().then((_) {
+                                final event = service
+                                    .getEventById(appState.lastSeerahEventId);
+                                if (event != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SeerahDetailScreen(
+                                        event: event,
+                                      ),
+                                    ),
+                                  ).then((_) => _loadDashboardData());
+                                }
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: accentColor.withOpacity(0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.history_edu,
+                                        color: accentColor, size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'آخر ما قرأت في السيرة النبوية',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        FutureBuilder(
+                                          future: SeerahService()
+                                              .loadEvents()
+                                              .then((_) => SeerahService()
+                                                  .getEventById(appState
+                                                      .lastSeerahEventId)),
+                                          builder: (context, snapshot) {
+                                            if (snapshot.hasData &&
+                                                snapshot.data != null) {
+                                              final ev =
+                                                  snapshot.data as SeerahEvent;
+                                              return Text(
+                                                '${ev.stage} - ${ev.title}',
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: isDark
+                                                        ? Colors.grey[400]
+                                                        : Colors.grey[600]),
+                                                textAlign: TextAlign.right,
+                                              );
+                                            }
+                                            return const SizedBox();
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      final service = SeerahService();
+                                      service.loadEvents().then((_) {
+                                        final event = service.getEventById(
+                                            appState.lastSeerahEventId);
+                                        if (event != null) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  SeerahDetailScreen(
+                                                event: event,
+                                              ),
+                                            ),
+                                          ).then((_) => _loadDashboardData());
+                                        }
+                                      });
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                    ),
+                                    child: const Text('تابع الآن',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      // Companion reading progress restoration
+                      if (appState.lastCompanionId > 0) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.03)
+                                : Colors.grey.withOpacity(0.03),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.black.withOpacity(0.05),
+                              width: 1,
+                            ),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              final service = CompanionsService();
+                              service.loadCompanions().then((_) {
+                                final companion = service
+                                    .getCompanionById(appState.lastCompanionId);
+                                if (companion != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          CompanionDetailScreen(
+                                        companion: companion,
+                                      ),
+                                    ),
+                                  ).then((_) => _loadDashboardData());
+                                }
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: accentColor.withOpacity(0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.group,
+                                        color: accentColor, size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'آخر ما قرأت عن الصحابة الكرام',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        FutureBuilder(
+                                          future: CompanionsService()
+                                              .loadCompanions()
+                                              .then((_) => CompanionsService()
+                                                  .getCompanionById(appState
+                                                      .lastCompanionId)),
+                                          builder: (context, snapshot) {
+                                            if (snapshot.hasData &&
+                                                snapshot.data != null) {
+                                              final comp =
+                                                  snapshot.data as Companion;
+                                              return Text(
+                                                'سيرة الصحابي: ${comp.name}',
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: isDark
+                                                        ? Colors.grey[400]
+                                                        : Colors.grey[600]),
+                                                textAlign: TextAlign.right,
+                                              );
+                                            }
+                                            return const SizedBox();
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      final service = CompanionsService();
+                                      service.loadCompanions().then((_) {
+                                        final companion =
+                                            service.getCompanionById(
+                                                appState.lastCompanionId);
+                                        if (companion != null) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  CompanionDetailScreen(
+                                                companion: companion,
+                                              ),
+                                            ),
+                                          ).then((_) => _loadDashboardData());
+                                        }
+                                      });
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                    ),
+                                    child: const Text('تابع الآن',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      // Aldaa Wadawaa progress restoration
+                      if (appState.lastReadAldaaWadawaaChapterId > 0) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.03)
+                                : Colors.grey.withOpacity(0.03),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.black.withOpacity(0.05),
+                              width: 1,
+                            ),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              final service = AldaaWadawaaService();
+                              service.loadChapters().then((_) {
+                                final chapter = service.getChapterById(
+                                    appState.lastReadAldaaWadawaaChapterId);
+                                if (chapter != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          AldaaWadawaaDetailScreen(
+                                        chapter: chapter,
+                                      ),
+                                    ),
+                                  ).then((_) => _loadDashboardData());
+                                }
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: accentColor.withOpacity(0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.bookmark_outline,
+                                        color: accentColor, size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'آخر ما قرأت في الداء والدواء',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        FutureBuilder(
+                                          future: AldaaWadawaaService()
+                                              .loadChapters()
+                                              .then((_) => AldaaWadawaaService()
+                                                  .getChapterById(appState
+                                                      .lastReadAldaaWadawaaChapterId)),
+                                          builder: (context, snapshot) {
+                                            if (snapshot.hasData &&
+                                                snapshot.data != null) {
+                                              final chap = snapshot.data
+                                                  as AldaaWadawaaChapter;
+                                              return Text(
+                                                'صفحة ${chap.page} - ${chap.title}',
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: isDark
+                                                        ? Colors.grey[400]
+                                                        : Colors.grey[600]),
+                                                textAlign: TextAlign.right,
+                                              );
+                                            }
+                                            return const SizedBox();
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      final service = AldaaWadawaaService();
+                                      service.loadChapters().then((_) {
+                                        final chapter = service.getChapterById(
+                                            appState
+                                                .lastReadAldaaWadawaaChapterId);
+                                        if (chapter != null) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  AldaaWadawaaDetailScreen(
+                                                chapter: chapter,
+                                              ),
+                                            ),
+                                          ).then((_) => _loadDashboardData());
+                                        }
+                                      });
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                    ),
+                                    child: const Text('تابع الآن',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   color: isDark ? const Color(0xFF1E1E1E) : Colors.white,

@@ -1,17 +1,24 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:adhan/adhan.dart';
+import 'periodic_notification_helper.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
   Future<void> init() async {
@@ -26,20 +33,24 @@ class NotificationService {
     try {
       // 1. Initialize timezone database
       tz.initializeTimeZones();
-      final String localName = 'Asia/Riyadh'; // Fallback timezone
       try {
-        // You can use flutter_timezone package to get local timezone name if needed,
-        // but setting Riyadh or Cairo as fallback is safe, or we can use local timezone offset.
-        tz.setLocalLocation(tz.getLocation(localName));
-      } catch (_) {
-        debugPrint("Could not set timezone location, using Riyadh as default.");
+        final String timeZoneName =
+            (await FlutterTimezone.getLocalTimezone()).identifier;
+        tz.setLocalLocation(tz.getLocation(timeZoneName));
+        debugPrint("Set local timezone to: $timeZoneName");
+      } catch (e) {
+        debugPrint("Could not set local timezone: $e. Using fallback Riyadh.");
+        try {
+          tz.setLocalLocation(tz.getLocation('Asia/Riyadh'));
+        } catch (_) {}
       }
 
       // 2. Initialize settings for Android & iOS
       const AndroidInitializationSettings androidSettings =
           AndroidInitializationSettings('ic_launcher');
 
-      const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
+      const DarwinInitializationSettings iosSettings =
+          DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
         requestSoundPermission: true,
@@ -54,12 +65,21 @@ class NotificationService {
         initSettings,
         onDidReceiveNotificationResponse: (details) {
           debugPrint("Notification Clicked: ${details.payload}");
+          final payload = details.payload;
+          if (payload != null && payload.isNotEmpty) {
+            navigatorKey.currentState?.pushNamedAndRemoveUntil(
+              '/home',
+              (route) => false,
+              arguments: payload,
+            );
+          }
         },
       );
 
       // Create high importance notification channel for Android 8.0+
       if (Platform.isAndroid) {
-        final AndroidNotificationChannel channel = const AndroidNotificationChannel(
+        final AndroidNotificationChannel channel =
+            const AndroidNotificationChannel(
           'prayer_channel_id',
           'تنبيهات الأذان والصلوات',
           description: 'تنبهات مواقيت الصلاة والأذان المكتوب',
@@ -73,7 +93,11 @@ class NotificationService {
                 AndroidFlutterLocalNotificationsPlugin>();
         if (androidImplementation != null) {
           await androidImplementation.createNotificationChannel(channel);
-          await androidImplementation.requestNotificationsPermission();
+          try {
+            await androidImplementation.requestNotificationsPermission();
+          } catch (e) {
+            debugPrint("Error requesting notifications permission: $e");
+          }
           try {
             await androidImplementation.requestExactAlarmsPermission();
           } catch (e) {
@@ -99,9 +123,11 @@ class NotificationService {
     if (kIsWeb || !_initialized) return;
 
     try {
-      final tz.TZDateTime tzDateTime = tz.TZDateTime.from(scheduledDate, tz.local);
-      
-      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      final tz.TZDateTime tzDateTime =
+          tz.TZDateTime.from(scheduledDate, tz.local);
+
+      const AndroidNotificationDetails androidDetails =
+          AndroidNotificationDetails(
         'prayer_channel_id',
         'تنبيهات الأذان والصلوات',
         channelDescription: 'تنبهات مواقيت الصلاة والأذان المكتوب',
@@ -115,17 +141,135 @@ class NotificationService {
         iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
       );
 
-      await _notificationsPlugin.zonedSchedule(
-        id,
-        title,
-        body,
-        tzDateTime,
-        platformDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
-      debugPrint("Scheduled exact notification '$title' (ID: $id) for $tzDateTime");
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          title,
+          body,
+          tzDateTime,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        );
+        debugPrint(
+            "Scheduled exact notification '$title' (ID: $id) for $tzDateTime");
+      } catch (e) {
+        debugPrint(
+            "Failed to schedule exact notification, retrying with inexact fallback: $e");
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          title,
+          body,
+          tzDateTime,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+        debugPrint(
+            "Scheduled inexact notification '$title' (ID: $id) for $tzDateTime");
+      }
     } catch (e) {
       debugPrint("Error scheduling notification: $e");
+    }
+  }
+
+  // --- Schedule/Cancel Daily Reminder Notification ---
+  Future<void> scheduleDailyReminder({required bool enabled}) async {
+    if (kIsWeb || !_initialized) return;
+
+    final int dailyReminderId = 999;
+
+    if (!enabled) {
+      await _notificationsPlugin.cancel(dailyReminderId);
+      debugPrint(
+          "Cancelled daily reminder notification (ID: $dailyReminderId)");
+      return;
+    }
+
+    try {
+      // Cancel first to avoid duplicates
+      await _notificationsPlugin.cancel(dailyReminderId);
+
+      final now = tz.TZDateTime.now(tz.local);
+      var scheduledTime = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        9, // 9:00 AM
+        0,
+      );
+
+      // If 9:00 AM has already passed today, schedule for tomorrow
+      if (scheduledTime.isBefore(now)) {
+        scheduledTime = scheduledTime.add(const Duration(days: 1));
+      }
+
+      const AndroidNotificationDetails androidDetails =
+          AndroidNotificationDetails(
+        'daily_reminder_channel_id',
+        'التذكير اليومي بالورد والأذكار',
+        channelDescription:
+            'تنبيه يومي لقراءة الورد القرآني وأذكار الصباح والمساء',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+      );
+
+      const NotificationDetails platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+      );
+
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          dailyReminderId,
+          '📖 الورد اليومي والأذكار',
+          'لا تنسَ قراءة وردك اليومي وأذكار الصباح والمساء لتنعم بذكر الله 📿',
+          scheduledTime,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+        debugPrint("Scheduled daily reminder (exact) at $scheduledTime");
+      } catch (e) {
+        debugPrint(
+            "Failed to schedule daily reminder (exact), retrying inexact: $e");
+        await _notificationsPlugin.zonedSchedule(
+          dailyReminderId,
+          '📖 الورد اليومي والأذكار',
+          'لا تنسَ قراءة وردك اليومي وأذكار الصباح والمساء لتنعم بذكر الله 📿',
+          scheduledTime,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+        debugPrint("Scheduled daily reminder (inexact) at $scheduledTime");
+      }
+    } catch (e) {
+      debugPrint("Error scheduling daily reminder: $e");
+    }
+  }
+
+  // --- Cancel only prayer alarms ---
+  Future<void> _cancelPrayerAlarms() async {
+    for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
+      for (int i = 0; i < 5; i++) {
+        try {
+          await _notificationsPlugin.cancel((dayOffset * 10) + i + 1000);
+          await _notificationsPlugin.cancel((dayOffset * 10) + i + 2000);
+        } catch (_) {}
+      }
+    }
+  }
+
+  // --- Cancel only smart daily reminders ---
+  Future<void> _cancelSmartReminders() async {
+    for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
+      try {
+        await _notificationsPlugin.cancel((dayOffset * 10) + 3000);
+        await _notificationsPlugin.cancel((dayOffset * 10) + 3010);
+        await _notificationsPlugin.cancel((dayOffset * 10) + 3020);
+        await _notificationsPlugin.cancel((dayOffset * 10) + 3030);
+      } catch (_) {}
     }
   }
 
@@ -141,8 +285,8 @@ class NotificationService {
     if (kIsWeb || !_initialized) return;
 
     try {
-      // Cancel previous scheduled notifications first to prevent duplicates
-      await _notificationsPlugin.cancelAll();
+      // Cancel previous scheduled prayer alarms to prevent duplicates
+      await _cancelPrayerAlarms();
 
       final coords = Coordinates(latitude, longitude);
       final now = DateTime.now();
@@ -162,10 +306,10 @@ class NotificationService {
       for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
         final date = now.add(Duration(days: dayOffset));
         final DateComponents dateComponents = DateComponents.from(date);
-        
+
         final params = method.getParameters();
         params.madhab = Madhab.shafi;
-        
+
         final times = PrayerTimes(coords, dateComponents, params);
 
         final List<Map<String, dynamic>> prayers = [
@@ -193,22 +337,25 @@ class NotificationService {
             await scheduleNotification(
               id: notificationId,
               title: 'حان الآن موعد صلاة $label 🕌',
-              body: 'الله أكبر، الله أكبر. حان الآن موعد الأذان لصلاة $label حسب توقيتك المحلي. أقم صلاتك تسعد حياتك 🤲',
+              body:
+                  'الله أكبر، الله أكبر. حان الآن موعد الأذان لصلاة $label حسب توقيتك المحلي. أقم صلاتك تسعد حياتك 🤲',
               scheduledDate: prayerTime,
             );
           }
 
           // 2. Pre-Prayer Preparation Notification (إشعار الاستعداد قبل الصلاة)
           if (preAlarmsEnabled) {
-            final DateTime preAlarmTime = prayerTime.subtract(Duration(minutes: preAlarmMinutes));
+            final DateTime preAlarmTime =
+                prayerTime.subtract(Duration(minutes: preAlarmMinutes));
             if (preAlarmTime.isAfter(now)) {
               final int preNotificationId = (dayOffset * 10) + i + 2000;
               final String verse = prayerVerses[i % prayerVerses.length];
-              
+
               await scheduleNotification(
                 id: preNotificationId,
                 title: 'تأهب لصلاة $label بعد $preAlarmMinutes دقيقة ⏱️',
-                body: 'استعد للوقوف بين يدي الله سبحانه وتعالى لصلاة $label قريباً.\n$verse',
+                body:
+                    'استعد للوقوف بين يدي الله سبحانه وتعالى لصلاة $label قريباً.\n$verse',
                 scheduledDate: preAlarmTime,
               );
             }
@@ -221,10 +368,233 @@ class NotificationService {
     }
   }
 
+  // --- Schedule all smart daily reminders for the next 7 days ---
+  Future<void> scheduleSmartReminders({
+    required int wakeUpHour,
+    required int wakeUpMinute,
+    required int returnHour,
+    required int returnMinute,
+    required int sleepHour,
+    required int sleepMinute,
+    required int wakeUpDelayMins,
+    required bool wakeUpRem1Enabled,
+    required bool wakeUpRem2Enabled,
+    required bool returnRemEnabled,
+    required bool sleepRemEnabled,
+    required String contentType,
+  }) async {
+    if (kIsWeb || !_initialized) return;
+
+    try {
+      // 1. Cancel existing smart reminders first
+      await _cancelSmartReminders();
+
+      final random = Random();
+      final now = tz.TZDateTime.now(tz.local);
+
+      // Helper function to pick random content
+      Map<String, String> getRandomContent(String type) {
+        String selectedType = type;
+        if (type == 'all') {
+          final roll = random.nextInt(3);
+          if (roll == 0)
+            selectedType = 'verse';
+          else if (roll == 1)
+            selectedType = 'dhikr';
+          else
+            selectedType = 'hadith';
+        }
+
+        if (selectedType == 'verse') {
+          final index =
+              random.nextInt(PeriodicNotificationHelper.verses.length);
+          return {
+            'title': '📖 آية قرآنية للتأمل',
+            'body': PeriodicNotificationHelper.verses[index],
+            'payload': 'quran'
+          };
+        } else if (selectedType == 'dhikr') {
+          final index =
+              random.nextInt(PeriodicNotificationHelper.adhkar.length);
+          return {
+            'title': '📿 ذكر اليوم',
+            'body': PeriodicNotificationHelper.adhkar[index],
+            'payload': 'adhkar'
+          };
+        } else {
+          final index =
+              random.nextInt(PeriodicNotificationHelper.hadiths.length);
+          return {
+            'title': '📚 من الهدي النبوي',
+            'body': PeriodicNotificationHelper.hadiths[index],
+            'payload': 'home'
+          };
+        }
+      }
+
+      // Schedule alarms for the next 7 days
+      for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
+        // Base dates
+        final wakeUpBase = tz.TZDateTime(tz.local, now.year, now.month, now.day,
+                wakeUpHour, wakeUpMinute)
+            .add(Duration(days: dayOffset));
+        final returnBase = tz.TZDateTime(tz.local, now.year, now.month, now.day,
+                returnHour, returnMinute)
+            .add(Duration(days: dayOffset));
+        final sleepBase = tz.TZDateTime(
+                tz.local, now.year, now.month, now.day, sleepHour, sleepMinute)
+            .add(Duration(days: dayOffset));
+
+        // 1. Wake Up - Reminder 1: X minutes after wake up (delay duration)
+        if (wakeUpRem1Enabled) {
+          final targetTime = wakeUpBase.add(Duration(minutes: wakeUpDelayMins));
+          if (targetTime.isAfter(now)) {
+            final content = getRandomContent(contentType);
+            await scheduleNotificationDirect(
+              id: (dayOffset * 10) + 3000,
+              title: content['title'] ?? 'صباح الخير والبركة 🌅',
+              body: content['body'] ?? 'اذكر الله يذكرك ويبارك في يومك.',
+              scheduledDate: targetTime,
+              payload: content['payload'] ?? 'home',
+            );
+          }
+        }
+
+        // 2. Wake Up - Reminder 2: 1 hour after wake up (Quran daily portion reminder)
+        if (wakeUpRem2Enabled) {
+          final targetTime = wakeUpBase.add(const Duration(hours: 1));
+          if (targetTime.isAfter(now)) {
+            await scheduleNotificationDirect(
+              id: (dayOffset * 10) + 3010,
+              title: '📖 وردك القرآني اليومي',
+              body:
+                  'لا تنسَ قراءة وردك اليومي من كتاب الله، رتب وقتك لتنعم ببركة القرآن في يومك 🌿',
+              scheduledDate: targetTime,
+              payload: 'quran',
+            );
+          }
+        }
+
+        // 3. Return from Work: reminder of portion, evening dhikr, or blessings campaign
+        if (returnRemEnabled) {
+          final targetTime = returnBase;
+          if (targetTime.isAfter(now)) {
+            // Pick a message topic randomly
+            final topic = random.nextInt(3);
+            String title = '🏢 عوداً حميداً من العمل';
+            String body =
+                'تقبل الله طاعتك. لا تنسَ قراءة أذكار المساء لتكون في حفظ الله 📿';
+            String payload = 'adhkar';
+
+            if (topic == 0) {
+              title = '📖 هل أكملت وردك اليوم؟';
+              body =
+                  'خصص دقائق من وقتك الآن لإتمام وردك اليومي من القرآن الكريم وتدبر آياته 🤲';
+              payload = 'quran';
+            } else if (topic == 1) {
+              title = 'ﷻ الصلاة على النبي ﷺ';
+              body =
+                  'شارك الآن مع آلاف المسلمين في مبادرة مليونية الصلاة على الرسول ﷺ 🕌';
+              payload =
+                  'home'; // HomeScreen contains the blessings campaign card
+            }
+
+            await scheduleNotificationDirect(
+              id: (dayOffset * 10) + 3020,
+              title: title,
+              body: body,
+              scheduledDate: targetTime,
+              payload: payload,
+            );
+          }
+        }
+
+        // 4. Bedtime: 30 minutes before sleep
+        if (sleepRemEnabled) {
+          final targetTime = sleepBase.subtract(const Duration(minutes: 30));
+          if (targetTime.isAfter(now)) {
+            // Get random content
+            final content = getRandomContent(contentType);
+            String body =
+                'استعد للنوم بقراءة أذكار النوم وسورة الملك. طابت ليلتك في حفظ الرحمن 🌙\n${content['body']}';
+
+            await scheduleNotificationDirect(
+              id: (dayOffset * 10) + 3030,
+              title: '🌙 أذكار النوم والاستعداد',
+              body: body,
+              scheduledDate: targetTime,
+              payload: 'adhkar',
+            );
+          }
+        }
+      }
+      debugPrint("Smart daily reminders scheduled for the next 7 days.");
+    } catch (e) {
+      debugPrint("Error scheduling smart reminders: $e");
+    }
+  }
+
+  // --- Internal helper to schedule directly with a specific payload ---
+  Future<void> scheduleNotificationDirect({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    required String payload,
+  }) async {
+    if (kIsWeb || !_initialized) return;
+
+    try {
+      final tz.TZDateTime tzDateTime = scheduledDate is tz.TZDateTime
+          ? scheduledDate as tz.TZDateTime
+          : tz.TZDateTime.from(scheduledDate, tz.local);
+
+      const AndroidNotificationDetails androidDetails =
+          AndroidNotificationDetails(
+        'smart_reminders_channel_id',
+        'التذكيرات الذكية اليومية',
+        channelDescription:
+            'تنبيهات مخصصة لمرافقتك طوال اليوم من الاستيقاظ إلى النوم',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+      );
+
+      const NotificationDetails platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+      );
+
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          title,
+          body,
+          tzDateTime,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          payload: payload,
+        );
+      } catch (e) {
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          title,
+          body,
+          tzDateTime,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: payload,
+        );
+      }
+    } catch (e) {
+      debugPrint("Error in scheduleNotificationDirect: $e");
+    }
+  }
+
   // --- Show instant alert inside the app ---
   void showInstantAlert(BuildContext context, String title, String body) {
     if (!context.mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -238,7 +608,8 @@ class NotificationService {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
                   ),
                   Text(
                     body,

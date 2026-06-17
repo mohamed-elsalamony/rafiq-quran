@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:async';
 import 'package:quran/quran.dart' as quran;
 import '../../../core/services/app_state.dart';
 import '../../../core/services/recitation_service.dart';
@@ -26,11 +27,17 @@ class QuranProvider extends ChangeNotifier {
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
   String? _errorMessage;
+  bool _isKhatmCompleted = false;
 
   int _currentAudioPositionMs = 0;
   int _lastSavedTimeMs = 0;
 
   final Map<int, List<Map<String, dynamic>>> _pageVersesCache = {};
+
+  // StreamSubscription references for proper cleanup
+  StreamSubscription? _completeSub;
+  StreamSubscription? _positionSub;
+  StreamSubscription? _logSub;
 
   // Getters
   int get currentPage => _currentPage;
@@ -48,6 +55,12 @@ class QuranProvider extends ChangeNotifier {
   double get downloadProgress => _downloadProgress;
   String? get errorMessage => _errorMessage;
   int get currentAudioPositionMs => _currentAudioPositionMs;
+  bool get isKhatmCompleted => _isKhatmCompleted;
+
+  void clearKhatmCompleted() {
+    _isKhatmCompleted = false;
+    notifyListeners();
+  }
 
   final List<Map<String, String>> reciters = [
     {'name': 'عبد الباسط عبد الصمد', 'id': 'Abdul_Basit_Murattal_64kbps'},
@@ -65,23 +78,26 @@ class QuranProvider extends ChangeNotifier {
       _loadPageVerses(_currentPage + 1);
       _loadPageVerses(_currentPage - 1);
     });
-    
+
     // Listen to audio player events
-    _audioPlayer.onPlayerComplete.listen((event) {
+    _completeSub = _audioPlayer.onPlayerComplete.listen((event) {
       _playNextAyah();
     });
 
-    _audioPlayer.onLog.listen((log) {
+    _logSub = _audioPlayer.onLog.listen((log) {
       debugPrint("AudioPlayer Log: $log");
     });
 
-    _audioPlayer.onPositionChanged.listen((pos) {
+    _positionSub = _audioPlayer.onPositionChanged.listen((pos) {
       _currentAudioPositionMs = pos.inMilliseconds;
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       if (nowMs - _lastSavedTimeMs > 5000) {
         _lastSavedTimeMs = nowMs;
-        if (_isPlaying && _activePlayingSurah != null && _activePlayingAyah != null) {
-          final reciterName = reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!;
+        if (_isPlaying &&
+            _activePlayingSurah != null &&
+            _activePlayingAyah != null) {
+          final reciterName =
+              reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!;
           appState.saveAudioState(
             reciter: reciterName,
             positionMs: _currentAudioPositionMs,
@@ -122,6 +138,9 @@ class QuranProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _completeSub?.cancel();
+    _positionSub?.cancel();
+    _logSub?.cancel();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -168,7 +187,8 @@ class QuranProvider extends ChangeNotifier {
   }
 
   // --- Recitation controls ---
-  Future<void> startRecitation(int surah, int ayah, {int? startPositionMs}) async {
+  Future<void> startRecitation(int surah, int ayah,
+      {int? startPositionMs}) async {
     _errorMessage = null;
     _activePlayingSurah = surah;
     _activePlayingAyah = ayah;
@@ -178,17 +198,20 @@ class QuranProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final localFile = await RecitationService.getLocalFile(surah, ayah, _currentReciterId);
+      final localFile =
+          await RecitationService.getLocalFile(surah, ayah, _currentReciterId);
       await _audioPlayer.setPlaybackRate(_playbackSpeed);
 
       if (await localFile.exists()) {
         await _audioPlayer.play(DeviceFileSource(localFile.path));
       } else {
-        final url = RecitationService.getAudioUrl(surah, ayah, _currentReciterId);
+        final url =
+            RecitationService.getAudioUrl(surah, ayah, _currentReciterId);
         await _audioPlayer.play(UrlSource(url)).timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw Exception('انتهت مهلة تشغيل الصوت. يرجى التحقق من اتصالك بالإنترنت.'),
-        );
+              const Duration(seconds: 15),
+              onTimeout: () => throw Exception(
+                  'انتهت مهلة تشغيل الصوت. يرجى التحقق من اتصالك بالإنترنت.'),
+            );
       }
 
       if (startPositionMs != null && startPositionMs > 0) {
@@ -196,7 +219,8 @@ class QuranProvider extends ChangeNotifier {
       }
 
       // Save audio state
-      final reciterName = reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!;
+      final reciterName =
+          reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!;
       appState.saveAudioState(
         reciter: reciterName,
         positionMs: startPositionMs ?? 0,
@@ -206,7 +230,8 @@ class QuranProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("Error starting recitation: $e");
       _isPlaying = false;
-      _errorMessage = "عذراً، فشل تشغيل الصوت: ${e.toString().replaceAll('Exception:', '').trim()}";
+      _errorMessage =
+          "عذراً، فشل تشغيل الصوت: ${e.toString().replaceAll('Exception:', '').trim()}";
       notifyListeners();
     }
   }
@@ -232,6 +257,7 @@ class QuranProvider extends ChangeNotifier {
         currentAyah = 1;
       } else {
         // Entire Quran finished
+        _isKhatmCompleted = true;
         _isPlaying = false;
         _activePlayingSurah = null;
         _activePlayingAyah = null;
@@ -255,7 +281,8 @@ class QuranProvider extends ChangeNotifier {
       _audioPlayer.pause();
       _isPlaying = false;
       if (_activePlayingSurah != null && _activePlayingAyah != null) {
-        final reciterName = reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!;
+        final reciterName =
+            reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!;
         appState.saveAudioState(
           reciter: reciterName,
           positionMs: _currentAudioPositionMs,
@@ -290,7 +317,9 @@ class QuranProvider extends ChangeNotifier {
   void changeReciter(String reciterId) {
     _currentReciterId = reciterId;
     notifyListeners();
-    if (_isPlaying && _activePlayingSurah != null && _activePlayingAyah != null) {
+    if (_isPlaying &&
+        _activePlayingSurah != null &&
+        _activePlayingAyah != null) {
       startRecitation(_activePlayingSurah!, _activePlayingAyah!);
     }
   }
@@ -358,7 +387,8 @@ class QuranProvider extends ChangeNotifier {
         int count = quran.getVerseCount(s);
         for (int v = 1; v <= count; v++) {
           String verseText = quran.getVerse(s, v);
-          if (verseText.contains(query) || quran.getSurahNameArabic(s).contains(query)) {
+          if (verseText.contains(query) ||
+              quran.getSurahNameArabic(s).contains(query)) {
             results.add({
               'surah': s,
               'ayah': v,

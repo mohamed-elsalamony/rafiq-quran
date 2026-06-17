@@ -12,6 +12,7 @@ import 'audio_player_widget.dart';
 import 'tafseer_widget.dart';
 import 'quran_provider.dart';
 import 'widgets/quran_page_widget.dart';
+import 'khatm_celebration_screen.dart';
 
 class QuranScreen extends StatefulWidget {
   final int initialPage;
@@ -35,6 +36,7 @@ class _QuranScreenState extends State<QuranScreen> {
 
   bool _isInit = false;
   bool _isProgrammaticScroll = false;
+  bool _isDownloadDialogShowing = false;
 
   // Auto-scroll variables
   Timer? _autoScrollTimer;
@@ -111,6 +113,23 @@ class _QuranScreenState extends State<QuranScreen> {
     if (!mounted) return;
     final provider = Provider.of<QuranProvider>(context, listen: false);
 
+    // Handle Quran completion event
+    if (provider.isKhatmCompleted) {
+      provider.clearKhatmCompleted();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const KhatmCelebrationScreen(
+                isNewCompletion: true,
+              ),
+            ),
+          );
+        }
+      });
+    }
+
     // 1. Handle errors
     if (provider.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -127,7 +146,8 @@ class _QuranScreenState extends State<QuranScreen> {
     }
 
     // 2. Handle download dialog loader
-    if (provider.isDownloading) {
+    if (provider.isDownloading && !_isDownloadDialogShowing) {
+      _isDownloadDialogShowing = true;
       _showDownloadProgressDialog(provider);
     }
 
@@ -222,7 +242,7 @@ class _QuranScreenState extends State<QuranScreen> {
 
             if (!isDownloading) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                Navigator.of(context, rootNavigator: true).pop();
+                if (mounted) Navigator.of(context, rootNavigator: true).pop();
               });
             }
 
@@ -244,7 +264,12 @@ class _QuranScreenState extends State<QuranScreen> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      // Reset flag so dialog can be shown again for future downloads
+      if (mounted) {
+        setState(() => _isDownloadDialogShowing = false);
+      }
+    });
   }
 
   void _showReaderSettingsBottomSheet(BuildContext context) {
@@ -778,7 +803,7 @@ class _QuranScreenState extends State<QuranScreen> {
 
         leading: canPop
             ? IconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_forward),
                 onPressed: () => Navigator.pop(context),
               )
             : null,
@@ -887,6 +912,17 @@ class _QuranScreenState extends State<QuranScreen> {
                           quranProvider.selectAyah(surah, ayah);
                           _showVerseActionsBottomSheet(context, quranProvider,
                               surah, ayah, quran.getVerse(surah, ayah));
+                        },
+                        onKhatmTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const KhatmCelebrationScreen(
+                                isNewCompletion: true,
+                              ),
+                            ),
+                          );
                         },
                       ),
                     );
@@ -1147,7 +1183,7 @@ class QuranSearchDelegate extends SearchDelegate<int?> {
   @override
   Widget? buildLeading(BuildContext context) {
     return IconButton(
-      icon: const Icon(Icons.arrow_back),
+      icon: const Icon(Icons.arrow_forward),
       onPressed: () {
         close(context, null);
       },
@@ -1181,12 +1217,12 @@ class QuranSearchDelegate extends SearchDelegate<int?> {
       // 1. Remove diacritics (harakat)
       final diacritics = RegExp(r'[\u064B-\u065F\u0670]');
       String normalized = text.replaceAll(diacritics, '');
-      
+
       // 2. Normalize hamzas and alef
       normalized = normalized.replaceAll(RegExp(r'[أإآا]'), 'ا');
       normalized = normalized.replaceAll(RegExp(r'[ةه]'), 'ه');
       normalized = normalized.replaceAll(RegExp(r'[ىي]'), 'ي');
-      
+
       return normalized;
     }
 
@@ -1305,7 +1341,7 @@ class QuranSearchDelegate extends SearchDelegate<int?> {
                   ),
                   subtitle: Text(
                     'سورة ${verse['surahName']} - الآية ${verse['ayah']} - صفحة ${verse['page']}',
-                    textAlign: TextAlign.left,
+                    textAlign: TextAlign.right,
                   ),
                   onTap: () {
                     close(context, verse['page'] as int);

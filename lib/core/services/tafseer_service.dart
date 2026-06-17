@@ -10,7 +10,8 @@ class TafseerService {
   static Future<void> preloadTafseer() async {
     if (_cachedTafseer != null) return;
     try {
-      final String jsonString = await rootBundle.loadString('assets/data/tafseer.json');
+      final String jsonString =
+          await rootBundle.loadString('assets/data/tafseer.json');
       _cachedTafseer = json.decode(jsonString) as List<dynamic>;
       _hasError = false;
     } catch (e) {

@@ -43,7 +43,7 @@ class PrayerProvider extends ChangeNotifier {
   PrayerProvider() {
     _currentCity = PrayerService.defaultCities[_selectedCityName]!;
     _calculateTimes();
-    
+
     // Load settings and initialize notification service sequentially
     _initProvider();
   }
@@ -67,7 +67,8 @@ class PrayerProvider extends ChangeNotifier {
     try {
       final coords = Coordinates(_currentCity.latitude, _currentCity.longitude);
       _prayerTimes = PrayerService.getPrayerTimes(coords, _currentCity.method);
-      _qiblaAngle = PrayerService.calculateQiblaDirection(_currentCity.latitude, _currentCity.longitude);
+      _qiblaAngle = PrayerService.calculateQiblaDirection(
+          _currentCity.latitude, _currentCity.longitude);
     } catch (e) {
       debugPrint("Error calculating prayer times: $e");
     }
@@ -77,7 +78,8 @@ class PrayerProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedCity = prefs.getString('prayer_selected_city') ?? 'القاهرة';
-      final savedMethodName = prefs.getString('prayer_calculation_method') ?? '';
+      final savedMethodName =
+          prefs.getString('prayer_calculation_method') ?? '';
 
       _isAutoGps = prefs.getBool('prayer_is_auto_gps') ?? false;
       _preAlarmsEnabled = prefs.getBool('prayer_pre_alarms_enabled') ?? false;
@@ -99,7 +101,9 @@ class PrayerProvider extends ChangeNotifier {
           _selectedCityName = 'موقعي الحالي';
           CalculationMethod method = CalculationMethod.egyptian;
           if (savedMethodName.isNotEmpty) {
-            method = CalculationMethod.values.firstWhere((m) => m.name == savedMethodName, orElse: () => CalculationMethod.egyptian);
+            method = CalculationMethod.values.firstWhere(
+                (m) => m.name == savedMethodName,
+                orElse: () => CalculationMethod.egyptian);
           }
           _currentCity = CityConfig(
             nameArabic: 'موقعي الحالي',
@@ -121,7 +125,9 @@ class PrayerProvider extends ChangeNotifier {
         final defaultCity = PrayerService.defaultCities[savedCity]!;
         CalculationMethod method = defaultCity.method;
         if (savedMethodName.isNotEmpty) {
-          method = CalculationMethod.values.firstWhere((m) => m.name == savedMethodName, orElse: () => defaultCity.method);
+          method = CalculationMethod.values.firstWhere(
+              (m) => m.name == savedMethodName,
+              orElse: () => defaultCity.method);
         }
         _currentCity = CityConfig(
           nameArabic: defaultCity.nameArabic,
@@ -143,11 +149,12 @@ class PrayerProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('prayer_selected_city', _selectedCityName);
-      await prefs.setString('prayer_calculation_method', _currentCity.method.name);
+      await prefs.setString(
+          'prayer_calculation_method', _currentCity.method.name);
       await prefs.setBool('prayer_is_auto_gps', _isAutoGps);
       await prefs.setBool('prayer_pre_alarms_enabled', _preAlarmsEnabled);
       await prefs.setInt('prayer_pre_alarm_minutes', _preAlarmMinutes);
-      
+
       if (_selectedCityName == 'موقعي الحالي') {
         await prefs.setDouble('prayer_loc_lat', _currentCity.latitude);
         await prefs.setDouble('prayer_loc_lon', _currentCity.longitude);
@@ -199,7 +206,8 @@ class PrayerProvider extends ChangeNotifier {
   }
 
   void selectCity(String cityName) {
-    if (cityName == 'موقعي الحالي' || !PrayerService.defaultCities.containsKey(cityName)) return;
+    if (cityName == 'موقعي الحالي' ||
+        !PrayerService.defaultCities.containsKey(cityName)) return;
     _isAutoGps = false; // Turn off auto GPS when manually selecting a city
     _selectedCityName = cityName;
     _currentCity = PrayerService.defaultCities[cityName]!;
@@ -226,10 +234,11 @@ class PrayerProvider extends ChangeNotifier {
     if (_alarmsEnabled.containsKey(prayerName)) {
       _alarmsEnabled[prayerName] = !_alarmsEnabled[prayerName]!;
       notifyListeners();
-      
+
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('prayer_alarm_$prayerName', _alarmsEnabled[prayerName]!);
-      
+      await prefs.setBool(
+          'prayer_alarm_$prayerName', _alarmsEnabled[prayerName]!);
+
       _reschedulePrayerAlarms();
     }
   }
@@ -248,13 +257,15 @@ class PrayerProvider extends ChangeNotifier {
     try {
       final coords = await PrayerService.getCurrentLocation().timeout(
         const Duration(seconds: 12),
-        onTimeout: () => throw Exception('انتهت مهلة الحصول على إحداثيات الموقع.'),
+        onTimeout: () =>
+            throw Exception('انتهت مهلة الحصول على إحداثيات الموقع.'),
       );
 
       if (coords.latitude == 21.4225 && coords.longitude == 39.8262) {
         _selectedCityName = 'مكة المكرمة';
         _currentCity = PrayerService.defaultCities['مكة المكرمة']!;
-        _errorMessage = 'تعذر الوصول لموقعك الجغرافي (قد تكون الصلاحيات مرفوضة أو الـ GPS معطلاً). تم التحويل لمكة المكرمة افتراضياً.';
+        _errorMessage =
+            'تعذر الوصول لموقعك الجغرافي (قد تكون الصلاحيات مرفوضة أو الـ GPS معطلاً). تم التحويل لمكة المكرمة افتراضياً.';
       } else {
         _selectedCityName = 'موقعي الحالي';
         _currentCity = CityConfig(
@@ -273,7 +284,8 @@ class PrayerProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("Error detecting location: $e");
       _isDetectingLocation = false;
-      _errorMessage = "فشل تحديد موقعك الجغرافي: ${e.toString().replaceAll('Exception:', '').trim()}";
+      _errorMessage =
+          "فشل تحديد موقعك الجغرافي: ${e.toString().replaceAll('Exception:', '').trim()}";
       notifyListeners();
     }
   }

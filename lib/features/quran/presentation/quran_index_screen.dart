@@ -348,7 +348,7 @@ class _QuranIndexScreenState extends State<QuranIndexScreen>
                                   ],
                                 ),
                                 trailing: Icon(
-                                  Icons.arrow_forward_ios,
+                                  Icons.arrow_back_ios,
                                   size: 14,
                                   color: isLastRead ? goldColor : Colors.grey,
                                 ),

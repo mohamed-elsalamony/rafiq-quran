@@ -8,7 +8,7 @@ class AdhkarProvider extends ChangeNotifier {
   List<String> _favTexts = [];
   bool _isSearching = false;
   String _searchQuery = '';
-  
+
   // Keep counts in session
   final Map<String, int> _counts = {};
 
@@ -84,7 +84,7 @@ class AdhkarProvider extends ChangeNotifier {
       HapticFeedback.lightImpact();
       _counts[item.text] = current - 1;
       notifyListeners();
-      
+
       // If target reached, save to tasbih logs
       if (current - 1 == 0) {
         DbHelper.addTasbihLog(item.category, item.count);

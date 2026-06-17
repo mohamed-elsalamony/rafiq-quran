@@ -27,7 +27,10 @@ class QuranPageWidget extends StatefulWidget {
     this.selectedAyahSurah,
     this.selectedAyahNumber,
     required this.onAyahTap,
+    this.onKhatmTap,
   });
+
+  final VoidCallback? onKhatmTap;
 
   @override
   State<QuranPageWidget> createState() => _QuranPageWidgetState();
@@ -261,7 +264,83 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
             ],
           );
         }),
-        const SizedBox(height: 120),
+        if (widget.pageNumber == 604) ...[
+          const SizedBox(height: 40),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: widget.themeMode == 'dark'
+                    ? [const Color(0xFF1B3B31), const Color(0xFF0F2620)]
+                    : [const Color(0xFFD4AF37), const Color(0xFFAA8010)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: widget.themeMode == 'dark'
+                    ? const Color(0xFF23443B)
+                    : const Color(0xFFE5C158),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black
+                      .withOpacity(widget.themeMode == 'dark' ? 0.3 : 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  '🌸 صدق الله العظيم 🌸',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontFamily: 'Amiri',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'الحمد لله الذي بنعمته تتم الصالحات. بفضل الله وتوفيقه، أتممت قراءة آخر صفحات المصحف الشريف.',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: Colors.white.withOpacity(0.9),
+                    height: 1.5,
+                    fontFamily: 'Amiri',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF0F5A47),
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 14),
+                  ),
+                  onPressed: widget.onKhatmTap,
+                  icon: const Icon(Icons.menu_book, color: Color(0xFFD4AF37)),
+                  label: const Text(
+                    'قراءة دعاء الختم وتوثيق الختمة 🤲',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        fontFamily: 'Amiri'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 120),
+        ] else ...[
+          const SizedBox(height: 120),
+        ],
       ],
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
+import 'notification_service.dart';
 
 class AppState extends ChangeNotifier {
   static const String _keyLastPage = 'last_page';
@@ -15,18 +16,43 @@ class AppState extends ChangeNotifier {
   static const String _keyDarkMode = 'dark_mode';
   static const String _keyOnboarding = 'onboarding_completed';
   static const String _keyNotifications = 'notifications_enabled';
-  
+
   static const String _keyAutoScrollSpeed = 'auto_scroll_speed';
-  static const String _keyQuranThemeMode = 'quran_theme_mode'; // 'light', 'dark', 'sepia'
-  static const String _keyQuranFontFamily = 'quran_font_family'; // 'Amiri', 'Scheherazade'
+  static const String _keyQuranThemeMode =
+      'quran_theme_mode'; // 'light', 'dark', 'sepia'
+  static const String _keyQuranFontFamily =
+      'quran_font_family'; // 'Amiri', 'Scheherazade'
   static const String _keyQuranViewMode = 'quran_view_mode'; // 'page', 'verse'
   static const String _keyShowTranslation = 'show_translation';
 
   static const String _keyPeriodicDhikrEnabled = 'periodic_dhikr_enabled';
   static const String _keyPeriodicDhikrInterval = 'periodic_dhikr_interval';
   static const String _keyPeriodicDhikrType = 'periodic_dhikr_type';
-  static const String _keyPeriodicDhikrSilenceStart = 'periodic_dhikr_silence_start';
-  static const String _keyPeriodicDhikrSilenceEnd = 'periodic_dhikr_silence_end';
+  static const String _keyPeriodicDhikrSilenceStart =
+      'periodic_dhikr_silence_start';
+  static const String _keyPeriodicDhikrSilenceEnd =
+      'periodic_dhikr_silence_end';
+
+  static const String _keySmartWakeUpHour = 'smart_wakeup_hour';
+  static const String _keySmartWakeUpMinute = 'smart_wakeup_minute';
+  static const String _keySmartReturnHour = 'smart_return_hour';
+  static const String _keySmartReturnMinute = 'smart_return_minute';
+  static const String _keySmartSleepHour = 'smart_sleep_hour';
+  static const String _keySmartSleepMinute = 'smart_sleep_minute';
+  static const String _keySmartWakeUpDelay = 'smart_wakeup_delay';
+  static const String _keySmartWakeUpRem1Enabled = 'smart_wakeup_rem1_enabled';
+  static const String _keySmartWakeUpRem2Enabled = 'smart_wakeup_rem2_enabled';
+  static const String _keySmartReturnRemEnabled = 'smart_return_rem_enabled';
+  static const String _keySmartSleepRemEnabled = 'smart_sleep_rem_enabled';
+  static const String _keySmartContentType = 'smart_content_type';
+
+  static const String _keyLastProphetStoryId = 'last_prophet_story_id';
+  static const String _keyLastProphetChapterId = 'last_prophet_chapter_id';
+  static const String _keyLastSeerahEventId = 'last_seerah_event_id';
+  static const String _keyGeminiApiKey = 'gemini_api_key';
+  static const String _keyLastAldaaWadawaaChapterId =
+      'last_aldaa_wadawaa_chapter_id';
+  static const String _keyLastCompanionId = 'last_companion_id';
 
   int _lastPageRead = 1;
   int _lastSurahRead = 1;
@@ -52,6 +78,26 @@ class AppState extends ChangeNotifier {
   String _periodicDhikrType = 'all'; // 'verse', 'dhikr', 'hadith', 'all'
   int _periodicDhikrSilenceStart = 22; // 10 PM
   int _periodicDhikrSilenceEnd = 5; // 5 AM
+
+  int _smartWakeUpHour = 8;
+  int _smartWakeUpMinute = 15;
+  int _smartReturnHour = 17;
+  int _smartReturnMinute = 0;
+  int _smartSleepHour = 23;
+  int _smartSleepMinute = 30;
+  int _smartWakeUpDelay = 15;
+  bool _smartWakeUpRem1Enabled = true;
+  bool _smartWakeUpRem2Enabled = true;
+  bool _smartReturnRemEnabled = true;
+  bool _smartSleepRemEnabled = true;
+  String _smartContentType = 'all'; // 'all', 'verse', 'dhikr', 'hadith'
+
+  int _lastProphetStoryId = 0;
+  int _lastProphetChapterId = 0;
+  int _lastSeerahEventId = 0;
+  String _geminiApiKey = '';
+  int _lastReadAldaaWadawaaChapterId = 0;
+  int _lastCompanionId = 0;
 
   // Getters
   int get lastPageRead => _lastPageRead;
@@ -79,6 +125,26 @@ class AppState extends ChangeNotifier {
   int get periodicDhikrSilenceStart => _periodicDhikrSilenceStart;
   int get periodicDhikrSilenceEnd => _periodicDhikrSilenceEnd;
 
+  int get smartWakeUpHour => _smartWakeUpHour;
+  int get smartWakeUpMinute => _smartWakeUpMinute;
+  int get smartReturnHour => _smartReturnHour;
+  int get smartReturnMinute => _smartReturnMinute;
+  int get smartSleepHour => _smartSleepHour;
+  int get smartSleepMinute => _smartSleepMinute;
+  int get smartWakeUpDelay => _smartWakeUpDelay;
+  bool get smartWakeUpRem1Enabled => _smartWakeUpRem1Enabled;
+  bool get smartWakeUpRem2Enabled => _smartWakeUpRem2Enabled;
+  bool get smartReturnRemEnabled => _smartReturnRemEnabled;
+  bool get smartSleepRemEnabled => _smartSleepRemEnabled;
+  String get smartContentType => _smartContentType;
+
+  int get lastProphetStoryId => _lastProphetStoryId;
+  int get lastProphetChapterId => _lastProphetChapterId;
+  int get lastSeerahEventId => _lastSeerahEventId;
+  String get geminiApiKey => _geminiApiKey;
+  int get lastReadAldaaWadawaaChapterId => _lastReadAldaaWadawaaChapterId;
+  int get lastCompanionId => _lastCompanionId;
+
   AppState() {
     _loadState();
   }
@@ -90,7 +156,8 @@ class AppState extends ChangeNotifier {
       _lastSurahRead = prefs.getInt(_keyLastSurah) ?? 1;
       _lastAyahRead = prefs.getInt(_keyLastAyah) ?? 1;
       _lastScreen = prefs.getString(_keyLastScreen) ?? 'home';
-      _lastAudioReciter = prefs.getString(_keyLastReciter) ?? 'عبد الباسط عبد الصمد';
+      _lastAudioReciter =
+          prefs.getString(_keyLastReciter) ?? 'عبد الباسط عبد الصمد';
       _lastAudioPositionMs = prefs.getInt(_keyLastAudioPos) ?? 0;
       _lastAudioSurah = prefs.getInt(_keyLastAudioSurah) ?? 1;
       _lastAudioAyah = prefs.getInt(_keyLastAudioAyah) ?? 1;
@@ -100,7 +167,8 @@ class AppState extends ChangeNotifier {
       _notificationsEnabled = prefs.getBool(_keyNotifications) ?? true;
 
       _autoScrollSpeed = prefs.getDouble(_keyAutoScrollSpeed) ?? 30.0;
-      _quranThemeMode = prefs.getString(_keyQuranThemeMode) ?? (_isDarkMode ? 'dark' : 'light');
+      _quranThemeMode = prefs.getString(_keyQuranThemeMode) ??
+          (_isDarkMode ? 'dark' : 'light');
       _quranFontFamily = prefs.getString(_keyQuranFontFamily) ?? 'Amiri';
       _quranViewMode = prefs.getString(_keyQuranViewMode) ?? 'page';
       _showTranslation = prefs.getBool(_keyShowTranslation) ?? true;
@@ -108,15 +176,44 @@ class AppState extends ChangeNotifier {
       _periodicDhikrEnabled = prefs.getBool(_keyPeriodicDhikrEnabled) ?? false;
       _periodicDhikrInterval = prefs.getInt(_keyPeriodicDhikrInterval) ?? 60;
       _periodicDhikrType = prefs.getString(_keyPeriodicDhikrType) ?? 'all';
-      _periodicDhikrSilenceStart = prefs.getInt(_keyPeriodicDhikrSilenceStart) ?? 22;
+      _periodicDhikrSilenceStart =
+          prefs.getInt(_keyPeriodicDhikrSilenceStart) ?? 22;
       _periodicDhikrSilenceEnd = prefs.getInt(_keyPeriodicDhikrSilenceEnd) ?? 5;
+
+      _smartWakeUpHour = prefs.getInt(_keySmartWakeUpHour) ?? 8;
+      _smartWakeUpMinute = prefs.getInt(_keySmartWakeUpMinute) ?? 15;
+      _smartReturnHour = prefs.getInt(_keySmartReturnHour) ?? 17;
+      _smartReturnMinute = prefs.getInt(_keySmartReturnMinute) ?? 0;
+      _smartSleepHour = prefs.getInt(_keySmartSleepHour) ?? 23;
+      _smartSleepMinute = prefs.getInt(_keySmartSleepMinute) ?? 30;
+      _smartWakeUpDelay = prefs.getInt(_keySmartWakeUpDelay) ?? 15;
+      _smartWakeUpRem1Enabled =
+          prefs.getBool(_keySmartWakeUpRem1Enabled) ?? true;
+      _smartWakeUpRem2Enabled =
+          prefs.getBool(_keySmartWakeUpRem2Enabled) ?? true;
+      _smartReturnRemEnabled = prefs.getBool(_keySmartReturnRemEnabled) ?? true;
+      _smartSleepRemEnabled = prefs.getBool(_keySmartSleepRemEnabled) ?? true;
+      _smartContentType = prefs.getString(_keySmartContentType) ?? 'all';
+
+      _lastProphetStoryId = prefs.getInt(_keyLastProphetStoryId) ?? 0;
+      _lastProphetChapterId = prefs.getInt(_keyLastProphetChapterId) ?? 0;
+      _lastSeerahEventId = prefs.getInt(_keyLastSeerahEventId) ?? 0;
+      _geminiApiKey = prefs.getString(_keyGeminiApiKey) ?? '';
+      _lastReadAldaaWadawaaChapterId =
+          prefs.getInt(_keyLastAldaaWadawaaChapterId) ?? 0;
+      _lastCompanionId = prefs.getInt(_keyLastCompanionId) ?? 0;
+
       notifyListeners();
+
+      _rescheduleDailyReminder();
+      _rescheduleSmartReminders();
     } catch (e) {
       debugPrint("Error loading AppState: $e");
     }
   }
 
-  Future<void> saveReadingPosition({required int page, required int surah, required int ayah}) async {
+  Future<void> saveReadingPosition(
+      {required int page, required int surah, required int ayah}) async {
     _lastPageRead = page;
     _lastSurahRead = surah;
     _lastAyahRead = ayah;
@@ -134,6 +231,49 @@ class AppState extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLastScreen, screen);
+  }
+
+  Future<void> saveProphetReadingPosition(
+      {required int storyId, required int chapterId}) async {
+    _lastProphetStoryId = storyId;
+    _lastProphetChapterId = chapterId;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyLastProphetStoryId, storyId);
+    await prefs.setInt(_keyLastProphetChapterId, chapterId);
+  }
+
+  Future<void> saveSeerahReadingPosition({required int eventId}) async {
+    _lastSeerahEventId = eventId;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyLastSeerahEventId, eventId);
+  }
+
+  Future<void> setGeminiApiKey(String key) async {
+    _geminiApiKey = key;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyGeminiApiKey, key);
+  }
+
+  Future<void> saveAldaaWadawaaReadingPosition({required int chapterId}) async {
+    _lastReadAldaaWadawaaChapterId = chapterId;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyLastAldaaWadawaaChapterId, chapterId);
+  }
+
+  Future<void> saveCompanionReadingPosition({required int companionId}) async {
+    _lastCompanionId = companionId;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyLastCompanionId, companionId);
   }
 
   Future<void> saveAudioState({
@@ -175,11 +315,13 @@ class AppState extends ChangeNotifier {
 
   Future<void> setQuranThemeMode(String mode) async {
     _quranThemeMode = mode;
+    // Sepia mode is only for Quran reader, doesn't affect the whole app dark mode
     if (mode == 'dark') {
       _isDarkMode = true;
-    } else {
+    } else if (mode == 'light') {
       _isDarkMode = false;
     }
+    // 'sepia' keeps isDarkMode unchanged
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();
@@ -233,6 +375,8 @@ class AppState extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyNotifications, val);
+
+    _rescheduleDailyReminder();
   }
 
   Future<void> setPeriodicDhikrEnabled(bool val) async {
@@ -293,7 +437,8 @@ class AppState extends ChangeNotifier {
         frequency: Duration(minutes: _periodicDhikrInterval),
         existingWorkPolicy: ExistingWorkPolicy.replace,
       );
-      debugPrint("Workmanager: Registered periodic task with interval $_periodicDhikrInterval mins.");
+      debugPrint(
+          "Workmanager: Registered periodic task with interval $_periodicDhikrInterval mins.");
     } catch (e) {
       debugPrint("Workmanager registration failed: $e");
     }
@@ -305,6 +450,123 @@ class AppState extends ChangeNotifier {
       debugPrint("Workmanager: Cancelled periodic task.");
     } catch (e) {
       debugPrint("Workmanager cancellation failed: $e");
+    }
+  }
+
+  Future<void> setSmartWakeUpTime(int hour, int minute) async {
+    _smartWakeUpHour = hour;
+    _smartWakeUpMinute = minute;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keySmartWakeUpHour, hour);
+    await prefs.setInt(_keySmartWakeUpMinute, minute);
+
+    await _rescheduleSmartReminders();
+  }
+
+  Future<void> setSmartReturnTime(int hour, int minute) async {
+    _smartReturnHour = hour;
+    _smartReturnMinute = minute;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keySmartReturnHour, hour);
+    await prefs.setInt(_keySmartReturnMinute, minute);
+
+    await _rescheduleSmartReminders();
+  }
+
+  Future<void> setSmartSleepTime(int hour, int minute) async {
+    _smartSleepHour = hour;
+    _smartSleepMinute = minute;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keySmartSleepHour, hour);
+    await prefs.setInt(_keySmartSleepMinute, minute);
+
+    await _rescheduleSmartReminders();
+  }
+
+  Future<void> setSmartWakeUpDelay(int delay) async {
+    _smartWakeUpDelay = delay;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keySmartWakeUpDelay, delay);
+
+    await _rescheduleSmartReminders();
+  }
+
+  Future<void> toggleSmartWakeUpRem1(bool val) async {
+    _smartWakeUpRem1Enabled = val;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keySmartWakeUpRem1Enabled, val);
+
+    await _rescheduleSmartReminders();
+  }
+
+  Future<void> toggleSmartWakeUpRem2(bool val) async {
+    _smartWakeUpRem2Enabled = val;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keySmartWakeUpRem2Enabled, val);
+
+    await _rescheduleSmartReminders();
+  }
+
+  Future<void> toggleSmartReturnRem(bool val) async {
+    _smartReturnRemEnabled = val;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keySmartReturnRemEnabled, val);
+
+    await _rescheduleSmartReminders();
+  }
+
+  Future<void> toggleSmartSleepRem(bool val) async {
+    _smartSleepRemEnabled = val;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keySmartSleepRemEnabled, val);
+
+    await _rescheduleSmartReminders();
+  }
+
+  Future<void> setSmartContentType(String type) async {
+    _smartContentType = type;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keySmartContentType, type);
+
+    await _rescheduleSmartReminders();
+  }
+
+  Future<void> _rescheduleSmartReminders() async {
+    try {
+      await NotificationService().scheduleSmartReminders(
+        wakeUpHour: _smartWakeUpHour,
+        wakeUpMinute: _smartWakeUpMinute,
+        returnHour: _smartReturnHour,
+        returnMinute: _smartReturnMinute,
+        sleepHour: _smartSleepHour,
+        sleepMinute: _smartSleepMinute,
+        wakeUpDelayMins: _smartWakeUpDelay,
+        wakeUpRem1Enabled: _smartWakeUpRem1Enabled,
+        wakeUpRem2Enabled: _smartWakeUpRem2Enabled,
+        returnRemEnabled: _smartReturnRemEnabled,
+        sleepRemEnabled: _smartSleepRemEnabled,
+        contentType: _smartContentType,
+      );
+    } catch (e) {
+      debugPrint("Error scheduling smart reminders: $e");
     }
   }
 
@@ -339,9 +601,41 @@ class AppState extends ChangeNotifier {
     _periodicDhikrSilenceStart = 22;
     _periodicDhikrSilenceEnd = 5;
 
+    _smartWakeUpHour = 8;
+    _smartWakeUpMinute = 15;
+    _smartReturnHour = 17;
+    _smartReturnMinute = 0;
+    _smartSleepHour = 23;
+    _smartSleepMinute = 30;
+    _smartWakeUpDelay = 15;
+    _smartWakeUpRem1Enabled = true;
+    _smartWakeUpRem2Enabled = true;
+    _smartReturnRemEnabled = true;
+    _smartSleepRemEnabled = true;
+    _smartContentType = 'all';
+
+    _lastProphetStoryId = 0;
+    _lastProphetChapterId = 0;
+    _lastSeerahEventId = 0;
+    _geminiApiKey = '';
+    _lastReadAldaaWadawaaChapterId = 0;
+    _lastCompanionId = 0;
+
     // Save onboarding completion back to SharedPreferences so onboarding doesn't restart
     await prefs.setBool(_keyOnboarding, true);
 
     notifyListeners();
+
+    _rescheduleDailyReminder();
+    _rescheduleSmartReminders();
+  }
+
+  Future<void> _rescheduleDailyReminder() async {
+    try {
+      await NotificationService()
+          .scheduleDailyReminder(enabled: _notificationsEnabled);
+    } catch (e) {
+      debugPrint("Error scheduling daily reminder: $e");
+    }
   }
 }

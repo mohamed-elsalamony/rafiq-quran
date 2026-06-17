@@ -12,7 +12,8 @@ class RecitationService {
   }
 
   /// Gets the local file path for a recitation verse.
-  static Future<File> getLocalFile(int surah, int ayah, String reciterId) async {
+  static Future<File> getLocalFile(
+      int surah, int ayah, String reciterId) async {
     final directory = await getApplicationDocumentsDirectory();
     final sStr = surah.toString().padLeft(3, '0');
     final aStr = ayah.toString().padLeft(3, '0');
@@ -20,7 +21,8 @@ class RecitationService {
   }
 
   /// Checks if a recitation verse exists offline.
-  static Future<bool> isOfflineAvailable(int surah, int ayah, String reciterId) async {
+  static Future<bool> isOfflineAvailable(
+      int surah, int ayah, String reciterId) async {
     try {
       final file = await getLocalFile(surah, ayah, reciterId);
       return await file.exists();
@@ -41,7 +43,7 @@ class RecitationService {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final dirPath = '${directory.path}/recitations/$reciterId';
-      
+
       // Ensure the directory exists
       await Directory(dirPath).create(recursive: true);
 
@@ -57,17 +59,19 @@ class RecitationService {
           final url = getAudioUrl(surah, ayah, reciterId);
           // Set a timeout of 15 seconds to prevent hanging indefinitely
           final response = await http.get(Uri.parse(url)).timeout(
-            const Duration(seconds: 15),
-            onTimeout: () => throw Exception('انتهت مهلة الاتصال بالخادم عند تحميل الآية $ayah.'),
-          );
+                const Duration(seconds: 15),
+                onTimeout: () => throw Exception(
+                    'انتهت مهلة الاتصال بالخادم عند تحميل الآية $ayah.'),
+              );
 
           if (response.statusCode == 200) {
             await file.writeAsBytes(response.bodyBytes);
           } else {
-            throw Exception('فشل تحميل الآية $ayah (رمز الاستجابة: ${response.statusCode}).');
+            throw Exception(
+                'فشل تحميل الآية $ayah (رمز الاستجابة: ${response.statusCode}).');
           }
         }
-        
+
         completed++;
         onProgress(completed / total);
       }

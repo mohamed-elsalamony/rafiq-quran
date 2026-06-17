@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/services/app_state.dart';
+import 'core/services/notification_service.dart';
 import 'core/services/prophet_blessing_service.dart';
 import 'core/services/periodic_notification_helper.dart';
 import 'features/home/presentation/home_screen.dart';
@@ -43,7 +44,9 @@ void callbackDispatcher() {
       final currentHour = now.hour;
 
       bool inSilence = false;
-      if (silenceStart < silenceEnd) {
+      if (silenceStart == silenceEnd) {
+        inSilence = false; // No silence window if both hours are the same
+      } else if (silenceStart < silenceEnd) {
         inSilence = currentHour >= silenceStart && currentHour < silenceEnd;
       } else {
         inSilence = currentHour >= silenceStart || currentHour < silenceEnd;
@@ -108,9 +111,11 @@ class MyApp extends StatelessWidget {
     const Color accentColor = Color(0xFFD4AF37);
 
     return MaterialApp(
+      navigatorKey: NotificationService.navigatorKey,
       title: 'رفيق القرآن',
       debugShowCheckedModeBanner: false,
-      locale: const Locale('ar', 'AE'), // تشغيل التطبيق باللغة العربية RTL افتراضياً
+      locale: const Locale(
+          'ar', 'AE'), // تشغيل التطبيق باللغة العربية RTL افتراضياً
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -252,9 +257,14 @@ class _MainShellState extends State<MainShell> {
     final double tabWidth = screenWidth / 5;
     final bool isRtl = Directionality.of(context) == TextDirection.rtl;
 
-    // دائماً يفتح على الرئيسية عند الإقلاع الأول، ونلغي الاستعادة التلقائية لآخر شاشة
+    // دائماً يفتح على الرئيسية عند الإقلاع الأول أو عند التوجيه من إشعار
     if (!_isInit) {
-      _currentIndex = 2;
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is String) {
+        _currentIndex = _getIndexFromScreenName(args);
+      } else {
+        _currentIndex = 2;
+      }
       _isInit = true;
     }
 
@@ -411,10 +421,14 @@ class _MainShellState extends State<MainShell> {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       height: 72,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E).withOpacity(0.95) : Colors.white.withOpacity(0.95),
+        color: isDark
+            ? const Color(0xFF1E1E1E).withOpacity(0.95)
+            : Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.08) : primaryColor.withOpacity(0.08),
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : primaryColor.withOpacity(0.08),
           width: 1.5,
         ),
         boxShadow: [
@@ -429,11 +443,16 @@ class _MainShellState extends State<MainShell> {
         borderRadius: BorderRadius.circular(24),
         child: Row(
           children: [
-            _buildNavItem(0, Icons.menu_book_outlined, 'المصحف', isDark, primaryColor, accentColor),
-            _buildNavItem(1, Icons.library_books_outlined, 'الأذكار', isDark, primaryColor, accentColor),
-            _buildNavItem(2, Icons.home_outlined, 'الرئيسية', isDark, primaryColor, accentColor),
-            _buildNavItem(3, Icons.fingerprint_outlined, 'السبحة', isDark, primaryColor, accentColor),
-            _buildNavItem(4, Icons.explore_outlined, 'الصلاة', isDark, primaryColor, accentColor),
+            _buildNavItem(0, Icons.menu_book_outlined, 'المصحف', isDark,
+                primaryColor, accentColor),
+            _buildNavItem(1, Icons.library_books_outlined, 'الأذكار', isDark,
+                primaryColor, accentColor),
+            _buildNavItem(2, Icons.home_outlined, 'الرئيسية', isDark,
+                primaryColor, accentColor),
+            _buildNavItem(3, Icons.fingerprint_outlined, 'السبحة', isDark,
+                primaryColor, accentColor),
+            _buildNavItem(4, Icons.explore_outlined, 'الصلاة', isDark,
+                primaryColor, accentColor),
           ],
         ),
       ),
@@ -459,10 +478,14 @@ class _MainShellState extends State<MainShell> {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              transform: isSelected ? (Matrix4.identity()..translate(0.0, -2.0)) : Matrix4.identity(),
+              transform: isSelected
+                  ? (Matrix4.identity()..translate(0.0, -2.0))
+                  : Matrix4.identity(),
               child: Icon(
                 isSelected ? _getIconForIndex(index, isActive: true) : icon,
-                color: isSelected ? accentColor : (isDark ? Colors.white54 : Colors.grey[500]),
+                color: isSelected
+                    ? accentColor
+                    : (isDark ? Colors.white54 : Colors.grey[500]),
                 size: isSelected ? 24 : 20,
               ),
             ),
@@ -474,7 +497,9 @@ class _MainShellState extends State<MainShell> {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? accentColor : (isDark ? Colors.white54 : Colors.grey[600]),
+                  color: isSelected
+                      ? accentColor
+                      : (isDark ? Colors.white54 : Colors.grey[600]),
                   fontFamily: 'Amiri',
                 ),
                 textAlign: TextAlign.center,

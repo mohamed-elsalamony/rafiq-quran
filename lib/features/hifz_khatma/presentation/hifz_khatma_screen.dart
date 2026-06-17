@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:quran/quran.dart' as quran;
 import '../../../core/services/app_state.dart';
 import '../../../core/services/db_helper.dart';
+import '../../quran/presentation/khatm_celebration_screen.dart';
 
 class HifzKhatmaScreen extends StatefulWidget {
   const HifzKhatmaScreen({super.key});
@@ -16,6 +17,7 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen>
   late TabController _tabController;
   List<Map<String, dynamic>> _khatmaPlans = [];
   List<Map<String, dynamic>> _hifzPlans = [];
+  List<Map<String, dynamic>> _khatmHistory = [];
 
   @override
   void initState() {
@@ -33,11 +35,41 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen>
   void _loadPlans() async {
     final khatmas = await DbHelper.getKhatmaPlans();
     final hifz = await DbHelper.getHifzPlans();
+    final history = await DbHelper.getKhatmHistory();
     if (mounted) {
       setState(() {
         _khatmaPlans = khatmas;
         _hifzPlans = hifz;
+        _khatmHistory = history.reversed.toList(); // Newest first
       });
+    }
+  }
+
+  String _formatArabicDate(String isoString) {
+    try {
+      final dt = DateTime.parse(isoString);
+      final months = [
+        'يناير',
+        'فبراير',
+        'مارس',
+        'أبريل',
+        'مايو',
+        'يونيو',
+        'يوليو',
+        'أغسطس',
+        'سبتمبر',
+        'أكتوبر',
+        'نوفمبر',
+        'ديسمبر'
+      ];
+      final year = dt.year;
+      final monthName = months[dt.month - 1];
+      final day = dt.day;
+      final hour = dt.hour.toString().padLeft(2, '0');
+      final minute = dt.minute.toString().padLeft(2, '0');
+      return '$day $monthName $year - الساعة $hour:$minute';
+    } catch (_) {
+      return isoString;
     }
   }
 
@@ -348,132 +380,267 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen>
   }
 
   Widget _buildKhatmaTab(bool isDark, Color primaryColor, Color accentColor) {
-    return Column(
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton.icon(
-            onPressed: _createNewKhatmaPlan,
-            icon: const Icon(Icons.add),
-            label: const Text('إنشاء خطة ختمة جديدة'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-          ),
-        ),
-        Expanded(
-          child: _khatmaPlans.isEmpty
-              ? Center(
-                  child: Text(
-                    'لا توجد خطط ختمة نشطة حالياً.',
-                    style: TextStyle(
-                        color: isDark ? Colors.grey[400] : Colors.grey[600]),
+        // 1. History Registry Card
+        Card(
+          elevation: 4,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: isDark ? const Color(0xFF1E3A2F) : const Color(0xFFE8F3EE),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'الختمات المنجزة: ${_khatmHistory.length}',
+                        style: TextStyle(
+                          color: accentColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          'سجل الختمات القرآنيّة',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: isDark ? Colors.white : primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(Icons.emoji_events, color: accentColor),
+                      ],
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                if (_khatmHistory.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: Text(
+                      'لم تسجل أي ختمة بعد. أتمم قراءة المصحف الشريف لتسجيل ختمة جديدة وتوثيقها هنا.',
+                      style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black54,
+                        fontSize: 13,
+                        fontFamily: 'Amiri',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else ...[
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount:
+                        _khatmHistory.length > 5 ? 5 : _khatmHistory.length,
+                    itemBuilder: (context, index) {
+                      final log = _khatmHistory[index];
+                      final numLabel = _khatmHistory.length - index;
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: accentColor.withOpacity(0.2),
+                          foregroundColor: accentColor,
+                          radius: 14,
+                          child: Text(
+                            '$numLabel',
+                            style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        title: Text(
+                          _formatArabicDate(log['date'] ?? ''),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                        trailing: const Icon(Icons.check_circle,
+                            color: Colors.green, size: 18),
+                      );
+                    },
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  itemCount: _khatmaPlans.length,
-                  itemBuilder: (context, index) {
-                    final plan = _khatmaPlans[index];
-                    final total = plan['endPage'] - plan['startPage'] + 1;
-                    final current = plan['currentPage'] - plan['startPage'] + 1;
-                    final double percent =
-                        total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
-
-                    // حساب الصفحات المطلوبة يومياً
-                    final dailyTarget =
-                        (total / (plan['daysDuration'] ?? 30)).ceil();
-
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16.0),
-                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      color: Colors.red),
-                                  onPressed: () =>
-                                      _deletePlan(plan['id'], true),
-                                ),
-                                Text(
-                                  plan['title'] ?? 'ختمة القرآن الكبرى',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: LinearProgressIndicator(
-                                value: percent,
-                                minHeight: 10,
-                                backgroundColor: isDark
-                                    ? Colors.grey[800]
-                                    : Colors.grey[200],
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(accentColor),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '${(percent * 100).toInt()}% منجز',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: accentColor),
-                                ),
-                                Text(
-                                  'الهدف اليومي: $dailyTarget صفحات',
-                                  style: const TextStyle(
-                                      fontSize: 12, color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                            const Divider(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                TextButton.icon(
-                                  style: TextButton.styleFrom(
-                                      foregroundColor: primaryColor),
-                                  icon: const Icon(Icons.check_circle_outline),
-                                  label: const Text('قراءة صفحة جديدة'),
-                                  onPressed: () => _updateKhatmaPage(plan['id'],
-                                      plan['currentPage'], plan['endPage']),
-                                ),
-                                Text(
-                                  'الصفحة الحالية: ${plan['currentPage']} من ${plan['endPage']}',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: isDark
-                                          ? Colors.grey[300]
-                                          : Colors.grey[700]),
-                                ),
-                              ],
-                            ),
-                          ],
+                  if (_khatmHistory.length > 5)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        'يتم عرض آخر 5 ختمات فقط...',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white38 : Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                ],
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const KhatmCelebrationScreen(
+                          isNewCompletion: false,
                         ),
                       ),
                     );
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.menu_book),
+                  label: const Text('دعاء ختم القرآن الكريم 🤲'),
                 ),
+              ],
+            ),
+          ),
         ),
+
+        const SizedBox(height: 16),
+
+        // 2. Section Header and Action Button for Active Plans
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton.icon(
+              onPressed: _createNewKhatmaPlan,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('إنشاء خطة جديدة',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              style: TextButton.styleFrom(
+                foregroundColor: primaryColor,
+              ),
+            ),
+            const Text(
+              'خطط الختمات الحالية',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+        const Divider(),
+
+        // 3. Active Plans List
+        if (_khatmaPlans.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32.0),
+            child: Center(
+              child: Text(
+                'لا توجد خطط ختمة نشطة حالياً.',
+                style: TextStyle(
+                    color: isDark ? Colors.grey[400] : Colors.grey[600]),
+              ),
+            ),
+          )
+        else
+          ..._khatmaPlans.map((plan) {
+            final total = plan['endPage'] - plan['startPage'] + 1;
+            final current = plan['currentPage'] - plan['startPage'] + 1;
+            final double percent =
+                total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
+
+            // حساب الصفحات المطلوبة يومياً
+            final dailyTarget = (total / (plan['daysDuration'] ?? 30)).ceil();
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 16.0),
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline,
+                              color: Colors.red),
+                          onPressed: () => _deletePlan(plan['id'], true),
+                        ),
+                        Text(
+                          plan['title'] ?? 'ختمة القرآن الكبرى',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: percent,
+                        minHeight: 10,
+                        backgroundColor:
+                            isDark ? Colors.grey[800] : Colors.grey[200],
+                        valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${(percent * 100).toInt()}% منجز',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, color: accentColor),
+                        ),
+                        Text(
+                          'الهدف اليومي: $dailyTarget صفحات',
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                              foregroundColor: primaryColor),
+                          icon: const Icon(Icons.check_circle_outline),
+                          label: const Text('قراءة صفحة جديدة'),
+                          onPressed: () => _updateKhatmaPage(
+                              plan['id'], plan['currentPage'], plan['endPage']),
+                        ),
+                        Text(
+                          'الصفحة الحالية: ${plan['currentPage']} من ${plan['endPage']}',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color:
+                                  isDark ? Colors.grey[300] : Colors.grey[700]),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
       ],
     );
   }

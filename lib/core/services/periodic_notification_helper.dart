@@ -322,12 +322,14 @@ class PeriodicNotificationHelper {
     required String title,
     required String body,
   }) async {
-    final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
-    
+    final FlutterLocalNotificationsPlugin localNotifications =
+        FlutterLocalNotificationsPlugin();
+
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('ic_launcher');
 
-    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings();
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings();
 
     const InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
@@ -337,7 +339,8 @@ class PeriodicNotificationHelper {
     // Initialize inside background isolate context
     await localNotifications.initialize(initSettings);
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'periodic_channel_id',
       'التذكير الدوري بالذكر والآية',
       channelDescription: 'تنبيهات الذكر والآيات والحديث الدوري التلقائي',
@@ -361,14 +364,17 @@ class PeriodicNotificationHelper {
 
   static Map<String, String> getRandomContent(String type) {
     final random = Random();
-    
+
     // Choose content type randomly if 'all' is selected
     String selectedType = type;
     if (type == 'all') {
       final roll = random.nextInt(3);
-      if (roll == 0) selectedType = 'verse';
-      else if (roll == 1) selectedType = 'dhikr';
-      else selectedType = 'hadith';
+      if (roll == 0)
+        selectedType = 'verse';
+      else if (roll == 1)
+        selectedType = 'dhikr';
+      else
+        selectedType = 'hadith';
     }
 
     if (selectedType == 'verse') {
