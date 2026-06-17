@@ -53,6 +53,7 @@ class AppState extends ChangeNotifier {
   static const String _keyLastAldaaWadawaaChapterId =
       'last_aldaa_wadawaa_chapter_id';
   static const String _keyLastCompanionId = 'last_companion_id';
+  static const String _keyLastReligiousStoryId = 'last_religious_story_id';
 
   int _lastPageRead = 1;
   int _lastSurahRead = 1;
@@ -98,6 +99,7 @@ class AppState extends ChangeNotifier {
   String _geminiApiKey = '';
   int _lastReadAldaaWadawaaChapterId = 0;
   int _lastCompanionId = 0;
+  int _lastReadReligiousStoryId = 0;
 
   // Getters
   int get lastPageRead => _lastPageRead;
@@ -144,6 +146,7 @@ class AppState extends ChangeNotifier {
   String get geminiApiKey => _geminiApiKey;
   int get lastReadAldaaWadawaaChapterId => _lastReadAldaaWadawaaChapterId;
   int get lastCompanionId => _lastCompanionId;
+  int get lastReadReligiousStoryId => _lastReadReligiousStoryId;
 
   AppState() {
     _loadState();
@@ -202,6 +205,7 @@ class AppState extends ChangeNotifier {
       _lastReadAldaaWadawaaChapterId =
           prefs.getInt(_keyLastAldaaWadawaaChapterId) ?? 0;
       _lastCompanionId = prefs.getInt(_keyLastCompanionId) ?? 0;
+      _lastReadReligiousStoryId = prefs.getInt(_keyLastReligiousStoryId) ?? 0;
 
       notifyListeners();
 
@@ -274,6 +278,14 @@ class AppState extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyLastCompanionId, companionId);
+  }
+
+  Future<void> saveReligiousStoryReadingPosition({required int storyId}) async {
+    _lastReadReligiousStoryId = storyId;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyLastReligiousStoryId, storyId);
   }
 
   Future<void> saveAudioState({
@@ -620,6 +632,7 @@ class AppState extends ChangeNotifier {
     _geminiApiKey = '';
     _lastReadAldaaWadawaaChapterId = 0;
     _lastCompanionId = 0;
+    _lastReadReligiousStoryId = 0;
 
     // Save onboarding completion back to SharedPreferences so onboarding doesn't restart
     await prefs.setBool(_keyOnboarding, true);

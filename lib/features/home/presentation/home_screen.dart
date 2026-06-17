@@ -28,6 +28,9 @@ import '../../companions/presentation/companion_detail_screen.dart';
 import 'prophet_blessing_screen.dart';
 import 'package:adhan/adhan.dart';
 import 'dart:async';
+import '../../../core/services/religious_stories_service.dart';
+import '../../religious_stories/presentation/religious_stories_list_screen.dart';
+import '../../religious_stories/presentation/religious_story_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int) onTabChanged;
@@ -46,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Hadith? _hadithOfDay;
   SeerahEvent? _seerahEventOfDay;
   Companion? _companionOfDay;
+  ReligiousStory? _religiousStoryOfDay;
 
   @override
   void initState() {
@@ -74,6 +78,10 @@ class _HomeScreenState extends State<HomeScreen> {
     await companionsService.loadCompanions();
     final companionOfDay = companionsService.getCompanionOfDay();
 
+    final religiousStoriesService = ReligiousStoriesService();
+    await religiousStoriesService.loadStories();
+    final religiousStoryOfDay = religiousStoriesService.getStoryOfDay();
+
     if (mounted) {
       setState(() {
         if (bookmarks.isNotEmpty) {
@@ -85,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _hadithOfDay = hadith;
         _seerahEventOfDay = seerahEvent;
         _companionOfDay = companionOfDay;
+        _religiousStoryOfDay = religiousStoryOfDay;
       });
     }
   }
@@ -395,6 +404,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         isDark),
                     _buildGridItem(
                         context,
+                        'القصص الهادفة',
+                        Icons.collections_bookmark_outlined,
+                        () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ReligiousStoriesListScreen()))
+                            .then((_) => _loadDashboardData()),
+                        isDark),
+                    _buildGridItem(
+                        context,
                         'اسأل عن دينك',
                         Icons.auto_awesome,
                         () => Navigator.push(
@@ -692,6 +712,86 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: isDark
                         ? const Color(0xFF1E2A22)
                         : const Color(0xFFF0FAF5),
+                  ),
+                const SizedBox(height: 24),
+
+                // قصة اليوم الهادفة
+                if (_religiousStoryOfDay != null)
+                  _buildSectionCard(
+                    title: 'قصة اليوم الهادفة 📚',
+                    isDark: isDark,
+                    accentColor: accentColor,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _religiousStoryOfDay!.title,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? accentColor : primaryColor,
+                                  fontFamily: 'Amiri',
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: accentColor.withOpacity(0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.collections_bookmark,
+                                  color: accentColor, size: 22),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _religiousStoryOfDay!.storyText.length > 200
+                              ? '${_religiousStoryOfDay!.storyText.substring(0, 200)}...'
+                              : _religiousStoryOfDay!.storyText,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.grey[200] : Colors.black87,
+                            height: 1.6,
+                          ),
+                          textAlign: TextAlign.justify,
+                          textDirection: TextDirection.rtl,
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      ReligiousStoryDetailScreen(
+                                          story: _religiousStoryOfDay!)),
+                            ).then((_) => _loadDashboardData());
+                          },
+                          icon: const Icon(Icons.menu_book,
+                              size: 16, color: Colors.teal),
+                          label: const Text('اقرأ القصة كاملة والدروس',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.teal)),
+                          style: OutlinedButton.styleFrom(
+                            side:
+                                BorderSide(color: accentColor.withOpacity(0.5)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    color: isDark
+                        ? const Color(0xFF2E2A15)
+                        : const Color(0xFFFAF9ED),
                   ),
                 const SizedBox(height: 24),
 
@@ -1501,6 +1601,138 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   AldaaWadawaaDetailScreen(
                                                 chapter: chapter,
                                               ),
+                                            ),
+                                          ).then((_) => _loadDashboardData());
+                                        }
+                                      });
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                    ),
+                                    child: const Text('تابع الآن',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      // Religious Stories progress restoration
+                      if (appState.lastReadReligiousStoryId > 0) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.03)
+                                : Colors.grey.withOpacity(0.03),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.black.withOpacity(0.05),
+                              width: 1,
+                            ),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              final service = ReligiousStoriesService();
+                              service.loadStories().then((_) {
+                                final story = service.getStoryById(
+                                    appState.lastReadReligiousStoryId);
+                                if (story != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          ReligiousStoryDetailScreen(
+                                              story: story),
+                                    ),
+                                  ).then((_) => _loadDashboardData());
+                                }
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: accentColor.withOpacity(0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                        Icons.collections_bookmark_outlined,
+                                        color: accentColor,
+                                        size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'آخر ما قرأت في القصص الهادفة',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        FutureBuilder(
+                                          future: ReligiousStoriesService()
+                                              .loadStories()
+                                              .then((_) => ReligiousStoriesService()
+                                                  .getStoryById(appState
+                                                      .lastReadReligiousStoryId)),
+                                          builder: (context, snapshot) {
+                                            if (snapshot.hasData &&
+                                                snapshot.data != null) {
+                                              final story = snapshot.data
+                                                  as ReligiousStory;
+                                              return Text(
+                                                'قصة: ${story.title}',
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: isDark
+                                                        ? Colors.grey[400]
+                                                        : Colors.grey[600]),
+                                                textAlign: TextAlign.right,
+                                              );
+                                            }
+                                            return const SizedBox();
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      final service = ReligiousStoriesService();
+                                      service.loadStories().then((_) {
+                                        final story = service.getStoryById(
+                                            appState.lastReadReligiousStoryId);
+                                        if (story != null) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  ReligiousStoryDetailScreen(
+                                                      story: story),
                                             ),
                                           ).then((_) => _loadDashboardData());
                                         }
