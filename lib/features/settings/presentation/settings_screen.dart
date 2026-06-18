@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../core/services/app_state.dart';
 import '../../../core/services/notification_service.dart';
 
@@ -444,6 +445,13 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             final success = await NotificationService().requestPermission();
+                            if (!success) {
+                              try {
+                                await Geolocator.openAppSettings();
+                              } catch (e) {
+                                debugPrint("Error opening app settings: $e");
+                              }
+                            }
                             _checkPermission();
                           },
                           icon: const Icon(Icons.settings, size: 16, color: Colors.white),
