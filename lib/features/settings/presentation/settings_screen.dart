@@ -4,8 +4,46 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/services/app_state.dart';
 import '../../../core/services/notification_service.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
+  bool _notificationsAllowed = true;
+  bool _isLoadingPermission = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkPermission();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermission();
+    }
+  }
+
+  Future<void> _checkPermission() async {
+    final allowed = await NotificationService().areNotificationsEnabled();
+    if (mounted) {
+      setState(() {
+        _notificationsAllowed = allowed;
+        _isLoadingPermission = false;
+      });
+    }
+  }
 
   void _showResetConfirmation(BuildContext context, AppState appState) {
     showDialog(
@@ -164,7 +202,7 @@ class SettingsScreen extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'الوضع الليلي (Dark Mode)',
@@ -354,6 +392,79 @@ class SettingsScreen extends StatelessWidget {
                 title: 'التنبيهات والإشعارات',
                 isDark: isDark,
                 accentColor: accentColor),
+            
+            // Warning banner if permissions are disabled at system level
+            if (!_isLoadingPermission && !_notificationsAllowed) ...[
+              Card(
+                color: Colors.red.shade900.withOpacity(0.15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.red.shade800.withOpacity(0.3), width: 1.2),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade600, size: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'إشعارات النظام معطلة ⚠️',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Colors.redAccent,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'تم تعطيل إشعارات التطبيق في إعدادات الهاتف. لن تتمكن من تلقي أوقات الصلاة والتذكيرات اليومية.',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: isDark ? Colors.grey[300] : Colors.grey[700],
+                                    height: 1.4,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 38,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final success = await NotificationService().requestPermission();
+                            _checkPermission();
+                          },
+                          icon: const Icon(Icons.settings, size: 16, color: Colors.white),
+                          label: const Text(
+                            'تفعيل من إعدادات الهاتف',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade800,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
             Card(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
@@ -383,8 +494,9 @@ class SettingsScreen extends StatelessWidget {
                     Switch(
                       value: appState.notificationsEnabled,
                       activeColor: accentColor,
-                      onChanged: (val) {
-                        appState.toggleNotifications(val);
+                      onChanged: (val) async {
+                        await appState.toggleNotifications(val);
+                        _checkPermission();
                       },
                     ),
                     const SizedBox(width: 12),
@@ -410,6 +522,12 @@ class SettingsScreen extends StatelessWidget {
                 trailing: const Icon(Icons.arrow_back_ios, size: 16),
                 onTap: () async {
                   try {
+                    // Check if system notifications are allowed first
+                    final allowed = await NotificationService().areNotificationsEnabled();
+                    if (!allowed) {
+                      throw Exception("صلاحية الإشعارات معطلة في النظام. يرجى تفعيلها أولاً.");
+                    }
+
                     // Schedule a notification to run 5 seconds from now
                     final testTime =
                         DateTime.now().add(const Duration(seconds: 5));
@@ -433,11 +551,12 @@ class SettingsScreen extends StatelessWidget {
                     }
                   } catch (e) {
                     if (context.mounted) {
+                      final msg = e.toString().replaceAll('Exception:', '').trim();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('فشل إرسال الإشعار التجريبي: $e',
+                          content: Text('فشل إرسال الإشعار التجريبي: $msg',
                               textAlign: TextAlign.right),
-                          backgroundColor: Colors.red,
+                          backgroundColor: Colors.red.shade900,
                         ),
                       );
                     }
@@ -480,8 +599,9 @@ class SettingsScreen extends StatelessWidget {
                         Switch(
                           value: appState.periodicDhikrEnabled,
                           activeColor: accentColor,
-                          onChanged: (val) {
-                            appState.setPeriodicDhikrEnabled(val);
+                          onChanged: (val) async {
+                            await appState.setPeriodicDhikrEnabled(val);
+                            _checkPermission();
                           },
                         ),
                         const SizedBox(width: 12),
@@ -1000,20 +1120,16 @@ class SettingsScreen extends StatelessWidget {
                                 items: const [
                                   DropdownMenuItem(
                                       value: 'all',
-                                      child: Text('الكل (آية / ذكر / حديث)',
-                                          textAlign: TextAlign.left)),
+                                      child: Text('الكل (آية / ذكر / حديث)')),
                                   DropdownMenuItem(
                                       value: 'verse',
-                                      child: Text('آيات قرآنية فقط',
-                                          textAlign: TextAlign.left)),
+                                      child: Text('آيات قرآنية فقط')),
                                   DropdownMenuItem(
                                       value: 'dhikr',
-                                      child: Text('أذكار وأدعية فقط',
-                                          textAlign: TextAlign.left)),
+                                      child: Text('أذكار وأدعية فقط')),
                                   DropdownMenuItem(
                                       value: 'hadith',
-                                      child: Text('أحاديث نبوية فقط',
-                                          textAlign: TextAlign.left)),
+                                      child: Text('أحاديث نبوية فقط')),
                                 ],
                                 onChanged: (val) {
                                   if (val != null) {
@@ -1098,7 +1214,7 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'المساعد الذكي (AI)',
@@ -1305,5 +1421,3 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
-
-

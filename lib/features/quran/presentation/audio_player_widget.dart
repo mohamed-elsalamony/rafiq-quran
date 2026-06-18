@@ -82,10 +82,7 @@ class AudioPlayerWidget extends StatelessWidget {
                         items: reciters.map((r) {
                           return DropdownMenuItem<String>(
                             value: r['id'],
-                            child: Text(r['name']!,
-                                textAlign: Alignment.centerRight.x > 0
-                                    ? TextAlign.left
-                                    : TextAlign.right),
+                            child: Text(r['name']!),
                           );
                         }).toList(),
                         onChanged: (val) {

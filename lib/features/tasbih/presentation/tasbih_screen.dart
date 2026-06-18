@@ -213,15 +213,16 @@ class _TasbihScreenState extends State<TasbihScreen> {
                     children: [
                       // Selected Zekr selector
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Icon(Icons.keyboard_arrow_down,
-                              color: Colors.grey),
+                          const Icon(Icons.auto_awesome, color: Colors.teal),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: DropdownButton<String>(
                               value: tasbihProvider.selectedDhikr,
                               isExpanded: true,
                               underline: const SizedBox(),
+                              icon: const Icon(Icons.keyboard_arrow_down,
+                                  color: Colors.grey),
                               alignment: Alignment.centerRight,
                               style: TextStyle(
                                 fontSize: 16,
@@ -237,8 +238,6 @@ class _TasbihScreenState extends State<TasbihScreen> {
                               },
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.auto_awesome, color: Colors.teal),
                         ],
                       ),
                       const Divider(height: 20),

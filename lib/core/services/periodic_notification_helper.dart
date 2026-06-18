@@ -339,6 +339,23 @@ class PeriodicNotificationHelper {
     // Initialize inside background isolate context
     await localNotifications.initialize(initSettings);
 
+    // Create channel on background isolate to ensure it exists
+    final androidImplementation =
+        localNotifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidImplementation != null) {
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'periodic_channel_id',
+          'التذكير الدوري بالذكر والآية',
+          description: 'تنبيهات الذكر والآيات والحديث الدوري التلقائي',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+    }
+
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       'periodic_channel_id',

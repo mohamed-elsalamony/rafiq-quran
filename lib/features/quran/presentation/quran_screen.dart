@@ -734,7 +734,7 @@ class _QuranScreenState extends State<QuranScreen> {
               padding: const EdgeInsets.all(10.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     juz['name'],
@@ -801,12 +801,7 @@ class _QuranScreenState extends State<QuranScreen> {
             ? const Color(0xFF5B4636)
             : Colors.white,
 
-        leading: canPop
-            ? IconButton(
-                icon: const Icon(Icons.arrow_forward),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
+        leading: canPop ? const BackButton() : null,
 
         actions: [
           IconButton(
@@ -1183,7 +1178,7 @@ class QuranSearchDelegate extends SearchDelegate<int?> {
   @override
   Widget? buildLeading(BuildContext context) {
     return IconButton(
-      icon: const Icon(Icons.arrow_forward),
+      icon: const Icon(Icons.arrow_back),
       onPressed: () {
         close(context, null);
       },

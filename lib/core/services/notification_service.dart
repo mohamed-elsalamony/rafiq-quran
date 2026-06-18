@@ -21,6 +21,28 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
+  bool get isInitialized => _initialized;
+
+  Future<bool> areNotificationsEnabled() async {
+    if (kIsWeb) return true;
+    try {
+      if (Platform.isAndroid) {
+        final androidImplementation =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        if (androidImplementation != null) {
+          final bool? enabled = await androidImplementation.areNotificationsEnabled();
+          return enabled ?? false;
+        }
+      } else if (Platform.isIOS) {
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Error checking notifications status: $e");
+    }
+    return false;
+  }
+
   Future<bool> requestPermission() async {
     if (kIsWeb) return true;
     try {
@@ -30,7 +52,11 @@ class NotificationService {
                 AndroidFlutterLocalNotificationsPlugin>();
         if (androidImplementation != null) {
           final bool? granted = await androidImplementation.requestNotificationsPermission();
-          await androidImplementation.requestExactAlarmsPermission();
+          try {
+            await androidImplementation.requestExactAlarmsPermission();
+          } catch (e) {
+            debugPrint("Error requesting exact alarms permission: $e");
+          }
           return (granted ?? false);
         }
       } else if (Platform.isIOS) {
@@ -107,33 +133,59 @@ class NotificationService {
         },
       );
 
-      // Create high importance notification channel for Android 8.0+
+      // Create high importance notification channels for Android 8.0+
       if (Platform.isAndroid) {
-        final AndroidNotificationChannel channel =
-            const AndroidNotificationChannel(
-          'prayer_channel_id',
-          'تنبيهات الأذان والصلوات',
-          description: 'تنبهات مواقيت الصلاة والأذان المكتوب',
-          importance: Importance.max,
-          playSound: true,
-          enableVibration: true,
-        );
-
         final androidImplementation =
             _notificationsPlugin.resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
         if (androidImplementation != null) {
-          await androidImplementation.createNotificationChannel(channel);
-          try {
-            await androidImplementation.requestNotificationsPermission();
-          } catch (e) {
-            debugPrint("Error requesting notifications permission: $e");
-          }
-          try {
-            await androidImplementation.requestExactAlarmsPermission();
-          } catch (e) {
-            debugPrint("Error requesting exact alarms permission: $e");
-          }
+          // Channel 1: Prayer alarms
+          await androidImplementation.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'prayer_channel_id',
+              'تنبيهات الأذان والصلوات',
+              description: 'تنبهات مواقيت الصلاة والأذان المكتوب',
+              importance: Importance.max,
+              playSound: true,
+              enableVibration: true,
+            ),
+          );
+
+          // Channel 2: Daily Reminders
+          await androidImplementation.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'daily_reminder_channel_id',
+              'التذكير اليومي بالورد والأذكار',
+              description: 'تنبيه يومي لقراءة الورد القرآني وأذكار الصباح والمساء',
+              importance: Importance.max,
+              playSound: true,
+              enableVibration: true,
+            ),
+          );
+
+          // Channel 3: Smart Reminders
+          await androidImplementation.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'smart_reminders_channel_id',
+              'التذكيرات الذكية اليومية',
+              description: 'تنبيهات مخصصة لمرافقتك طوال اليوم من الاستيقاظ إلى النوم',
+              importance: Importance.max,
+              playSound: true,
+              enableVibration: true,
+            ),
+          );
+
+          // Channel 4: Periodic reminders (WorkManager)
+          await androidImplementation.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'periodic_channel_id',
+              'التذكير الدوري بالذكر والآية',
+              description: 'تنبيهات الذكر والآيات والحديث الدوري التلقائي',
+              importance: Importance.max,
+              playSound: true,
+              enableVibration: true,
+            ),
+          );
         }
       }
 
@@ -151,7 +203,10 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
   }) async {
-    if (kIsWeb || !_initialized) return;
+    if (kIsWeb) return;
+    if (!_initialized) {
+      throw Exception("خدمة الإشعارات ليست نشطة حالياً. يرجى تفعيلها أولاً.");
+    }
 
     try {
       final tz.TZDateTime tzDateTime =

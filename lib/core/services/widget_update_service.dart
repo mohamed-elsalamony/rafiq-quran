@@ -4,9 +4,9 @@ import 'package:adhan/adhan.dart';
 import 'prayer_service.dart';
 
 class WidgetUpdateService {
-  static const String androidWidgetSmall = 'WidgetSmallProvider';
-  static const String androidWidgetMedium = 'WidgetMediumProvider';
-  static const String androidWidgetLarge = 'WidgetLargeProvider';
+  static const String androidWidgetSmall = 'com.rafiqquran.rafiq_quran.WidgetSmallProvider';
+  static const String androidWidgetMedium = 'com.rafiqquran.rafiq_quran.WidgetMediumProvider';
+  static const String androidWidgetLarge = 'com.rafiqquran.rafiq_quran.WidgetLargeProvider';
   static const String iOSWidget = 'RunnerWidget';
 
   static String _formatTime(DateTime time) {

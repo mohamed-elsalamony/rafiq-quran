@@ -260,6 +260,14 @@ class _MainShellState extends State<MainShell> {
       const TasbihScreen(),
       const PrayerQiblaScreen(),
     ]);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await NotificationService().requestPermission();
+      } catch (e) {
+        debugPrint("Error requesting notification permissions on startup: $e");
+      }
+    });
   }
 
   void _onTabChanged(int index) {
@@ -429,26 +437,35 @@ class _MainShellState extends State<MainShell> {
       ),
       appBar: _currentIndex == 2
           ? AppBar(
-              backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
+              backgroundColor: isDark ? const Color(0xFF0E1A17) : primaryColor,
               foregroundColor: Colors.white,
               elevation: 0,
+              scrolledUnderElevation: 0,
               leading: Builder(
                 builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu),
+                  icon: const Icon(Icons.menu_rounded),
                   onPressed: () => Scaffold.of(context).openDrawer(),
                 ),
               ),
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      'رفيق القرآن',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                  Text(
+                    'رفيق',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    'القرآن',
+                    style: GoogleFonts.amiri(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                      color: const Color(0xFFD4AF37),
                     ),
                   ),
                 ],
@@ -476,41 +493,39 @@ class _MainShellState extends State<MainShell> {
     Color accentColor,
   ) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      height: 72,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+      height: 76,
       decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF1E1E1E).withOpacity(0.95)
-            : Colors.white.withOpacity(0.95),
-        borderRadius: BorderRadius.circular(24),
+        color: isDark ? const Color(0xFF161E1C) : Colors.white,
+        borderRadius: BorderRadius.circular(26),
         border: Border.all(
           color: isDark
-              ? Colors.white.withOpacity(0.08)
-              : primaryColor.withOpacity(0.08),
-          width: 1.5,
+              ? Colors.white.withOpacity(0.07)
+              : primaryColor.withOpacity(0.09),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
-            blurRadius: 16,
+            color: Colors.black.withOpacity(isDark ? 0.35 : 0.10),
+            blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(26),
         child: Row(
           children: [
-            _buildNavItem(0, Icons.menu_book_outlined, 'المصحف', isDark,
-                primaryColor, accentColor),
-            _buildNavItem(1, Icons.library_books_outlined, 'الأذكار', isDark,
-                primaryColor, accentColor),
-            _buildNavItem(2, Icons.home_outlined, 'الرئيسية', isDark,
-                primaryColor, accentColor),
-            _buildNavItem(3, Icons.fingerprint_outlined, 'السبحة', isDark,
-                primaryColor, accentColor),
-            _buildNavItem(4, Icons.explore_outlined, 'الصلاة', isDark,
-                primaryColor, accentColor),
+            _buildNavItem(0, Icons.menu_book_outlined, Icons.menu_book,
+                'المصحف', isDark, primaryColor, accentColor),
+            _buildNavItem(1, Icons.wb_sunny_outlined, Icons.wb_sunny,
+                'الأذكار', isDark, primaryColor, accentColor),
+            _buildNavItem(2, Icons.home_outlined, Icons.home,
+                'الرئيسية', isDark, primaryColor, accentColor),
+            _buildNavItem(3, Icons.fingerprint_outlined, Icons.fingerprint,
+                'التسبيح', isDark, primaryColor, accentColor),
+            _buildNavItem(4, Icons.mosque_outlined, Icons.mosque,
+                'الصلاة', isDark, primaryColor, accentColor),
           ],
         ),
       ),
@@ -519,80 +534,67 @@ class _MainShellState extends State<MainShell> {
 
   Widget _buildNavItem(
     int index,
-    IconData icon,
+    IconData inactiveIcon,
+    IconData activeIcon,
     String label,
     bool isDark,
     Color primaryColor,
     Color accentColor,
   ) {
     final bool isSelected = _currentIndex == index;
+    final bool isHome = index == 2;
 
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => _onTabChanged(index),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              transform: isSelected
-                  ? (Matrix4.identity()..translate(0.0, -2.0))
-                  : Matrix4.identity(),
-              child: Icon(
-                isSelected ? _getIconForIndex(index, isActive: true) : icon,
-                color: isSelected
-                    ? accentColor
-                    : (isDark ? Colors.white54 : Colors.grey[500]),
-                size: isSelected ? 24 : 20,
-              ),
-            ),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          margin: EdgeInsets.symmetric(
+            horizontal: isHome ? 4 : 2,
+            vertical: isHome ? 8 : 10,
+          ),
+          decoration: isSelected
+              ? BoxDecoration(
+                  color: isHome
+                      ? primaryColor
+                      : accentColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                )
+              : null,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  isSelected ? activeIcon : inactiveIcon,
+                  key: ValueKey(isSelected),
                   color: isSelected
-                      ? accentColor
-                      : (isDark ? Colors.white54 : Colors.grey[600]),
+                      ? (isHome ? Colors.white : accentColor)
+                      : (isDark ? Colors.white38 : Colors.grey[500]),
+                  size: isSelected ? 23 : 21,
+                ),
+              ),
+              const SizedBox(height: 3),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: TextStyle(
+                  fontSize: isSelected ? 10.5 : 9.5,
+                  fontWeight:
+                      isSelected ? FontWeight.w700 : FontWeight.w400,
+                  color: isSelected
+                      ? (isHome ? Colors.white : accentColor)
+                      : (isDark ? Colors.white38 : Colors.grey[500]),
                   fontFamily: 'Amiri',
                 ),
-                textAlign: TextAlign.center,
+                child: Text(label, textAlign: TextAlign.center),
               ),
-            ),
-            const SizedBox(height: 2),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: isSelected ? 6 : 0,
-              height: 3,
-              decoration: BoxDecoration(
-                color: accentColor,
-                borderRadius: BorderRadius.circular(1.5),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  IconData _getIconForIndex(int index, {required bool isActive}) {
-    switch (index) {
-      case 0:
-        return isActive ? Icons.menu_book : Icons.menu_book_outlined;
-      case 1:
-        return isActive ? Icons.library_books : Icons.library_books_outlined;
-      case 2:
-        return isActive ? Icons.home : Icons.home_outlined;
-      case 3:
-        return isActive ? Icons.fingerprint : Icons.fingerprint_outlined;
-      case 4:
-        return isActive ? Icons.explore : Icons.explore_outlined;
-      default:
-        return Icons.home;
-    }
   }
 }

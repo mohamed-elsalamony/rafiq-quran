@@ -96,7 +96,7 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
               color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                reverse: true, // RTL fit
+                reverse: false, // RTL fit
                 itemCount: adhkarProvider.categories.length,
                 itemBuilder: (context, index) {
                   final cat = adhkarProvider.categories[index];
@@ -167,189 +167,204 @@ class _AdhkarScreenState extends State<AdhkarScreen> {
                         final isFavorited =
                             adhkarProvider.favTexts.contains(item.text);
 
-                        return Card(
-                          elevation: 3,
-                          shadowColor: Colors.black.withOpacity(0.05),
-                          color: isDark
-                              ? (isCompleted
-                                  ? const Color(0xFF1B2621)
-                                  : const Color(0xFF1E1E1E))
-                              : (isCompleted
-                                  ? const Color(0xFFEDF5F1)
-                                  : Colors.white),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                              color: isCompleted
-                                  ? Colors.teal.withOpacity(0.3)
-                                  : Colors.transparent,
-                              width: 1.5,
+                        return TweenAnimationBuilder<double>(
+                          key: ValueKey(item.text + adhkarProvider.selectedCategory),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: Duration(milliseconds: 300 + (index * 40).clamp(0, 300)),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, child) {
+                            return Transform.translate(
+                              offset: Offset(0, (1.0 - value) * 16),
+                              child: Opacity(
+                                opacity: value,
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Card(
+                            elevation: 3,
+                            shadowColor: Colors.black.withOpacity(0.05),
+                            color: isDark
+                                ? (isCompleted
+                                    ? const Color(0xFF1B2621)
+                                    : const Color(0xFF1E1E1E))
+                                : (isCompleted
+                                    ? const Color(0xFFEDF5F1)
+                                    : Colors.white),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color: isCompleted
+                                    ? Colors.teal.withOpacity(0.3)
+                                    : Colors.transparent,
+                                width: 1.5,
+                              ),
                             ),
-                          ),
-                          margin: const EdgeInsets.only(bottom: 16.0),
-                          child: InkWell(
-                            onTap: () => adhkarProvider.decrementCount(item),
-                            borderRadius: BorderRadius.circular(16),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          IconButton(
-                                            icon: Icon(
-                                              isFavorited
-                                                  ? Icons.favorite
-                                                  : Icons.favorite_border,
-                                              color: isFavorited
-                                                  ? Colors.red
-                                                  : Colors.grey,
+                            margin: const EdgeInsets.only(bottom: 16.0),
+                            child: InkWell(
+                              onTap: () => adhkarProvider.decrementCount(item),
+                              borderRadius: BorderRadius.circular(16),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            IconButton(
+                                              icon: Icon(
+                                                isFavorited
+                                                    ? Icons.favorite
+                                                    : Icons.favorite_border,
+                                                color: isFavorited
+                                                    ? Colors.red
+                                                    : Colors.grey,
+                                              ),
+                                              iconSize: 20,
+                                              onPressed: () => adhkarProvider
+                                                  .toggleFavorite(item.text),
                                             ),
-                                            iconSize: 20,
-                                            onPressed: () => adhkarProvider
-                                                .toggleFavorite(item.text),
+                                            IconButton(
+                                              icon: const Icon(Icons.copy,
+                                                  color: Colors.grey),
+                                              iconSize: 20,
+                                              onPressed: () {
+                                                Clipboard.setData(ClipboardData(
+                                                    text: item.text));
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  const SnackBar(
+                                                      content: Text(
+                                                          'تم نسخ الذكر إلى الحافظة!')),
+                                                );
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? const Color(0xFF2C2C2C)
+                                                : Colors.grey[100],
+                                            borderRadius:
+                                                BorderRadius.circular(20),
                                           ),
-                                          IconButton(
-                                            icon: const Icon(Icons.copy,
-                                                color: Colors.grey),
-                                            iconSize: 20,
-                                            onPressed: () {
-                                              Clipboard.setData(ClipboardData(
-                                                  text: item.text));
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                const SnackBar(
-                                                    content: Text(
-                                                        'تم نسخ الذكر إلى الحافظة!')),
-                                              );
-                                            },
+                                          child: Text(
+                                            'المطلوب: ${item.count}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: isDark
+                                                  ? Colors.grey[400]
+                                                  : Colors.grey[700],
+                                            ),
                                           ),
-                                        ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+
+                                    // Text of Dhikr
+                                    Text(
+                                      item.text,
+                                      style: TextStyle(
+                                        fontSize: 16.5,
+                                        height: 1.6,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark
+                                            ? Colors.grey[100]
+                                            : Colors.black87,
                                       ),
+                                      textAlign: TextAlign.justify,
+                                      textDirection: TextDirection.rtl,
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // Fadl text if exists
+                                    if (item.fadl.isNotEmpty) ...[
                                       Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 4),
+                                        padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
                                           color: isDark
-                                              ? const Color(0xFF2C2C2C)
-                                              : Colors.grey[100],
-                                          borderRadius:
-                                              BorderRadius.circular(20),
+                                              ? const Color(0xFF182220)
+                                              : const Color(0xFFF1F6F3),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Text(
-                                          'المطلوب: ${item.count}',
+                                          item.fadl,
                                           style: TextStyle(
-                                            fontSize: 11,
+                                            fontSize: 12,
                                             color: isDark
-                                                ? Colors.grey[400]
-                                                : Colors.grey[700],
+                                                ? Colors.teal[200]
+                                                : primaryColor,
+                                            height: 1.4,
                                           ),
+                                          textDirection: TextDirection.rtl,
                                         ),
                                       ),
+                                      const SizedBox(height: 16),
                                     ],
-                                  ),
-                                  const SizedBox(height: 8),
 
-                                  // Text of Dhikr
-                                  Text(
-                                    item.text,
-                                    style: TextStyle(
-                                      fontSize: 16.5,
-                                      height: 1.6,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark
-                                          ? Colors.grey[100]
-                                          : Colors.black87,
-                                    ),
-                                    textAlign: TextAlign.justify,
-                                    textDirection: TextDirection.rtl,
-                                  ),
-                                  const SizedBox(height: 12),
-
-                                  // Fadl text if exists
-                                  if (item.fadl.isNotEmpty) ...[
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? const Color(0xFF182220)
-                                            : const Color(0xFFF1F6F3),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        item.fadl,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: isDark
-                                              ? Colors.teal[200]
-                                              : primaryColor,
-                                          height: 1.4,
-                                        ),
-                                        textDirection: TextDirection.rtl,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
-
-                                  // Count decrements indicators
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        isCompleted
-                                            ? 'تم إنجازه بنجاح!'
-                                            : 'انقر على البطاقة للتسبيح',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: isCompleted
-                                              ? Colors.teal
-                                              : Colors.grey,
-                                          fontWeight: isCompleted
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                        ),
-                                      ),
-                                      Container(
-                                        width: 52,
-                                        height: 52,
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: isCompleted
-                                              ? Colors.teal
-                                              : (isDark
-                                                  ? const Color(0xFF2C2C2C)
-                                                  : Colors.grey[200]),
-                                          border: Border.all(
+                                    // Count decrements indicators
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          isCompleted
+                                              ? 'تم إنجازه بنجاح!'
+                                              : 'انقر على البطاقة للتسبيح',
+                                          style: TextStyle(
+                                            fontSize: 12,
                                             color: isCompleted
                                                 ? Colors.teal
-                                                : Colors.transparent,
-                                            width: 2,
+                                                : Colors.grey,
+                                            fontWeight: isCompleted
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
                                           ),
                                         ),
-                                        child: Text(
-                                          isCompleted ? '✓' : '$remaining',
-                                          style: TextStyle(
-                                            fontSize: isCompleted ? 20 : 18,
-                                            fontWeight: FontWeight.bold,
+                                        Container(
+                                          width: 52,
+                                          height: 52,
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
                                             color: isCompleted
-                                                ? Colors.white
+                                                ? Colors.teal
                                                 : (isDark
-                                                    ? Colors.white
-                                                    : Colors.black87),
-                                            fontFamily: 'Outfit',
+                                                    ? const Color(0xFF2C2C2C)
+                                                    : Colors.grey[200]),
+                                            border: Border.all(
+                                              color: isCompleted
+                                                  ? Colors.teal
+                                                  : Colors.transparent,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            isCompleted ? '✓' : '$remaining',
+                                            style: TextStyle(
+                                              fontSize: isCompleted ? 20 : 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: isCompleted
+                                                  ? Colors.white
+                                                  : (isDark
+                                                      ? Colors.white
+                                                      : Colors.black87),
+                                              fontFamily: 'Outfit',
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

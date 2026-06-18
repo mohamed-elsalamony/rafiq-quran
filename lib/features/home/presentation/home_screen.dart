@@ -1,37 +1,41 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:quran/quran.dart' as quran;
+import 'package:adhan/adhan.dart';
+
+// Core services
 import '../../../core/services/app_state.dart';
 import '../../../core/services/db_helper.dart';
 import '../../../core/services/prayer_service.dart';
 import '../../../core/services/hadith_service.dart';
 import '../../../core/services/prophet_blessing_service.dart';
-import '../../../core/services/prophets_stories_service.dart';
-import '../../../core/services/seerah_service.dart';
 import '../../../core/services/companions_service.dart';
+import '../../../core/services/periodic_notification_helper.dart';
+
+// Feature providers & screens
+import '../../adhkar/presentation/adhkar_provider.dart';
+
+// Feature screens
 import '../../quran/presentation/quran_screen.dart';
 import '../../hifz_khatma/presentation/hifz_khatma_screen.dart';
 import '../../hadith/presentation/hadith_library_screen.dart';
-import '../../prayer_times/presentation/qibla_compass_screen.dart';
 import '../../prayer_times/presentation/prayer_provider.dart';
+import '../../prayer_times/presentation/qibla_compass_screen.dart';
 import '../../prophets_stories/presentation/prophets_stories_screen.dart';
-import '../../prophets_stories/presentation/prophet_story_detail_screen.dart';
 import '../../seerah/presentation/seerah_screen.dart';
-import '../../seerah/presentation/seerah_detail_screen.dart';
 import '../../auth/presentation/auth_screen.dart';
 import '../../ai_assistant/presentation/ai_chat_screen.dart';
 import '../../aldaa_wadawaa/presentation/aldaa_wadawaa_screen.dart';
-import '../../aldaa_wadawaa/presentation/aldaa_wadawaa_detail_screen.dart';
-import '../../../core/services/aldaa_wadawaa_service.dart';
 import '../../companions/presentation/companions_list_screen.dart';
-import '../../companions/presentation/companion_detail_screen.dart';
-import 'prophet_blessing_screen.dart';
-import 'package:adhan/adhan.dart';
-import 'dart:async';
-import '../../../core/services/religious_stories_service.dart';
 import '../../religious_stories/presentation/religious_stories_list_screen.dart';
-import '../../religious_stories/presentation/religious_story_detail_screen.dart';
+import 'prophet_blessing_screen.dart';
 
+// ═══════════════════════════════════════════════════════════
+//  HomeScreen
+// ═══════════════════════════════════════════════════════════
 class HomeScreen extends StatefulWidget {
   final Function(int) onTabChanged;
   const HomeScreen({super.key, required this.onTabChanged});
@@ -40,2012 +44,934 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  // ── Design tokens ──────────────────────────────────────
+  static const _primary = Color(0xFF0F5A47);
+  static const _accent = Color(0xFFD4AF37);
+  static const _bgDark = Color(0xFF0E1A17);
+  static const _bgLight = Color(0xFFF2F5F3);
+
+  // ── Animation ──────────────────────────────────────────
+  late AnimationController _animCtrl;
+
+  // ── Prayer countdown ──────────────────────────────────
   String _timeUntilNextPrayer = '--:--:--';
   String _nextPrayerName = '';
   Timer? _prayerTimer;
-  Map<String, dynamic>? _lastBookmark;
+
+  Map<String, dynamic>? _lastBookmark; // محفوظ للاستخدام المستقبلي
   List<Map<String, dynamic>> _khatmaPlans = [];
   Hadith? _hadithOfDay;
-  SeerahEvent? _seerahEventOfDay;
   Companion? _companionOfDay;
-  ReligiousStory? _religiousStoryOfDay;
+  String? _dailyDhikrTip;
 
+  // ── Ayah of day (static for now) ─────────────────────
+  static const _ayahText =
+      'إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ وَيُبَشِّرُ الْمُؤْمِنِينَ';
+  static const _ayahRef = 'سورة الإسراء • الآية ٩';
+
+  // ═══════════════════════════════════════════════════════
   @override
   void initState() {
     super.initState();
-    _startPrayerTimer();
-    _loadDashboardData();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startPrayerTimer();
+      _loadDashboardData();
+    });
   }
 
   @override
   void dispose() {
     _prayerTimer?.cancel();
+    _animCtrl.dispose();
     super.dispose();
   }
 
-  void _loadDashboardData() async {
+  // ═══════════════════════════════════════════════════════
+  //  Data loading
+  // ═══════════════════════════════════════════════════════
+  Future<void> _loadDashboardData() async {
     final bookmarks = await DbHelper.getBookmarks();
     final khatmas = await DbHelper.getKhatmaPlans();
 
-    final hadithService = HadithService();
-    final hadith = await hadithService.getHadithOfDay();
+    final hadithSvc = HadithService();
+    final hadith = await hadithSvc.getHadithOfDay();
 
-    final seerahService = SeerahService();
-    final seerahEvent = await seerahService.getEventOfDay();
+    final compSvc = CompanionsService();
+    await compSvc.loadCompanions();
+    final companion = compSvc.getCompanionOfDay();
 
-    final companionsService = CompanionsService();
-    await companionsService.loadCompanions();
-    final companionOfDay = companionsService.getCompanionOfDay();
-
-    final religiousStoriesService = ReligiousStoriesService();
-    await religiousStoriesService.loadStories();
-    final religiousStoryOfDay = religiousStoriesService.getStoryOfDay();
-
-    if (mounted) {
-      setState(() {
-        if (bookmarks.isNotEmpty) {
-          _lastBookmark = bookmarks.last;
-        } else {
-          _lastBookmark = null;
-        }
-        _khatmaPlans = khatmas;
-        _hadithOfDay = hadith;
-        _seerahEventOfDay = seerahEvent;
-        _companionOfDay = companionOfDay;
-        _religiousStoryOfDay = religiousStoryOfDay;
-      });
+    // Pick a random dhikr tip once
+    final random = Random();
+    String? dhikrTip;
+    if (_dailyDhikrTip == null && PeriodicNotificationHelper.adhkar.isNotEmpty) {
+      dhikrTip = PeriodicNotificationHelper.adhkar[random.nextInt(PeriodicNotificationHelper.adhkar.length)];
     }
+
+    if (!mounted) return;
+    setState(() {
+      _lastBookmark = bookmarks.isNotEmpty ? bookmarks.last : null;
+      _khatmaPlans = khatmas;
+      _hadithOfDay = hadith;
+      _companionOfDay = companion;
+      if (dhikrTip != null) {
+        _dailyDhikrTip = dhikrTip;
+      }
+    });
   }
 
+  // ═══════════════════════════════════════════════════════
+  //  Prayer timer
+  // ═══════════════════════════════════════════════════════
   void _startPrayerTimer() {
     _updatePrayerTime();
     _prayerTimer?.cancel();
-    _prayerTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _updatePrayerTime();
-    });
+    _prayerTimer =
+        Timer.periodic(const Duration(seconds: 1), (_) => _updatePrayerTime());
   }
 
   void _updatePrayerTime() {
     if (!mounted) return;
     try {
-      final prayerProvider =
-          Provider.of<PrayerProvider>(context, listen: false);
-      final times = prayerProvider.prayerTimes;
+      final pp = Provider.of<PrayerProvider>(context, listen: false);
+      final times = pp.prayerTimes;
       final now = DateTime.now();
 
       var next = times.nextPrayer();
-      if (next == Prayer.none) {
-        next = Prayer.fajr;
-      }
+      if (next == Prayer.none) next = Prayer.fajr;
 
       DateTime? nextTime = times.timeForPrayer(next);
       if (nextTime == null || nextTime.isBefore(now)) {
         final tomorrow = now.add(const Duration(days: 1));
-        final tomorrowCoords = Coordinates(prayerProvider.currentCity.latitude,
-            prayerProvider.currentCity.longitude);
-        final tomorrowTimes = PrayerService.getPrayerTimes(
-            tomorrowCoords, prayerProvider.currentCity.method,
+        final coords = Coordinates(
+            pp.currentCity.latitude, pp.currentCity.longitude);
+        final tTimes = PrayerService.getPrayerTimes(
+            coords, pp.currentCity.method,
             date: tomorrow);
-        nextTime = tomorrowTimes.timeForPrayer(next);
+        nextTime = tTimes.timeForPrayer(next);
       }
 
       if (nextTime != null) {
         final diff = nextTime.difference(now);
-        final hours = diff.inHours;
-        final mins = diff.inMinutes % 60;
-        final secs = diff.inSeconds % 60;
-
-        String prayerStr = '';
-        switch (next) {
-          case Prayer.fajr:
-            prayerStr = 'الفجر';
-            break;
-          case Prayer.dhuhr:
-            prayerStr = 'الظهر';
-            break;
-          case Prayer.asr:
-            prayerStr = 'العصر';
-            break;
-          case Prayer.maghrib:
-            prayerStr = 'المغرب';
-            break;
-          case Prayer.isha:
-            prayerStr = 'العشاء';
-            break;
-          default:
-            prayerStr = 'الفجر';
-            break;
-        }
-
+        final h = diff.inHours;
+        final m = diff.inMinutes % 60;
+        final s = diff.inSeconds % 60;
+        const names = {
+          Prayer.fajr: 'الفجر',
+          Prayer.dhuhr: 'الظهر',
+          Prayer.asr: 'العصر',
+          Prayer.maghrib: 'المغرب',
+          Prayer.isha: 'العشاء',
+        };
         setState(() {
-          _nextPrayerName = prayerStr;
+          _nextPrayerName = names[next] ?? 'الفجر';
           _timeUntilNextPrayer =
-              '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+              '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
         });
       }
-    } catch (e) {
-      debugPrint("Error updating home prayer countdown: $e");
+    } catch (_) {}
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  Helpers
+  // ═══════════════════════════════════════════════════════
+  String get _greeting {
+    final h = DateTime.now().hour;
+    if (h < 5) return 'ليلة مباركة 🌙';
+    if (h < 12) return 'صباح الخير ☀️';
+    if (h < 17) return 'مساء النور 🌿';
+    if (h < 20) return 'مساء الخير 🌅';
+    return 'ليلة طيبة 🌙';
+  }
+
+  String get _arabicDate {
+    final n = DateTime.now();
+    const months = [
+      'يناير', 'فبراير', 'مارس', 'إبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+    ];
+    return '${n.day} ${months[n.month - 1]} ${n.year}';
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}م';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}ك';
+    return count.toString();
+  }
+
+  String _safeArabicSurahName(int surah) {
+    try {
+      return quran.getSurahNameArabic(surah.clamp(1, 114));
+    } catch (_) {
+      return 'سورة البقرة';
     }
   }
 
-  String _formatAudioPosition(int ms) {
-    if (ms <= 0) return '00:00';
-    final duration = Duration(milliseconds: ms);
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  void _pushScreen(Widget screen) {
+    Navigator.push(context, _slide(screen)).then((_) => _loadDashboardData());
   }
 
+  Route _slide(Widget page) => PageRouteBuilder(
+        pageBuilder: (_, a, __) => page,
+        transitionsBuilder: (_, a, __, child) => SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.05, 0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: a, curve: Curves.easeOut)),
+          child: FadeTransition(opacity: a, child: child),
+        ),
+        transitionDuration: const Duration(milliseconds: 280),
+      );
+
+  // ═══════════════════════════════════════════════════════
+  //  BUILD
+  // ═══════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
-    final prayerProvider = Provider.of<PrayerProvider>(context);
-    const Color primaryColor = Color(0xFF0F5A47);
-    const Color accentColor = Color(0xFFD4AF37);
     final isDark = appState.isDarkMode;
 
-    const String ayahOfDayText =
-        "إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ";
-    const String ayahOfDayReference = "سورة الإسراء - الآية 9";
-
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: isDark
-                ? [const Color(0xFF0F2520), const Color(0xFF0B1412)]
-                : [const Color(0xFFF0F5F2), const Color(0xFFFAFBF9)],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 10),
-
-                // 2. Next Prayer Card with Live Ticking Countdown
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF162A25) : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isDark
-                          ? const Color(0xFF23443B)
-                          : const Color(0xFFE2ECE9),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'الصلاة القادمة: $_nextPrayerName',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: isDark
-                                        ? Colors.grey[300]
-                                        : Colors.grey[700],
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: isDark ? accentColor : primaryColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerRight,
-                              child: Text(
-                                _timeUntilNextPrayer,
-                                style: TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : primaryColor,
-                                  fontFamily: 'Outfit',
-                                  letterSpacing: 1,
-                                ),
-                                textDirection: TextDirection.ltr,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'التوقيت لمدينة: ${prayerProvider.currentCity.nameArabic}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF23443B)
-                              : const Color(0xFFE2ECE9),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.mosque_outlined,
-                          size: 32,
-                          color: isDark ? accentColor : primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // 3. Grid of Features (9 items, 3x3 layout)
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.82,
-                  children: [
-                    _buildGridItem(context, 'المصحف', Icons.menu_book_outlined,
-                        () => widget.onTabChanged(0), isDark),
-                    _buildGridItem(context, 'المواقيت', Icons.mosque_outlined,
-                        () => widget.onTabChanged(4), isDark),
-                    _buildGridItem(context, 'الأذكار', Icons.wb_sunny_outlined,
-                        () => widget.onTabChanged(1), isDark),
-                    _buildGridItem(context, 'السبحة', Icons.touch_app_outlined,
-                        () => widget.onTabChanged(3), isDark),
-                    _buildGridItem(
-                        context,
-                        'القبلة',
-                        Icons.explore_outlined,
-                        () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    const QiblaCompassScreen())),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'الحفظ والورد',
-                        Icons.bookmark_added_outlined,
-                        () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const HifzKhatmaScreen()))
-                            .then((_) => _loadDashboardData()),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'الأحاديث',
-                        Icons.auto_stories_outlined,
-                        () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const HadithLibraryScreen()))
-                            .then((_) => _loadDashboardData()),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'صلوات النبي',
-                        'ﷺ',
-                        () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const ProphetBlessingScreen()))
-                            .then((_) => _loadDashboardData()),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'قصص الأنبياء',
-                        Icons.auto_stories,
-                        () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const ProphetsStoriesScreen()))
-                            .then((_) => _loadDashboardData()),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'السيرة النبوية',
-                        Icons.history_edu,
-                        () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const SeerahScreen()))
-                            .then((_) => _loadDashboardData()),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'الصحابة الكرام',
-                        Icons.group_outlined,
-                        () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const CompanionsListScreen()))
-                            .then((_) => _loadDashboardData()),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'القصص الهادفة',
-                        Icons.collections_bookmark_outlined,
-                        () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const ReligiousStoriesListScreen()))
-                            .then((_) => _loadDashboardData()),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'اسأل عن دينك',
-                        Icons.auto_awesome,
-                        () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const AiChatScreen()))
-                            .then((_) => _loadDashboardData()),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'الداء والدواء',
-                        Icons.menu_book,
-                        () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const AldaaWadawaaScreen()))
-                            .then((_) => _loadDashboardData()),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'حساب ومزامنة',
-                        Icons.cloud_sync,
-                        () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const AuthScreen()))
-                            .then((_) => _loadDashboardData()),
-                        isDark),
-                    _buildGridItem(
-                        context,
-                        'الإعدادات',
-                        Icons.settings_outlined,
-                        () => Navigator.pushNamed(context, '/settings'),
-                        isDark),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // 9. Ayah of the Day
-                _buildSectionCard(
-                  title: 'آية اليوم',
-                  isDark: isDark,
-                  accentColor: accentColor,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 8),
-                      Text(
-                        '﴿ $ayahOfDayText ﴾',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? accentColor : primaryColor,
-                          fontFamily: 'Amiri',
-                          height: 1.6,
-                        ),
-                        textAlign: TextAlign.center,
-                        textDirection: TextDirection.rtl,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            ayahOfDayReference,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color:
-                                  isDark ? Colors.grey[400] : Colors.grey[600],
-                            ),
-                            textAlign: TextAlign.right,
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.bookmark_outline,
-                              color: accentColor.withOpacity(0.6), size: 16),
-                        ],
-                      ),
-                    ],
-                  ),
-                  color: isDark
-                      ? const Color(0xFF152A24)
-                      : const Color(0xFFEDF6F2),
-                ),
-                const SizedBox(height: 24),
-
-                // 4. Hadith of the Day (Moved to Middle)
-                if (_hadithOfDay != null)
-                  _buildSectionCard(
-                    title: 'حديث اليوم',
-                    isDark: isDark,
-                    accentColor: accentColor,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 8),
-                        Text(
-                          _hadithOfDay!.text,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: isDark ? Colors.grey[200] : Colors.black87,
-                            height: 1.6,
-                            fontFamily: 'Amiri',
-                          ),
-                          textAlign: TextAlign.right,
-                          textDirection: TextDirection.rtl,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'رواه: ${_hadithOfDay!.source}',
-                          style:
-                              const TextStyle(fontSize: 11, color: Colors.grey),
-                          textAlign: TextAlign.right,
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                      const HadithLibraryScreen()),
-                            ).then((_) => _loadDashboardData());
-                          },
-                          icon: const Icon(Icons.library_books,
-                              size: 16, color: Colors.teal),
-                          label: const Text('تصفح مكتبة الأحاديث الشريفة',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.teal)),
-                          style: OutlinedButton.styleFrom(
-                            side:
-                                BorderSide(color: accentColor.withOpacity(0.5)),
-                          ),
-                        ),
-                      ],
-                    ),
-                    color: isDark
-                        ? const Color(0xFF15222E)
-                        : const Color(0xFFEDF5FA),
-                  ),
-                const SizedBox(height: 24),
-
-                // حدث اليوم من السيرة النبوية
-                if (_seerahEventOfDay != null)
-                  _buildSectionCard(
-                    title: 'حدث اليوم من السيرة النبوية 👑',
-                    isDark: isDark,
-                    accentColor: accentColor,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 8),
-                        Text(
-                          _seerahEventOfDay!.title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? accentColor : primaryColor,
-                            fontFamily: 'Amiri',
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _seerahEventOfDay!.content,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.grey[200] : Colors.black87,
-                            height: 1.6,
-                          ),
-                          textAlign: TextAlign.justify,
-                          textDirection: TextDirection.rtl,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'المصدر: ${_seerahEventOfDay!.source}',
-                          style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                              fontStyle: FontStyle.italic),
-                          textAlign: TextAlign.right,
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const SeerahScreen()),
-                            ).then((_) => _loadDashboardData());
-                          },
-                          icon: const Icon(Icons.history_edu,
-                              size: 16, color: Colors.teal),
-                          label: const Text('تصفح السيرة النبوية الكاملة',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.teal)),
-                          style: OutlinedButton.styleFrom(
-                            side:
-                                BorderSide(color: accentColor.withOpacity(0.5)),
-                          ),
-                        ),
-                      ],
-                    ),
-                    color: isDark
-                        ? const Color(0xFF2E2215)
-                        : const Color(0xFFFAF5ED),
-                  ),
-                const SizedBox(height: 24),
-
-                // صحابي اليوم
-                if (_companionOfDay != null)
-                  _buildSectionCard(
-                    title: 'صحابي اليوم 🌟',
-                    isDark: isDark,
-                    accentColor: accentColor,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _companionOfDay!.name,
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? accentColor : primaryColor,
-                                  fontFamily: 'Amiri',
-                                ),
-                                textAlign: TextAlign.right,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: accentColor.withOpacity(0.12),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.person_outlined,
-                                  color: accentColor, size: 22),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _companionOfDay!.virtues.isNotEmpty
-                              ? (_companionOfDay!.virtues.length > 200
-                                  ? '${_companionOfDay!.virtues.substring(0, 200)}...'
-                                  : _companionOfDay!.virtues)
-                              : _companionOfDay!.moments.isNotEmpty
-                                  ? (_companionOfDay!.moments.length > 200
-                                      ? '${_companionOfDay!.moments.substring(0, 200)}...'
-                                      : _companionOfDay!.moments)
-                                  : '',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.grey[200] : Colors.black87,
-                            height: 1.6,
-                          ),
-                          textAlign: TextAlign.justify,
-                          textDirection: TextDirection.rtl,
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => CompanionDetailScreen(
-                                      companion: _companionOfDay!)),
-                            ).then((_) => _loadDashboardData());
-                          },
-                          icon: const Icon(Icons.group,
-                              size: 16, color: Colors.teal),
-                          label: const Text('قرأ السيرة الكاملة والأحاديث',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.teal)),
-                          style: OutlinedButton.styleFrom(
-                            side:
-                                BorderSide(color: accentColor.withOpacity(0.5)),
-                          ),
-                        ),
-                      ],
-                    ),
-                    color: isDark
-                        ? const Color(0xFF1E2A22)
-                        : const Color(0xFFF0FAF5),
-                  ),
-                const SizedBox(height: 24),
-
-                // قصة اليوم الهادفة
-                if (_religiousStoryOfDay != null)
-                  _buildSectionCard(
-                    title: 'قصة اليوم الهادفة 📚',
-                    isDark: isDark,
-                    accentColor: accentColor,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _religiousStoryOfDay!.title,
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? accentColor : primaryColor,
-                                  fontFamily: 'Amiri',
-                                ),
-                                textAlign: TextAlign.right,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: accentColor.withOpacity(0.12),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.collections_bookmark,
-                                  color: accentColor, size: 22),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _religiousStoryOfDay!.storyText.length > 200
-                              ? '${_religiousStoryOfDay!.storyText.substring(0, 200)}...'
-                              : _religiousStoryOfDay!.storyText,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.grey[200] : Colors.black87,
-                            height: 1.6,
-                          ),
-                          textAlign: TextAlign.justify,
-                          textDirection: TextDirection.rtl,
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                      ReligiousStoryDetailScreen(
-                                          story: _religiousStoryOfDay!)),
-                            ).then((_) => _loadDashboardData());
-                          },
-                          icon: const Icon(Icons.menu_book,
-                              size: 16, color: Colors.teal),
-                          label: const Text('اقرأ القصة كاملة والدروس',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.teal)),
-                          style: OutlinedButton.styleFrom(
-                            side:
-                                BorderSide(color: accentColor.withOpacity(0.5)),
-                          ),
-                        ),
-                      ],
-                    ),
-                    color: isDark
-                        ? const Color(0xFF2E2A15)
-                        : const Color(0xFFFAF9ED),
-                  ),
-                const SizedBox(height: 24),
-
-                // 5. Prophet Blessing Counter Campaign Card
-                Consumer<ProphetBlessingService>(
-                  builder: (context, blessingService, child) {
-                    return _buildSectionCard(
-                      title: 'مليونية الصلاة على النبي ﷺ',
-                      isDark: isDark,
-                      accentColor: accentColor,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      'صلواتك اليوم: ${blessingService.personalCount}',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14),
-                                      textAlign: TextAlign.right,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'العداد العالمي: ${blessingService.globalCount.toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")}',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: isDark
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600]),
-                                      textAlign: TextAlign.right,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: accentColor.withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.favorite,
-                                    color: accentColor, size: 24),
-                              ),
-                              const SizedBox(width: 12),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ProphetBlessingScreen()),
-                                  ).then((_) => _loadDashboardData());
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 8),
-                                ),
-                                child: const Text('شارك الآن',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      color: isDark
-                          ? const Color(0xFF162520)
-                          : const Color(0xFFEAF5F0),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // 6. Continue Reading / Listening Card
-                _buildSectionCard(
-                  title: 'متابعة من حيث توقفت',
-                  isDark: isDark,
-                  accentColor: accentColor,
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withOpacity(0.03)
-                              : Colors.grey.withOpacity(0.03),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.white10
-                                : Colors.black.withOpacity(0.05),
-                            width: 1,
-                          ),
-                        ),
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => QuranScreen(
-                                  initialPage: appState.lastPageRead,
-                                  initialSurah: appState.lastSurahRead,
-                                ),
-                              ),
-                            ).then((_) => _loadDashboardData());
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      const Text(
-                                        'آخر ما قرأت في المصحف',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14),
-                                        textAlign: TextAlign.right,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'سورة ${quran.getSurahNameArabic(appState.lastSurahRead)} - الصفحة ${appState.lastPageRead}',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: isDark
-                                                ? Colors.grey[400]
-                                                : Colors.grey[600]),
-                                        textAlign: TextAlign.right,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: accentColor.withOpacity(0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(Icons.chrome_reader_mode_outlined,
-                                      color: accentColor, size: 24),
-                                ),
-                                const SizedBox(width: 12),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => QuranScreen(
-                                          initialPage: appState.lastPageRead,
-                                          initialSurah: appState.lastSurahRead,
-                                        ),
-                                      ),
-                                    ).then((_) => _loadDashboardData());
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryColor,
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8)),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
-                                  ),
-                                  child: const Text('اقرأ الآن',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withOpacity(0.03)
-                              : Colors.grey.withOpacity(0.03),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.white10
-                                : Colors.black.withOpacity(0.05),
-                            width: 1,
-                          ),
-                        ),
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => QuranScreen(
-                                  initialPage: quran.getPageNumber(
-                                      appState.lastAudioSurah,
-                                      appState.lastAudioAyah),
-                                  initialSurah: appState.lastAudioSurah,
-                                  autoPlay: true,
-                                ),
-                              ),
-                            ).then((_) => _loadDashboardData());
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      const Text(
-                                        'آخر تلاوة استمعت إليها',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14),
-                                        textAlign: TextAlign.right,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'سورة ${quran.getSurahNameArabic(appState.lastAudioSurah)} (${appState.lastAudioReciter}) عند ${_formatAudioPosition(appState.lastAudioPositionMs)}',
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            color: isDark
-                                                ? Colors.grey[400]
-                                                : Colors.grey[600]),
-                                        textAlign: TextAlign.right,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: accentColor.withOpacity(0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(Icons.play_circle_outline,
-                                      color: accentColor, size: 24),
-                                ),
-                                const SizedBox(width: 12),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => QuranScreen(
-                                          initialPage: quran.getPageNumber(
-                                              appState.lastAudioSurah,
-                                              appState.lastAudioAyah),
-                                          initialSurah: appState.lastAudioSurah,
-                                          autoPlay: true,
-                                        ),
-                                      ),
-                                    ).then((_) => _loadDashboardData());
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryColor,
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8)),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
-                                  ),
-                                  child: const Text('استمع',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Prophets Stories progress restoration
-                      if (appState.lastProphetStoryId > 0) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.03)
-                                : Colors.grey.withOpacity(0.03),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isDark
-                                  ? Colors.white10
-                                  : Colors.black.withOpacity(0.05),
-                              width: 1,
-                            ),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              final service = ProphetsStoriesService();
-                              service.loadStories().then((_) {
-                                final story = service
-                                    .getStoryById(appState.lastProphetStoryId);
-                                if (story != null) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          ProphetStoryDetailScreen(
-                                        story: story,
-                                        initialChapterId:
-                                            appState.lastProphetChapterId,
-                                      ),
-                                    ),
-                                  ).then((_) => _loadDashboardData());
-                                }
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: accentColor.withOpacity(0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.auto_stories,
-                                        color: accentColor, size: 24),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'آخر ما قرأت في قصص الأنبياء',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14),
-                                          textAlign: TextAlign.right,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FutureBuilder(
-                                          future: ProphetsStoriesService()
-                                              .loadStories()
-                                              .then((_) =>
-                                                  ProphetsStoriesService()
-                                                      .getStoryById(appState
-                                                          .lastProphetStoryId)),
-                                          builder: (context, snapshot) {
-                                            if (snapshot.hasData &&
-                                                snapshot.data != null) {
-                                              final story =
-                                                  snapshot.data as ProphetStory;
-                                              final chap = story.chapters
-                                                  .firstWhere(
-                                                      (c) =>
-                                                          c.id ==
-                                                          appState
-                                                              .lastProphetChapterId,
-                                                      orElse: () =>
-                                                          story.chapters.first);
-                                              return Text(
-                                                'قصة ${story.name} - ${chap.title}',
-                                                style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: isDark
-                                                        ? Colors.grey[400]
-                                                        : Colors.grey[600]),
-                                                textAlign: TextAlign.right,
-                                              );
-                                            }
-                                            return const SizedBox();
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      final service = ProphetsStoriesService();
-                                      service.loadStories().then((_) {
-                                        final story = service.getStoryById(
-                                            appState.lastProphetStoryId);
-                                        if (story != null) {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  ProphetStoryDetailScreen(
-                                                story: story,
-                                                initialChapterId: appState
-                                                    .lastProphetChapterId,
-                                              ),
-                                            ),
-                                          ).then((_) => _loadDashboardData());
-                                        }
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                    ),
-                                    child: const Text('تابع الآن',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-
-                      // Seerah progress restoration
-                      if (appState.lastSeerahEventId > 0) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.03)
-                                : Colors.grey.withOpacity(0.03),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isDark
-                                  ? Colors.white10
-                                  : Colors.black.withOpacity(0.05),
-                              width: 1,
-                            ),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              final service = SeerahService();
-                              service.loadEvents().then((_) {
-                                final event = service
-                                    .getEventById(appState.lastSeerahEventId);
-                                if (event != null) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SeerahDetailScreen(
-                                        event: event,
-                                      ),
-                                    ),
-                                  ).then((_) => _loadDashboardData());
-                                }
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: accentColor.withOpacity(0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.history_edu,
-                                        color: accentColor, size: 24),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'آخر ما قرأت في السيرة النبوية',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14),
-                                          textAlign: TextAlign.right,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FutureBuilder(
-                                          future: SeerahService()
-                                              .loadEvents()
-                                              .then((_) => SeerahService()
-                                                  .getEventById(appState
-                                                      .lastSeerahEventId)),
-                                          builder: (context, snapshot) {
-                                            if (snapshot.hasData &&
-                                                snapshot.data != null) {
-                                              final ev =
-                                                  snapshot.data as SeerahEvent;
-                                              return Text(
-                                                '${ev.stage} - ${ev.title}',
-                                                style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: isDark
-                                                        ? Colors.grey[400]
-                                                        : Colors.grey[600]),
-                                                textAlign: TextAlign.right,
-                                              );
-                                            }
-                                            return const SizedBox();
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      final service = SeerahService();
-                                      service.loadEvents().then((_) {
-                                        final event = service.getEventById(
-                                            appState.lastSeerahEventId);
-                                        if (event != null) {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  SeerahDetailScreen(
-                                                event: event,
-                                              ),
-                                            ),
-                                          ).then((_) => _loadDashboardData());
-                                        }
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                    ),
-                                    child: const Text('تابع الآن',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-
-                      // Companion reading progress restoration
-                      if (appState.lastCompanionId > 0) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.03)
-                                : Colors.grey.withOpacity(0.03),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isDark
-                                  ? Colors.white10
-                                  : Colors.black.withOpacity(0.05),
-                              width: 1,
-                            ),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              final service = CompanionsService();
-                              service.loadCompanions().then((_) {
-                                final companion = service
-                                    .getCompanionById(appState.lastCompanionId);
-                                if (companion != null) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          CompanionDetailScreen(
-                                        companion: companion,
-                                      ),
-                                    ),
-                                  ).then((_) => _loadDashboardData());
-                                }
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: accentColor.withOpacity(0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(Icons.group,
-                                        color: accentColor, size: 24),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'آخر ما قرأت عن الصحابة الكرام',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14),
-                                          textAlign: TextAlign.right,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FutureBuilder(
-                                          future: CompanionsService()
-                                              .loadCompanions()
-                                              .then((_) => CompanionsService()
-                                                  .getCompanionById(appState
-                                                      .lastCompanionId)),
-                                          builder: (context, snapshot) {
-                                            if (snapshot.hasData &&
-                                                snapshot.data != null) {
-                                              final comp =
-                                                  snapshot.data as Companion;
-                                              return Text(
-                                                'سيرة الصحابي: ${comp.name}',
-                                                style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: isDark
-                                                        ? Colors.grey[400]
-                                                        : Colors.grey[600]),
-                                                textAlign: TextAlign.right,
-                                              );
-                                            }
-                                            return const SizedBox();
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      final service = CompanionsService();
-                                      service.loadCompanions().then((_) {
-                                        final companion =
-                                            service.getCompanionById(
-                                                appState.lastCompanionId);
-                                        if (companion != null) {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  CompanionDetailScreen(
-                                                companion: companion,
-                                              ),
-                                            ),
-                                          ).then((_) => _loadDashboardData());
-                                        }
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                    ),
-                                    child: const Text('تابع الآن',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-
-                      // Aldaa Wadawaa progress restoration
-                      if (appState.lastReadAldaaWadawaaChapterId > 0) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.03)
-                                : Colors.grey.withOpacity(0.03),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isDark
-                                  ? Colors.white10
-                                  : Colors.black.withOpacity(0.05),
-                              width: 1,
-                            ),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              final service = AldaaWadawaaService();
-                              service.loadChapters().then((_) {
-                                final chapter = service.getChapterById(
-                                    appState.lastReadAldaaWadawaaChapterId);
-                                if (chapter != null) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          AldaaWadawaaDetailScreen(
-                                        chapter: chapter,
-                                      ),
-                                    ),
-                                  ).then((_) => _loadDashboardData());
-                                }
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: accentColor.withOpacity(0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.bookmark_outline,
-                                        color: accentColor, size: 24),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'آخر ما قرأت في الداء والدواء',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14),
-                                          textAlign: TextAlign.right,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FutureBuilder(
-                                          future: AldaaWadawaaService()
-                                              .loadChapters()
-                                              .then((_) => AldaaWadawaaService()
-                                                  .getChapterById(appState
-                                                      .lastReadAldaaWadawaaChapterId)),
-                                          builder: (context, snapshot) {
-                                            if (snapshot.hasData &&
-                                                snapshot.data != null) {
-                                              final chap = snapshot.data
-                                                  as AldaaWadawaaChapter;
-                                              return Text(
-                                                'صفحة ${chap.page} - ${chap.title}',
-                                                style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: isDark
-                                                        ? Colors.grey[400]
-                                                        : Colors.grey[600]),
-                                                textAlign: TextAlign.right,
-                                              );
-                                            }
-                                            return const SizedBox();
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      final service = AldaaWadawaaService();
-                                      service.loadChapters().then((_) {
-                                        final chapter = service.getChapterById(
-                                            appState
-                                                .lastReadAldaaWadawaaChapterId);
-                                        if (chapter != null) {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  AldaaWadawaaDetailScreen(
-                                                chapter: chapter,
-                                              ),
-                                            ),
-                                          ).then((_) => _loadDashboardData());
-                                        }
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                    ),
-                                    child: const Text('تابع الآن',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-
-                      // Religious Stories progress restoration
-                      if (appState.lastReadReligiousStoryId > 0) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.03)
-                                : Colors.grey.withOpacity(0.03),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isDark
-                                  ? Colors.white10
-                                  : Colors.black.withOpacity(0.05),
-                              width: 1,
-                            ),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              final service = ReligiousStoriesService();
-                              service.loadStories().then((_) {
-                                final story = service.getStoryById(
-                                    appState.lastReadReligiousStoryId);
-                                if (story != null) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          ReligiousStoryDetailScreen(
-                                              story: story),
-                                    ),
-                                  ).then((_) => _loadDashboardData());
-                                }
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: accentColor.withOpacity(0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                        Icons.collections_bookmark_outlined,
-                                        color: accentColor,
-                                        size: 24),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'آخر ما قرأت في القصص الهادفة',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14),
-                                          textAlign: TextAlign.right,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FutureBuilder(
-                                          future: ReligiousStoriesService()
-                                              .loadStories()
-                                              .then((_) => ReligiousStoriesService()
-                                                  .getStoryById(appState
-                                                      .lastReadReligiousStoryId)),
-                                          builder: (context, snapshot) {
-                                            if (snapshot.hasData &&
-                                                snapshot.data != null) {
-                                              final story = snapshot.data
-                                                  as ReligiousStory;
-                                              return Text(
-                                                'قصة: ${story.title}',
-                                                style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: isDark
-                                                        ? Colors.grey[400]
-                                                        : Colors.grey[600]),
-                                                textAlign: TextAlign.right,
-                                              );
-                                            }
-                                            return const SizedBox();
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      final service = ReligiousStoriesService();
-                                      service.loadStories().then((_) {
-                                        final story = service.getStoryById(
-                                            appState.lastReadReligiousStoryId);
-                                        if (story != null) {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  ReligiousStoryDetailScreen(
-                                                      story: story),
-                                            ),
-                                          ).then((_) => _loadDashboardData());
-                                        }
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                    ),
-                                    child: const Text('تابع الآن',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                ),
-                const SizedBox(height: 24),
-
-                // 7. Khatma Plan
-                if (_khatmaPlans.isNotEmpty)
-                  _buildSectionCard(
-                    title: 'خطة الختمة الحالية',
-                    isDark: isDark,
-                    accentColor: accentColor,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: _khatmaPlans.map((khatma) {
-                        final total =
-                            khatma['endPage'] - khatma['startPage'] + 1;
-                        final current =
-                            khatma['currentPage'] - khatma['startPage'] + 1;
-                        final percent =
-                            total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '${(percent * 100).toInt()}%',
-                                  style: TextStyle(
-                                      color: accentColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16),
-                                ),
-                                Text(
-                                  khatma['title'] ?? 'ختمة القرآن الكبرى',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color:
-                                        isDark ? Colors.white : Colors.black87,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: LinearProgressIndicator(
-                                value: percent,
-                                backgroundColor: isDark
-                                    ? Colors.white.withOpacity(0.1)
-                                    : Colors.grey[200],
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(accentColor),
-                                minHeight: 10,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'الصفحة الحالية: ${khatma['currentPage']} من ${khatma['endPage']}',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600]),
-                              textAlign: TextAlign.right,
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  )
-                else
-                  _buildSectionCard(
-                    title: 'خطة الختمة',
-                    isDark: isDark,
-                    accentColor: accentColor,
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 8),
-                        Text(
-                          'لم تقم بإنشاء خطة ختمة قرآني بعد. أنشئ خطتك المخصصة لتتبع وردك اليومي ونسبة الإنجاز.',
-                          style: TextStyle(
-                              fontSize: 14,
-                              color:
-                                  isDark ? Colors.grey[300] : Colors.grey[700],
-                              height: 1.4),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                      const HifzKhatmaScreen()),
-                            ).then((_) => _loadDashboardData());
-                          },
-                          icon: const Icon(Icons.add, size: 20),
-                          label: const Text('إنشاء خطة ختمة جديدة',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                  color: accentColor.withOpacity(0.5),
-                                  width: 1),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  ),
-                const SizedBox(height: 24),
-
-                // 8. Bookmarks Card
-                if (_lastBookmark != null)
-                  _buildSectionCard(
-                    title: 'آخر العلامات المرجعية',
-                    isDark: isDark,
-                    accentColor: accentColor,
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.02)
-                            : Colors.grey.withOpacity(0.03),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? Colors.white12 : Colors.black12,
-                          width: 0.5,
-                        ),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: accentColor.withOpacity(0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.bookmark,
-                              color: accentColor, size: 24),
-                        ),
-                        title: Text(
-                          'سورة ${_lastBookmark!['surahName']} - الآية ${_lastBookmark!['ayah']}',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15),
-                          textAlign: TextAlign.right,
-                        ),
-                        subtitle: Text(
-                          'صفحة ${_lastBookmark!['page']} - ${_lastBookmark!['label']}',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color:
-                                  isDark ? Colors.grey[400] : Colors.grey[600]),
-                          textAlign: TextAlign.right,
-                        ),
-                        trailing: Icon(Icons.arrow_back_ios,
-                            size: 14, color: accentColor),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => QuranScreen(
-                                initialPage: _lastBookmark!['page'],
-                                initialSurah: _lastBookmark!['surah'],
-                              ),
-                            ),
-                          ).then((_) => _loadDashboardData());
-                        },
-                      ),
-                    ),
-                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  ),
-                const SizedBox(height: 100),
-              ],
+      backgroundColor: isDark ? _bgDark : _bgLight,
+      floatingActionButton: _buildFab(isDark),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      body: SafeArea(
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  _FadeSlide(ctrl: _animCtrl, delay: 0.0,
+                      child: _buildHeroZone(isDark)),
+                  const SizedBox(height: 20),
+                  _FadeSlide(ctrl: _animCtrl, delay: 0.12,
+                      child: _buildContinueRow(appState, isDark)),
+                  const SizedBox(height: 20),
+                  _FadeSlide(ctrl: _animCtrl, delay: 0.18,
+                      child: _buildRemindersCard(isDark)),
+                  const SizedBox(height: 20),
+                  _FadeSlide(ctrl: _animCtrl, delay: 0.22,
+                      child: _buildAyahCard(isDark)),
+                  const SizedBox(height: 14),
+                  if (_hadithOfDay != null)
+                    _FadeSlide(ctrl: _animCtrl, delay: 0.30,
+                        child: _buildHadithCard(isDark)),
+                  if (_hadithOfDay != null) const SizedBox(height: 14),
+                  _FadeSlide(ctrl: _animCtrl, delay: 0.38,
+                      child: _buildQuickGrid(isDark)),
+                  const SizedBox(height: 14),
+                  _FadeSlide(ctrl: _animCtrl, delay: 0.45,
+                      child: _buildMoreRow(isDark)),
+                  const SizedBox(height: 14),
+                  if (_khatmaPlans.isNotEmpty)
+                    _FadeSlide(ctrl: _animCtrl, delay: 0.50,
+                        child: _buildKhatmaCard(isDark)),
+                  if (_khatmaPlans.isNotEmpty) const SizedBox(height: 14),
+                  if (_companionOfDay != null)
+                    _FadeSlide(ctrl: _animCtrl, delay: 0.55,
+                        child: _buildCompanionCard(isDark)),
+                  if (_companionOfDay != null) const SizedBox(height: 14),
+                  _FadeSlide(ctrl: _animCtrl, delay: 0.60,
+                      child: _buildBlessingCard(isDark)),
+                  const SizedBox(height: 100),
+                ]),
+              ),
             ),
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => const ProphetBlessingScreen()),
-          ).then((_) => _loadDashboardData());
-        },
-        backgroundColor: accentColor,
-        foregroundColor: Colors.white,
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: const Text(
-          'ﷺ',
-          style: TextStyle(
-              fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Amiri'),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildGridItem(
-    BuildContext context,
-    String title,
-    dynamic icon,
-    VoidCallback onTap,
-    bool isDark,
-  ) {
-    const primaryColor = Color(0xFF0F5A47);
-    const accentColor = Color(0xFFD4AF37);
+  // ═══════════════════════════════════════════════════════
+  //  FAB — مليونية الصلاة
+  // ═══════════════════════════════════════════════════════
+  Widget _buildFab(bool isDark) {
+    return FloatingActionButton.extended(
+      heroTag: 'home_fab',
+      onPressed: () => _pushScreen(const ProphetBlessingScreen()),
+      backgroundColor: _accent,
+      foregroundColor: Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      label: Row(
+        children: [
+          Text('ﷺ',
+              style: GoogleFonts.amiri(
+                  fontSize: 18, fontWeight: FontWeight.bold,
+                  color: Colors.white)),
+          const SizedBox(width: 6),
+          const Text('صلِّ على النبي',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
 
-    Widget iconWidget;
-    if (icon is IconData) {
-      iconWidget = Icon(
-        icon,
-        size: 28,
-        color: isDark ? accentColor : primaryColor,
-      );
-    } else {
-      iconWidget = Text(
-        icon.toString(),
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.bold,
-          color: isDark ? accentColor : primaryColor,
+  // ═══════════════════════════════════════════════════════
+  //  HERO ZONE — الصلاة القادمة والعد التنازلي
+  // ═══════════════════════════════════════════════════════
+  Widget _buildHeroZone(bool isDark) {
+    final pp = Provider.of<PrayerProvider>(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: isDark
+              ? [const Color(0xFF0D3D30), const Color(0xFF071F19)]
+              : [_primary, const Color(0xFF073A2F)],
         ),
-      );
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: _primary.withOpacity(0.4),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Decorative circle
+          Positioned(
+            left: -30,
+            top: -30,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.03),
+              ),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Top row: greeting + settings ──
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, '/settings'),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.settings_outlined,
+                          color: Colors.white70, size: 18),
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _greeting,
+                        style: GoogleFonts.amiri(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        _arabicDate,
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              // ── Center: countdown ──
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      _timeUntilNextPrayer,
+                      style: GoogleFonts.outfit(
+                        fontSize: 52,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 3,
+                        height: 1,
+                      ),
+                      textDirection: TextDirection.ltr,
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: _accent.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: _accent.withOpacity(0.4), width: 1),
+                      ),
+                      child: Text(
+                        'الصلاة القادمة • $_nextPrayerName',
+                        style: GoogleFonts.amiri(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // ── Bottom row: city + link ──
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => widget.onTabChanged(4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.schedule_rounded,
+                              color: Colors.white70, size: 13),
+                          SizedBox(width: 5),
+                          Text('عرض المواقيت',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        pp.currentCity.nameArabic,
+                        style: const TextStyle(
+                            color: Colors.white60, fontSize: 12),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.location_on_outlined,
+                          color: Colors.white38, size: 13),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  CONTINUE ROW — تابع رحلتك
+  // ═══════════════════════════════════════════════════════
+  Widget _buildContinueRow(AppState appState, bool isDark) {
+    final readPage = appState.lastPageRead;
+    final readSurah = appState.lastSurahRead.clamp(1, 114);
+    final audioSurah = appState.lastAudioSurah.clamp(1, 114);
+    final hasAudio = appState.lastAudioPositionMs > 0;
+    final hasKhatma = _khatmaPlans.isNotEmpty;
+
+    final cards = <Widget>[
+      // ── قرآن ──
+      _ContinueCard(
+        icon: Icons.menu_book_rounded,
+        iconColor: _primary,
+        title: readPage > 1 ? 'أكمل القراءة' : 'ابدأ القراءة',
+        subtitle:
+            'سورة ${_safeArabicSurahName(readSurah)} • ص${readPage}',
+        actionLabel: 'اقرأ',
+        isDark: isDark,
+        onTap: () => _pushScreen(QuranScreen(
+            initialPage: readPage, initialSurah: readSurah)),
+      ),
+    ];
+
+    // ── تلاوة صوتية ──
+    if (hasAudio) {
+      cards.add(_ContinueCard(
+        icon: Icons.play_circle_outline_rounded,
+        iconColor: const Color(0xFF1565C0),
+        title: 'أكمل الاستماع',
+        subtitle:
+            'سورة ${_safeArabicSurahName(audioSurah)} • ${appState.lastAudioReciter}',
+        actionLabel: 'استمع',
+        isDark: isDark,
+        onTap: () => _pushScreen(QuranScreen(
+          initialPage: quran
+              .getPageNumber(audioSurah, appState.lastAudioAyah.clamp(1, 286)),
+          initialSurah: audioSurah,
+          autoPlay: true,
+        )),
+      ));
     }
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+    // ── ختمة ──
+    if (hasKhatma) {
+      final k = _khatmaPlans.first;
+      final total = (k['endPage'] as int) - (k['startPage'] as int) + 1;
+      final current =
+          (k['currentPage'] as int) - (k['startPage'] as int) + 1;
+      final pct = total > 0 ? (current / total * 100).toInt() : 0;
+      cards.add(_ContinueCard(
+        icon: Icons.auto_graph_rounded,
+        iconColor: _accent,
+        title: 'خطة الختمة',
+        subtitle: '$pct% منجز • ص${k['currentPage']}',
+        actionLabel: 'تفاصيل',
+        isDark: isDark,
+        onTap: () => _pushScreen(const HifzKhatmaScreen()),
+      ));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(right: 4, bottom: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () => widget.onTabChanged(0),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text('فتح المصحف ←',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? _accent : _primary,
+                        fontWeight: FontWeight.w600)),
+              ),
+              Text(
+                'تابع رحلتك',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 112,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            reverse: false,
+            padding: const EdgeInsets.only(right: 4),
+            itemCount: cards.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (_, i) => cards[i],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  AYAH CARD — آية اليوم
+  // ═══════════════════════════════════════════════════════
+  Widget _buildAyahCard(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF132820) : const Color(0xFFE8F4EE),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF1D3F30)
+              : const Color(0xFFC6E0D0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // عنوان
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 4,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: _accent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'آية اليوم',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white54 : Colors.black45,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // نص الآية
+          Text(
+            '﴿ $_ayahText ﴾',
+            style: GoogleFonts.amiri(
+              fontSize: 21,
+              fontWeight: FontWeight.bold,
+              color: isDark ? const Color(0xFFD4E8DA) : _primary,
+              height: 1.9,
+            ),
+            textAlign: TextAlign.center,
+            textDirection: TextDirection.rtl,
+          ),
+          const SizedBox(height: 10),
+          // مرجع
+          Center(
+            child: Text(
+              _ayahRef,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white38 : Colors.black38,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  HADITH CARD — حديث اليوم
+  // ═══════════════════════════════════════════════════════
+  Widget _buildHadithCard(bool isDark) {
+    final h = _hadithOfDay!;
+    return GestureDetector(
+      onTap: () => _pushScreen(const HadithLibraryScreen()),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: isDark ? const Color(0xFF13202E) : const Color(0xFFE8EFF8),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isDark
-                ? Colors.white.withOpacity(0.08)
-                : primaryColor.withOpacity(0.08),
-            width: 1.2,
+                ? const Color(0xFF1C3048)
+                : const Color(0xFFBDD0EA),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Icon(Icons.arrow_back_ios_new_rounded,
+                    size: 13, color: Color(0xFF1565C0)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1565C0).withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'حديث اليوم',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white54 : Colors.black45,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '« ${h.text} »',
+              style: GoogleFonts.amiri(
+                fontSize: 15,
+                height: 1.75,
+                color: isDark ? Colors.white.withOpacity(0.87) : Colors.black87,
+              ),
+              textAlign: TextAlign.right,
+              textDirection: TextDirection.rtl,
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'رواه ${h.source}',
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.white38 : Colors.black38,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.left,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  QUICK ACCESS GRID 4×2 — وصول سريع
+  // ═══════════════════════════════════════════════════════
+  Widget _buildQuickGrid(bool isDark) {
+    final items = [
+      _GItem('القرآن', Icons.menu_book_rounded,
+          const Color(0xFF0F5A47), () => widget.onTabChanged(0)),
+      _GItem('الأذكار', Icons.wb_sunny_rounded,
+          const Color(0xFF1565C0), () => widget.onTabChanged(1)),
+      _GItem('المواقيت', Icons.mosque_rounded,
+          const Color(0xFF6A1B9A), () => widget.onTabChanged(4)),
+      _GItem('التسبيح', Icons.fingerprint_rounded,
+          const Color(0xFF00838F), () => widget.onTabChanged(3)),
+      _GItem('الأحاديث', Icons.auto_stories_rounded,
+          const Color(0xFFBF360C),
+          () => _pushScreen(const HadithLibraryScreen())),
+      _GItem('الأنبياء', Icons.stars_rounded,
+          const Color(0xFF558B2F),
+          () => _pushScreen(const ProphetsStoriesScreen())),
+      _GItem('السيرة', Icons.history_edu_rounded,
+          const Color(0xFF4527A0),
+          () => _pushScreen(const SeerahScreen())),
+      _GItem('رفيق AI', Icons.auto_awesome_rounded,
+          const Color(0xFF8B2FC9),
+          () => _pushScreen(const AiChatScreen())),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(right: 4, bottom: 12),
+          child: Text(
+            'وصول سريع',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+        ),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 4,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.88,
+          children: items.map((item) => _QuickGridItem(item: item, isDark: isDark)).toList(),
+        ),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  MORE ROW — اكتشف المزيد
+  // ═══════════════════════════════════════════════════════
+  Widget _buildMoreRow(bool isDark) {
+    final chips = [
+      _MItem('الصحابة', Icons.group_rounded,
+          () => _pushScreen(const CompanionsListScreen())),
+      _MItem('القصص الهادفة', Icons.collections_bookmark_rounded,
+          () => _pushScreen(const ReligiousStoriesListScreen())),
+      _MItem('الداء والدواء', Icons.healing_rounded,
+          () => _pushScreen(const AldaaWadawaaScreen())),
+      _MItem('القبلة', Icons.explore_rounded,
+          () => _pushScreen(const QiblaCompassScreen())),
+      _MItem('حفظ وختمة', Icons.assignment_turned_in_rounded,
+          () => _pushScreen(const HifzKhatmaScreen())),
+      _MItem('حساب ومزامنة', Icons.cloud_sync_rounded,
+          () => _pushScreen(const AuthScreen())),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(right: 4, bottom: 10),
+          child: Text(
+            'اكتشف المزيد',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white38 : Colors.black38,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 40,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            reverse: false,
+            padding: const EdgeInsets.only(right: 4),
+            itemCount: chips.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) {
+              final c = chips[i];
+              return GestureDetector(
+                onTap: c.onTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 0),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1A2A26)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.08)
+                          : Colors.grey.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(c.icon,
+                          size: 13,
+                          color: isDark ? Colors.white54 : Colors.grey[600]),
+                      const SizedBox(width: 5),
+                      Text(
+                        c.label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white70 : Colors.grey[700],
+                          fontFamily: 'Amiri',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  KHATMA CARD — تقدم الختمة
+  // ═══════════════════════════════════════════════════════
+  Widget _buildKhatmaCard(bool isDark) {
+    final k = _khatmaPlans.first;
+    final total = (k['endPage'] as int) - (k['startPage'] as int) + 1;
+    final current =
+        (k['currentPage'] as int) - (k['startPage'] as int) + 1;
+    final pct = total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
+
+    return GestureDetector(
+      onTap: () => _pushScreen(const HifzKhatmaScreen()),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1A1F14) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark
+                ? _accent.withOpacity(0.15)
+                : _accent.withOpacity(0.25),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.03),
-              blurRadius: 8,
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+              blurRadius: 10,
               offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: iconWidget,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${(pct * 100).toInt()}%',
+                  style: GoogleFonts.outfit(
+                    color: _accent,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22,
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: _accent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      k['title'] ?? 'خطة الختمة',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: pct),
+                duration: const Duration(milliseconds: 1400),
+                curve: Curves.easeOut,
+                builder: (_, v, __) => LinearProgressIndicator(
+                  value: v,
+                  backgroundColor: isDark
+                      ? Colors.white.withOpacity(0.08)
+                      : Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(_accent),
+                  minHeight: 10,
                 ),
               ),
             ),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Amiri',
-                  color: isDark ? Colors.amber[100] : primaryColor,
-                ),
-                textAlign: TextAlign.center,
+            const SizedBox(height: 8),
+            Text(
+              'الصفحة ${k['currentPage']} من ${k['endPage']}',
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.white38 : Colors.black38,
               ),
             ),
           ],
@@ -2054,69 +980,723 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSectionCard({
-    required String title,
-    required Widget child,
-    required Color color,
-    required bool isDark,
-    required Color accentColor,
-  }) {
+  // ═══════════════════════════════════════════════════════
+  //  COMPANION CARD — صحابي اليوم
+  // ═══════════════════════════════════════════════════════
+  Widget _buildCompanionCard(bool isDark) {
+    final c = _companionOfDay!;
+    final bioText = c.virtues.isNotEmpty ? c.virtues : c.moments;
+    final shortBio =
+        bioText.length > 200 ? '${bioText.substring(0, 200)}...' : bioText;
+
+    return GestureDetector(
+      onTap: () => _pushScreen(const CompanionsListScreen()),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1A2215) : const Color(0xFFF2F9EB),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark
+                ? const Color(0xFF283D1C)
+                : const Color(0xFFC8DFB2),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Icon(Icons.arrow_back_ios_new_rounded,
+                    size: 13, color: Color(0xFF558B2F)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF558B2F),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'صحابي اليوم',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white54 : Colors.black45,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              c.name,
+              style: GoogleFonts.amiri(
+                fontSize: 19,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? const Color(0xFF9CCC65)
+                    : const Color(0xFF33691E),
+              ),
+              textAlign: TextAlign.right,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              shortBio,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.65,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+              textAlign: TextAlign.right,
+              textDirection: TextDirection.rtl,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  BLESSING CARD — مليونية الصلاة على النبي ﷺ
+  // ═══════════════════════════════════════════════════════
+  Widget _buildBlessingCard(bool isDark) {
+    return Consumer<ProphetBlessingService>(
+      builder: (_, svc, __) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: isDark
+                  ? [const Color(0xFF2A1F00), const Color(0xFF1A1200)]
+                  : [const Color(0xFFFFF8E1), const Color(0xFFFEF3CC)],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _accent.withOpacity(isDark ? 0.25 : 0.35),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _accent.withOpacity(0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // عنوان
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => _pushScreen(const ProphetBlessingScreen()),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _accent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text('شارك الآن',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  Text(
+                    'مليونية الصلاة على النبي ﷺ',
+                    style: GoogleFonts.amiri(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? _accent : const Color(0xFF6D4C00),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              // العدادات
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _BlessingCount(
+                    label: 'عالمياً',
+                    value: _formatCount(svc.globalCount),
+                    isDark: isDark,
+                  ),
+                  Container(
+                    width: 1,
+                    height: 44,
+                    color: _accent.withOpacity(0.3),
+                  ),
+                  _BlessingCount(
+                    label: 'صلواتك اليوم',
+                    value: '${svc.personalCount}',
+                    isDark: isDark,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  REMINDERS CARD — التذكيرات اليومية المهمة
+  // ═══════════════════════════════════════════════════════
+  Widget _buildRemindersCard(bool isDark) {
+    // Dynamic zekr based on hour
+    final hour = DateTime.now().hour;
+    String zekrCategory = 'أذكار الصباح';
+    String zekrTitle = 'أذكار الصباح ☀️';
+    String zekrSubtitle = 'هل تحصّنت اليوم؟ اقرأ أذكار الصباح لنور وبركة يومك.';
+    IconData zekrIcon = Icons.wb_sunny_rounded;
+    Color zekrColor = Colors.orange;
+
+    if (hour >= 12 && hour < 17) {
+      zekrCategory = 'أذكار المساء';
+      zekrTitle = 'أذكار المساء 🌅';
+      zekrSubtitle = 'أقبل المساء؛ حصّن نفسك بذكر الله الحكيم.';
+      zekrIcon = Icons.wb_twilight_rounded;
+      zekrColor = const Color(0xFFE65100);
+    } else if (hour >= 17 || hour < 5) {
+      zekrCategory = 'أذكار النوم والاستيقاظ';
+      zekrTitle = 'أذكار النوم 🌙';
+      zekrSubtitle = 'لا تنسَ أذكار النوم لتبيت في حفظ الله ورعايته.';
+      zekrIcon = Icons.nightlight_round;
+      zekrColor = const Color(0xFF7E57C2);
+    }
+
+    final hasKhatma = _khatmaPlans.isNotEmpty;
+    final k = hasKhatma ? _khatmaPlans.first : null;
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
+        color: isDark ? const Color(0xFF161E1B) : Colors.white,
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: isDark
-              ? Colors.white.withOpacity(0.05)
-              : Colors.black.withOpacity(0.04),
-          width: 1,
+              ? Colors.white.withOpacity(0.08)
+              : _primary.withOpacity(0.08),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withOpacity(isDark ? 0.25 : 0.04),
             blurRadius: 12,
-            offset: const Offset(0, 4),
-          )
+            offset: const Offset(0, 5),
+          ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white70 : Colors.black54,
-                  ),
-                  textAlign: TextAlign.right,
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: _accent.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.notifications_active_rounded,
+                  color: _accent,
+                  size: 16,
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                width: 6,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  borderRadius: BorderRadius.circular(3),
+              Text(
+                'التذكيرات اليومية المهمة',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Divider(
-            height: 16,
-            thickness: 0.5,
-            color: isDark ? Colors.white10 : Colors.black12,
+          const SizedBox(height: 16),
+
+          // 1. Zekr reminder tile
+          _buildReminderTile(
+            icon: zekrIcon,
+            iconBg: zekrColor.withOpacity(0.1),
+            iconColor: zekrColor,
+            title: zekrTitle,
+            subtitle: zekrSubtitle,
+            actionLabel: 'ابدأ الآن',
+            isDark: isDark,
+            onTap: () {
+              Provider.of<AdhkarProvider>(context, listen: false)
+                  .setCategory(zekrCategory);
+              widget.onTabChanged(1); // Go to Adhkar tab
+            },
           ),
-          child,
+
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Divider(height: 1, thickness: 0.5, color: Colors.black12),
+          ),
+
+          // 2. Khatma daily progress reminder
+          _buildReminderTile(
+            icon: Icons.menu_book_rounded,
+            iconBg: _primary.withOpacity(0.1),
+            iconColor: _primary,
+            title: 'وردك اليومي',
+            subtitle: hasKhatma
+                ? 'تابع قراءة وردك القرآني اليوم: من صفحة ${k!['currentPage']} إلى ${k['endPage']}.'
+                : 'لم تقم بإنشاء خطة ختمة بعد. ابدأ الآن ونظّم قراءتك اليومية.',
+            actionLabel: hasKhatma ? 'اقرأ' : 'أنشئ خطة',
+            isDark: isDark,
+            onTap: () {
+              if (hasKhatma) {
+                // Open Quran reader on the page
+                final page = k!['currentPage'] as int;
+                final surah = (quran.getPageData(page).first['surah'] as int).clamp(1, 114);
+                _pushScreen(QuranScreen(initialPage: page, initialSurah: surah));
+              } else {
+                // Open Khatma screen
+                _pushScreen(const HifzKhatmaScreen());
+              }
+            },
+          ),
+
+          if (_dailyDhikrTip != null) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Divider(height: 1, thickness: 0.5, color: Colors.black12),
+            ),
+            // 3. Daily Dhikr Tip
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A2622) : const Color(0xFFF4F7F5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark
+                      ? _primary.withOpacity(0.1)
+                      : _primary.withOpacity(0.05),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: _accent, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        'ذكر اليوم وتوصية روحيّة',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? _accent : const Color(0xFF6D4C00),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _dailyDhikrTip!,
+                    style: GoogleFonts.amiri(
+                      fontSize: 13,
+                      height: 1.6,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                    textDirection: TextDirection.rtl,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildReminderTile({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required String actionLabel,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: iconBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: iconColor, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.4,
+                  color: isDark ? Colors.white54 : Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        TextButton(
+          onPressed: onTap,
+          style: TextButton.styleFrom(
+            backgroundColor: iconColor.withOpacity(0.08),
+            foregroundColor: iconColor,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: Text(
+            actionLabel,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Data models
+// ═══════════════════════════════════════════════════════════
+class _GItem {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _GItem(this.label, this.icon, this.color, this.onTap);
+}
+
+class _MItem {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  const _MItem(this.label, this.icon, this.onTap);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  _QuickGridItem
+// ═══════════════════════════════════════════════════════════
+class _QuickGridItem extends StatefulWidget {
+  final _GItem item;
+  final bool isDark;
+  const _QuickGridItem({required this.item, required this.isDark});
+
+  @override
+  State<_QuickGridItem> createState() => _QuickGridItemState();
+}
+
+class _QuickGridItemState extends State<_QuickGridItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pressCtrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 120));
+    _scale = Tween<double>(begin: 1.0, end: 0.93)
+        .animate(CurvedAnimation(parent: _pressCtrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _pressCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    final isDark = widget.isDark;
+
+    return GestureDetector(
+      onTapDown: (_) => _pressCtrl.forward(),
+      onTapUp: (_) {
+        _pressCtrl.reverse();
+        item.onTap();
+      },
+      onTapCancel: () => _pressCtrl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF182420) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark
+                  ? item.color.withOpacity(0.15)
+                  : item.color.withOpacity(0.12),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: item.color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(item.icon, size: 23, color: item.color),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                item.label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white.withOpacity(0.87) : Colors.black87,
+                  fontFamily: 'Amiri',
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  _ContinueCard
+// ═══════════════════════════════════════════════════════════
+class _ContinueCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ContinueCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 175,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF182420) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDark
+                ? iconColor.withOpacity(0.15)
+                : iconColor.withOpacity(0.15),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.18 : 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // action button
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    actionLabel,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: iconColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                // icon circle
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, size: 18, color: iconColor),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              textAlign: TextAlign.right,
+            ),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 10,
+                height: 1.4,
+                color: isDark ? Colors.white38 : Colors.black38,
+              ),
+              textAlign: TextAlign.right,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  _BlessingCount
+// ═══════════════════════════════════════════════════════════
+class _BlessingCount extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isDark;
+  const _BlessingCount(
+      {required this.label, required this.value, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.outfit(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: isDark ? const Color(0xFFD4AF37) : const Color(0xFF6D4C00),
+          ),
+          textDirection: TextDirection.ltr,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: isDark ? Colors.white38 : Colors.black38,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  _FadeSlide — Staggered animation wrapper
+// ═══════════════════════════════════════════════════════════
+class _FadeSlide extends StatelessWidget {
+  final AnimationController ctrl;
+  final double delay; // 0.0 → 1.0
+  final Widget child;
+
+  const _FadeSlide({
+    required this.ctrl,
+    required this.delay,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final end = (delay + 0.38).clamp(0.0, 1.0);
+
+    final fade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: ctrl,
+        curve: Interval(delay, end, curve: Curves.easeOut),
+      ),
+    );
+    final slide = Tween<Offset>(
+      begin: const Offset(0, 0.12),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: ctrl,
+        curve: Interval(delay, end, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    return FadeTransition(
+      opacity: fade,
+      child: SlideTransition(position: slide, child: child),
     );
   }
 }
