@@ -1,6 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rafiq_quran/core/services/notification_service.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+class MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  @override
+  Future<String?> getTemporaryPath() async => '.';
+  @override
+  Future<String?> getApplicationSupportPath() async => '.';
+  @override
+  Future<String?> getLibraryPath() async => '.';
+  @override
+  Future<String?> getApplicationDocumentsPath() async => '.';
+  @override
+  Future<String?> getExternalStoragePath() async => '.';
+  @override
+  Future<List<String>?> getExternalCachePaths() async => ['.'];
+  @override
+  Future<List<String>?> getExternalStoragePaths({StorageDirectory? type}) async => ['.'];
+  @override
+  Future<String?> getDownloadsPath() async => '.';
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -9,6 +31,8 @@ void main() {
   const MethodChannel notificationsChannel = MethodChannel('dexterous.com/flutter/local_notifications');
 
   setUp(() {
+    PathProviderPlatform.instance = MockPathProviderPlatform();
+
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
       if (methodCall.method == 'getLocalTimezone') {
@@ -21,6 +45,12 @@ void main() {
         .setMockMethodCallHandler(notificationsChannel, (MethodCall methodCall) async {
       return null;
     });
+
+    const MethodChannel pathChannel = MethodChannel('plugins.flutter.io/path_provider');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(pathChannel, (MethodCall methodCall) async {
+      return '.';
+    });
   });
 
   tearDown(() {
@@ -28,6 +58,9 @@ void main() {
         .setMockMethodCallHandler(channel, null);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(notificationsChannel, null);
+    const MethodChannel pathChannel = MethodChannel('plugins.flutter.io/path_provider');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(pathChannel, null);
   });
 
   test('NotificationService initialization and scheduling test', () async {

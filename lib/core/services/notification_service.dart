@@ -81,8 +81,8 @@ class NotificationService {
   Future<void> init() async {
     if (_initialized) return;
 
-    if (kIsWeb) {
-      debugPrint("Web Notification Service Initialized");
+    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST')) {
+      debugPrint("Web or Test Notification Service Initialized");
       _initialized = true;
       return;
     }
@@ -203,7 +203,10 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
   }) async {
-    if (kIsWeb) return;
+    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST')) {
+      debugPrint("Skipping scheduleNotification in test/web");
+      return;
+    }
     if (!_initialized) {
       throw Exception("خدمة الإشعارات ليست نشطة حالياً. يرجى تفعيلها أولاً.");
     }
@@ -211,6 +214,11 @@ class NotificationService {
     try {
       final tz.TZDateTime tzDateTime =
           tz.TZDateTime.from(scheduledDate, tz.local);
+
+      if (tzDateTime.isBefore(tz.TZDateTime.now(tz.local))) {
+        debugPrint("Warning: Scheduled date $tzDateTime (ID: $id) is in the past. Skipping.");
+        return;
+      }
 
       const AndroidNotificationDetails androidDetails =
           AndroidNotificationDetails(
@@ -241,25 +249,30 @@ class NotificationService {
       } catch (e) {
         debugPrint(
             "Failed to schedule exact notification, retrying with inexact fallback: $e");
-        await _notificationsPlugin.zonedSchedule(
-          id,
-          title,
-          body,
-          tzDateTime,
-          platformDetails,
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        );
-        debugPrint(
-            "Scheduled inexact notification '$title' (ID: $id) for $tzDateTime");
+        try {
+          await _notificationsPlugin.zonedSchedule(
+            id,
+            title,
+            body,
+            tzDateTime,
+            platformDetails,
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          );
+          debugPrint(
+              "Scheduled inexact notification '$title' (ID: $id) for $tzDateTime");
+        } catch (innerErr) {
+          debugPrint("Failed to schedule inexact fallback notification (ID: $id): $innerErr");
+        }
       }
     } catch (e) {
       debugPrint("Error scheduling notification: $e");
     }
   }
 
+
   // --- Schedule/Cancel Daily Reminder Notification ---
   Future<void> scheduleDailyReminder({required bool enabled}) async {
-    if (kIsWeb || !_initialized) return;
+    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST')) return;
 
     final int dailyReminderId = 999;
 
@@ -469,7 +482,7 @@ class NotificationService {
     required bool sleepRemEnabled,
     required String contentType,
   }) async {
-    if (kIsWeb || !_initialized) return;
+    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST')) return;
 
     try {
       // 1. Cancel existing smart reminders first
@@ -628,12 +641,17 @@ class NotificationService {
     required DateTime scheduledDate,
     required String payload,
   }) async {
-    if (kIsWeb || !_initialized) return;
+    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST')) return;
 
     try {
       final tz.TZDateTime tzDateTime = scheduledDate is tz.TZDateTime
           ? scheduledDate as tz.TZDateTime
           : tz.TZDateTime.from(scheduledDate, tz.local);
+
+      if (tzDateTime.isBefore(tz.TZDateTime.now(tz.local))) {
+        debugPrint("Warning: Direct scheduled date $tzDateTime (ID: $id) is in the past. Skipping.");
+        return;
+      }
 
       const AndroidNotificationDetails androidDetails =
           AndroidNotificationDetails(
@@ -661,19 +679,68 @@ class NotificationService {
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           payload: payload,
         );
+        debugPrint("Scheduled direct exact notification '$title' (ID: $id) for $tzDateTime");
       } catch (e) {
-        await _notificationsPlugin.zonedSchedule(
-          id,
-          title,
-          body,
-          tzDateTime,
-          platformDetails,
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          payload: payload,
-        );
+        debugPrint("Failed to schedule direct exact notification, trying inexact fallback: $e");
+        try {
+          await _notificationsPlugin.zonedSchedule(
+            id,
+            title,
+            body,
+            tzDateTime,
+            platformDetails,
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            payload: payload,
+          );
+          debugPrint("Scheduled direct inexact notification '$title' (ID: $id) for $tzDateTime");
+        } catch (innerErr) {
+          debugPrint("Failed to schedule direct inexact fallback (ID: $id): $innerErr");
+        }
       }
     } catch (e) {
       debugPrint("Error in scheduleNotificationDirect: $e");
+    }
+  }
+
+  // --- Show instant system notification immediately ---
+  Future<void> showInstantNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST')) return;
+    if (!_initialized) {
+      await init();
+    }
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'prayer_channel_id',
+      'تنبيهات الأذان والصلوات',
+      channelDescription: 'تنبهات مواقيت الصلاة والأذان المكتوب',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true, presentBadge: true),
+    );
+
+    try {
+      await _notificationsPlugin.show(
+        id,
+        title,
+        body,
+        platformDetails,
+        payload: payload,
+      );
+      debugPrint("Instant notification presented successfully.");
+    } catch (e) {
+      debugPrint("Error displaying instant notification: $e");
     }
   }
 

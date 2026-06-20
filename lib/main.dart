@@ -7,8 +7,10 @@ import 'package:workmanager/workmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'core/services/app_state.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/fcm_service.dart';
 import 'core/services/prophet_blessing_service.dart';
 import 'core/services/periodic_notification_helper.dart';
 import 'core/services/prayer_service.dart';
@@ -122,6 +124,15 @@ void callbackDispatcher() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // تهيئة Firebase و FCM بشكل آمن يمنع الانهيار
+  try {
+    await Firebase.initializeApp();
+    debugPrint("Firebase initialized successfully.");
+    await FcmService().init();
+  } catch (e) {
+    debugPrint("Firebase/FCM initialization bypassed (missing config): $e");
+  }
   
   // تهيئة خدمة الإشعارات — ضرورية لعمل جميع التنبيهات
   try {

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../core/services/app_state.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/services/fcm_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -526,7 +528,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               child: ListTile(
                 leading: Icon(Icons.playlist_add_check, color: accentColor),
-                title: const Text('إرسال إشعار تجريبي (مؤقت بعد 5 ثوانٍ)',
+                title: const Text('إرسال إشعار تجريبي فوري',
                     textAlign: TextAlign.right),
                 subtitle: const Text(
                   'اضغط هنا لاختبار وصول الإشعارات وسماع صوت التنبيه فوراً',
@@ -542,22 +544,19 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                       throw Exception("صلاحية الإشعارات معطلة في النظام. يرجى تفعيلها أولاً.");
                     }
 
-                    // Schedule a notification to run 5 seconds from now
-                    final testTime =
-                        DateTime.now().add(const Duration(seconds: 5));
-                    await NotificationService().scheduleNotification(
+                    // Show notification instantly (0 seconds delay)
+                    await NotificationService().showInstantNotification(
                       id: 888,
-                      title: '🔔 إشعار تجريبي من رفيق القرآن',
+                      title: '🔔 إشعار تجريبي فوري من رفيق القرآن',
                       body:
                           'رائع! خدمة التنبيهات والأصوات تعمل بشكل صحيح وسليم على جهازك 🕌',
-                      scheduledDate: testTime,
                     );
 
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                              'تمت جدولة إشعار تجريبي بنجاح! سيصلك خلال 5 ثوانٍ...',
+                              'تم إرسال إشعار تجريبي فوري بنجاح!',
                               textAlign: TextAlign.right),
                           backgroundColor: Colors.teal,
                         ),
@@ -576,6 +575,110 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                     }
                   }
                 },
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // FCM Token & Status Card
+            Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'خدمة الإشعارات السحابية (FCM)',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: FcmService().isInitialized
+                                          ? Colors.green
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    FcmService().isInitialized
+                                        ? 'نشط ومتصل بـ Firebase'
+                                        : 'غير نشط (لم يتم تهيئة Firebase)',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: FcmService().isInitialized
+                                          ? Colors.green
+                                          : Colors.grey,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.cloud_sync_outlined, color: accentColor),
+                      ],
+                    ),
+                    if (FcmService().isInitialized && FcmService().fcmToken != null) ...[
+                      const Divider(height: 20),
+                      const Text(
+                        'رمز تسجيل الجهاز (FCM Token):',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.black26 : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[350]!),
+                              ),
+                              child: SelectableText(
+                                FcmService().fcmToken!,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontFamily: 'monospace',
+                                ),
+                                maxLines: 1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.copy, size: 18),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: FcmService().fcmToken!));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('تم نسخ رمز FCM Token للحافظة بنجاح', textAlign: TextAlign.right),
+                                  backgroundColor: Colors.teal,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -1514,7 +1617,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   }
 
   Widget _buildStatusBadge(String status, bool isDark) {
-    Color badgeColor;
+    MaterialColor badgeColor;
     String badgeText;
     IconData icon;
 

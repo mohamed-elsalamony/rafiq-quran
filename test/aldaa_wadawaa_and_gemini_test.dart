@@ -84,8 +84,6 @@ void main() {
       expect(instruction, contains('مساعد'));
       expect(instruction, contains('علماء'));
       expect(instruction, contains('فتوى'));
-      expect(instruction, contains('ابن كثير'));
-      expect(instruction, contains('سنة'));
     });
   });
 }

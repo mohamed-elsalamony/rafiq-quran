@@ -40,7 +40,6 @@ dependencies:
   quran: ^1.4.1
   adhan: any
   shared_preferences: any
-  google_generative_ai: any
   geolocator: any
   audioplayers: any
   google_fonts: ^8.1.0
@@ -53,6 +52,8 @@ dependencies:
   timezone: any
   flutter_timezone: ^5.1.0
   home_widget: ^0.9.3
+  firebase_core: ^2.31.1
+  firebase_messaging: ^14.9.4
 
 dev_dependencies:
   flutter_test:
