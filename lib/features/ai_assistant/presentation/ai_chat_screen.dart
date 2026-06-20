@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/services/app_state.dart';
 import '../../../core/services/gemini_service.dart';
+import '../../settings/presentation/settings_screen.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -73,8 +74,9 @@ class _AiChatScreenState extends State<AiChatScreen>
     _messageController.clear();
     _scrollToBottom();
 
+    final appState = Provider.of<AppState>(context, listen: false);
     try {
-      await GeminiService().sendMessage(trimmed);
+      await GeminiService().sendMessage(trimmed, appState);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -121,21 +123,33 @@ class _AiChatScreenState extends State<AiChatScreen>
       backgroundColor: isDark ? const Color(0xFF1F1F1F) : _primaryColor,
       foregroundColor: Colors.white,
       elevation: 0,
-      title: Row(
+      title: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
-          ),
-          const SizedBox(width: 8),
           const Text(
             'رفيق - المساعد الإسلامي',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          Consumer<AppState>(
+            builder: (context, appState, _) {
+              Color statusColor = Colors.orange[200]!;
+              String statusText = 'وضع قاعدة البيانات المحلية';
+              if (appState.assistantStatus == 'online') {
+                statusColor = Colors.tealAccent[100]!;
+                statusText = 'الوضع الذكي نشط (Gemini AI)';
+              } else if (appState.assistantStatus == 'failed') {
+                statusColor = Colors.red[200]!;
+                statusText = 'فشل الاتصال بالسيرفر';
+              }
+              return Text(
+                statusText,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: statusColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -263,29 +277,49 @@ class _AiChatScreenState extends State<AiChatScreen>
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 10),
-          // شارة النموذج
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: _primaryColor.withOpacity(0.07),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _primaryColor.withOpacity(0.18)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.bolt_rounded, size: 13, color: _primaryColor),
-                const SizedBox(width: 4),
-                Text(
-                  'Gemini 2.5 Pro • Google',
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: _primaryColor,
-                      fontWeight: FontWeight.w600),
+          // شارة نموذج المساعد الذكية
+          Consumer<AppState>(
+            builder: (context, appState, _) {
+              final isOnline = appState.assistantStatus == 'online';
+              final Color badgeColor = isOnline ? _primaryColor : Colors.orange;
+              return InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: badgeColor.withOpacity(0.25)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isOnline ? Icons.bolt_rounded : Icons.cloud_off_rounded,
+                        size: 13,
+                        color: badgeColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isOnline
+                            ? 'مساعد متقدم نشط (Gemini 2.5 Pro)'
+                            : 'الوضع المحلي (اضغط هنا لتفعيل المساعد الذكي)',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: isOnline ? badgeColor : Colors.orange.shade800,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
           const SizedBox(height: 28),
           // عنوان الاقتراحات

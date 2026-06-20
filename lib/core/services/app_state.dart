@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import 'notification_service.dart';
+import 'package:http/http.dart' as http;
 
 class AppState extends ChangeNotifier {
   static const String _keyLastPage = 'last_page';
@@ -50,6 +51,9 @@ class AppState extends ChangeNotifier {
   static const String _keyLastProphetChapterId = 'last_prophet_chapter_id';
   static const String _keyLastSeerahEventId = 'last_seerah_event_id';
   static const String _keyGeminiApiKey = 'gemini_api_key';
+  static const String _keyBackendUrl = 'backend_url';
+  static const String _keyLastSuccessfulConnection =
+      'last_successful_connection';
   static const String _keyLastAldaaWadawaaChapterId =
       'last_aldaa_wadawaa_chapter_id';
   static const String _keyLastCompanionId = 'last_companion_id';
@@ -97,6 +101,9 @@ class AppState extends ChangeNotifier {
   int _lastProphetChapterId = 0;
   int _lastSeerahEventId = 0;
   String _geminiApiKey = '';
+  String _backendUrl = 'http://10.0.2.2:3000';
+  String _assistantStatus = 'local'; // 'online', 'local', 'failed'
+  String _lastSuccessfulConnection = '';
   int _lastReadAldaaWadawaaChapterId = 0;
   int _lastCompanionId = 0;
   int _lastReadReligiousStoryId = 0;
@@ -144,6 +151,9 @@ class AppState extends ChangeNotifier {
   int get lastProphetChapterId => _lastProphetChapterId;
   int get lastSeerahEventId => _lastSeerahEventId;
   String get geminiApiKey => _geminiApiKey;
+  String get backendUrl => _backendUrl;
+  String get assistantStatus => _assistantStatus;
+  String get lastSuccessfulConnection => _lastSuccessfulConnection;
   int get lastReadAldaaWadawaaChapterId => _lastReadAldaaWadawaaChapterId;
   int get lastCompanionId => _lastCompanionId;
   int get lastReadReligiousStoryId => _lastReadReligiousStoryId;
@@ -202,6 +212,12 @@ class AppState extends ChangeNotifier {
       _lastProphetChapterId = prefs.getInt(_keyLastProphetChapterId) ?? 0;
       _lastSeerahEventId = prefs.getInt(_keyLastSeerahEventId) ?? 0;
       _geminiApiKey = prefs.getString(_keyGeminiApiKey) ?? '';
+      _backendUrl = prefs.getString(_keyBackendUrl) ?? 'http://10.0.2.2:3000';
+      _lastSuccessfulConnection =
+          prefs.getString(_keyLastSuccessfulConnection) ?? '';
+      
+      // فحص حالة السيرفر عند الإقلاع
+      checkBackendStatus();
       _lastReadAldaaWadawaaChapterId =
           prefs.getInt(_keyLastAldaaWadawaaChapterId) ?? 0;
       _lastCompanionId = prefs.getInt(_keyLastCompanionId) ?? 0;
@@ -262,6 +278,64 @@ class AppState extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyGeminiApiKey, key);
+  }
+
+  Future<void> setBackendUrl(String url) async {
+    _backendUrl = url;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyBackendUrl, url);
+
+    await checkBackendStatus();
+  }
+
+  Future<void> setAssistantStatus(String status) async {
+    _assistantStatus = status;
+    notifyListeners();
+  }
+
+  Future<void> updateLastConnectionTime() async {
+    final now = DateTime.now();
+    final timeStr = _formatDateTime(now);
+    _lastSuccessfulConnection = timeStr;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyLastSuccessfulConnection, timeStr);
+  }
+
+  String _formatDateTime(DateTime dt) {
+    final period = dt.hour >= 12 ? 'م' : 'ص';
+    final displayHour = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
+    final displayMinute = dt.minute.toString().padLeft(2, '0');
+    final dateStr = "${dt.year}/${dt.month}/${dt.day}";
+    return "$dateStr $displayHour:$displayMinute $period";
+  }
+
+  Future<void> checkBackendStatus() async {
+    if (_backendUrl.trim().isEmpty) {
+      _assistantStatus = 'local';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final response = await http
+          .get(Uri.parse('${_backendUrl.trim()}/health'))
+          .timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        _assistantStatus = 'online';
+        await updateLastConnectionTime();
+      } else {
+        _assistantStatus = 'failed';
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error pinging backend health check: $e");
+      _assistantStatus = 'failed';
+      notifyListeners();
+    }
   }
 
   Future<void> saveAldaaWadawaaReadingPosition({required int chapterId}) async {
@@ -636,6 +710,9 @@ class AppState extends ChangeNotifier {
     _lastProphetChapterId = 0;
     _lastSeerahEventId = 0;
     _geminiApiKey = '';
+    _backendUrl = 'http://10.0.2.2:3000';
+    _assistantStatus = 'local';
+    _lastSuccessfulConnection = '';
     _lastReadAldaaWadawaaChapterId = 0;
     _lastCompanionId = 0;
     _lastReadReligiousStoryId = 0;

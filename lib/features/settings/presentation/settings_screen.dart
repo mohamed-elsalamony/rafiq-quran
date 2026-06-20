@@ -16,16 +16,22 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   bool _notificationsAllowed = true;
   bool _isLoadingPermission = true;
 
+  late TextEditingController _backendUrlController;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkPermission();
+    
+    final appState = Provider.of<AppState>(context, listen: false);
+    _backendUrlController = TextEditingController(text: appState.backendUrl);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _backendUrlController.dispose();
     super.dispose();
   }
 
@@ -1207,9 +1213,9 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             ),
             const SizedBox(height: 20),
 
-            // 4. المساعد الذكي (AI)
+            // 4. إدارة حالة المساعد (AI Backend)
             _buildSectionHeader(
-                title: 'المساعد الذكي (AI)',
+                title: 'إدارة حالة المساعد (AI Backend)',
                 isDark: isDark,
                 accentColor: accentColor),
             Card(
@@ -1218,40 +1224,201 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'المساعد الذكي (AI)',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 14),
+                    // العنوان والرمز وحالة الاتصال
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'خادم المساعد الذكي المطور',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              const SizedBox(height: 8),
+                              // شارة حالة الاتصال
+                              _buildStatusBadge(appState.assistantStatus, isDark),
+                            ],
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'يعمل المساعد الذكي الآن محلياً وتلقائياً بالكامل في التطبيق لخدمتك والإجابة على أسئلتك دون الحاجة لإدخال أي مفاتيح تشغيل أو الاتصال بالإنترنت.',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                height: 1.4),
-                            textAlign: TextAlign.right,
+                        ),
+                        const SizedBox(width: 16),
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: appState.assistantStatus == 'online'
+                              ? const Color(0xFFE8F8F5)
+                              : (appState.assistantStatus == 'local'
+                                  ? Colors.orange.withOpacity(0.1)
+                                  : Colors.red.withOpacity(0.1)),
+                          child: Icon(
+                            appState.assistantStatus == 'online'
+                                ? Icons.auto_awesome
+                                : (appState.assistantStatus == 'local'
+                                    ? Icons.cloud_off_rounded
+                                    : Icons.error_outline_rounded),
+                            color: appState.assistantStatus == 'online'
+                                ? const Color(0xFF0F5A47)
+                                : (appState.assistantStatus == 'local'
+                                    ? Colors.orange
+                                    : Colors.red),
+                            size: 24,
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // آخر وقت اتصال ناجح
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          appState.lastSuccessfulConnection.isNotEmpty
+                              ? appState.lastSuccessfulConnection
+                              : 'غير متوفر',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.grey[300] : Colors.black87,
+                          ),
+                        ),
+                        const Text(
+                          'آخر وقت اتصال ناجح:',
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    // حقل إدخال عنوان السيرفر
+                    TextField(
+                      controller: _backendUrlController,
+                      decoration: InputDecoration(
+                        labelText: 'عنوان سيرفر الـ Backend',
+                        labelStyle: TextStyle(
+                          color: isDark ? Colors.grey[350] : primaryColor,
+                          fontSize: 12,
+                        ),
+                        hintText: 'http://10.0.2.2:3000',
+                        hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                        prefixIcon: Icon(Icons.dns_rounded, color: accentColor),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: primaryColor, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontFamily: 'Outfit',
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: isDark
-                          ? const Color(0xFF1D3C34)
-                          : const Color(0xFFE8F3EF),
-                      child: Icon(
-                        Icons.auto_awesome,
-                        color: isDark ? accentColor : primaryColor,
-                        size: 24,
-                      ),
+                    const SizedBox(height: 12),
+                    // أزرار التحكم
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // زر استعادة الافتراضي والمساعدة
+                        Row(
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                _backendUrlController.text = 'http://10.0.2.2:3000';
+                                appState.setBackendUrl('http://10.0.2.2:3000');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('تم استعادة عنوان السيرفر الافتراضي للمحاكي',
+                                        textAlign: TextAlign.right),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                'الافتراضي',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            TextButton(
+                              onPressed: () => _showBackendHelpDialog(context, isDark),
+                              child: Text(
+                                'دليل الإعداد',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: accentColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                        // زر الحفظ وفحص الاتصال
+                        Row(
+                          children: [
+                            OutlinedButton(
+                              onPressed: () async {
+                                await appState.checkBackendStatus();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      appState.assistantStatus == 'online'
+                                          ? 'تم الاتصال بالسيرفر بنجاح!'
+                                          : 'فشل الاتصال بالسيرفر. يرجى التأكد من تشغيله.',
+                                      textAlign: TextAlign.right,
+                                    ),
+                                    backgroundColor: appState.assistantStatus == 'online'
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: primaryColor),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text('فحص الاتصال', style: TextStyle(fontSize: 12)),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: () async {
+                                final url = _backendUrlController.text.trim();
+                                await appState.setBackendUrl(url);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      appState.assistantStatus == 'online'
+                                          ? 'تم حفظ العنوان والاتصال بالسيرفر بنجاح!'
+                                          : 'تم حفظ العنوان، ولكن تعذر الاتصال بالسيرفر.',
+                                      textAlign: TextAlign.right,
+                                    ),
+                                    backgroundColor: appState.assistantStatus == 'online'
+                                        ? Colors.green
+                                        : Colors.orange,
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'حفظ وتفعيل',
+                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1342,6 +1509,122 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status, bool isDark) {
+    Color badgeColor;
+    String badgeText;
+    IconData icon;
+
+    switch (status) {
+      case 'online':
+        badgeColor = Colors.green;
+        badgeText = 'متصل بالمساعد الذكي (Online)';
+        icon = Icons.check_circle_rounded;
+        break;
+      case 'failed':
+        badgeColor = Colors.red;
+        badgeText = 'فشل الاتصال بالسيرفر (Error)';
+        icon = Icons.cancel_rounded;
+        break;
+      case 'local':
+      default:
+        badgeColor = Colors.orange;
+        badgeText = 'يعمل بوضع محلي (Offline)';
+        icon = Icons.offline_bolt_rounded;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: badgeColor.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: badgeColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: badgeColor),
+          const SizedBox(width: 6),
+          Text(
+            badgeText,
+            style: TextStyle(
+              color: isDark ? badgeColor.withOpacity(0.85) : badgeColor.shade800,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBackendHelpDialog(BuildContext context, bool isDark) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'دليل إعداد وتشغيل الـ Backend',
+          textAlign: TextAlign.right,
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F5A47)),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'لتأمين مفاتيح الـ API وتحسين ذكاء المساعد، يجب إعداد خادم Backend وسيط باتباع الخطوات التالية:',
+                textAlign: TextAlign.right,
+                style: TextStyle(fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 12),
+              _buildStepRow('1', 'افتح مجلد "backend" الموجود في جذر هذا المشروع.'),
+              _buildStepRow('2', 'قم بتثبيت الاعتمادات بتشغيل الأمر: npm install في الطرفية.'),
+              _buildStepRow('3', 'انسخ الملف .env.example إلى .env وافتحه لإضافة مفتاح Gemini الخاص بك في GEMINI_API_KEY.'),
+              _buildStepRow('4', 'شغّل السيرفر محلياً بالأمر: npm run dev (سيستمع على المنفذ 3000).'),
+              _buildStepRow('5', 'عند استخدام محاكي أندرويد، اترك العنوان الافتراضي (http://10.0.2.2:3000). أما عند التشغيل على هاتف حقيقي، فاكتب عنوان الآي بي الخاص بحاسوبك، أو انسخ رابط السيرفر المرفوع سحابياً (مثل Render أو Railway).'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('فهمت'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepRow(String stepNum, String stepText) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 9,
+            backgroundColor: const Color(0xFFD4AF37),
+            child: Text(
+              stepNum,
+              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              stepText,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 12, height: 1.4),
+            ),
+          ),
+        ],
       ),
     );
   }
