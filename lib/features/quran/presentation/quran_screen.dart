@@ -43,6 +43,7 @@ class _QuranScreenState extends State<QuranScreen> {
   bool _isAutoScrolling = false;
   bool _showAutoScrollPanel = false;
   late ScrollController _activePageScrollController;
+  int _pageTicksCounter = 0;
 
   @override
   void initState() {
@@ -163,43 +164,57 @@ class _QuranScreenState extends State<QuranScreen> {
   // Auto Scroll logic customized for PageView
   void _startAutoScroll() {
     _autoScrollTimer?.cancel();
+    _pageTicksCounter = 0; // Reset counter when starting
     final appState = Provider.of<AppState>(context, listen: false);
-    final double step = appState.autoScrollSpeed / 20.0;
 
     _autoScrollTimer =
         Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if (_activePageScrollController.hasClients && _isAutoScrolling) {
         final maxScroll = _activePageScrollController.position.maxScrollExtent;
         final currentScroll = _activePageScrollController.offset;
+        final double step = appState.autoScrollSpeed / 20.0;
 
-        if (currentScroll >= maxScroll) {
-          final quranProvider =
-              Provider.of<QuranProvider>(context, listen: false);
-          if (quranProvider.currentPage < 604) {
-            _stopAutoScroll();
-            // Go to next page
-            quranProvider.goToPage(quranProvider.currentPage + 1);
-            // Wait 2 seconds for new page to load, then resume auto scroll from top of new page
-            Future.delayed(const Duration(seconds: 2), () {
-              if (mounted && _showAutoScrollPanel) {
-                setState(() {
-                  _isAutoScrolling = true;
-                });
-                _startAutoScroll();
-              }
-            });
+        if (maxScroll > 0) {
+          if (currentScroll >= maxScroll) {
+            // We reached the end of the page, wait 3 seconds (60 ticks) before flipping
+            _pageTicksCounter++;
+            if (_pageTicksCounter >= 60) {
+              _pageTicksCounter = 0;
+              _moveToNextPage();
+            }
           } else {
-            _stopAutoScroll();
+            // Reset counter since we are still scrolling
+            _pageTicksCounter = 0;
+            _activePageScrollController.jumpTo(currentScroll + step);
           }
         } else {
-          _activePageScrollController.jumpTo(currentScroll + step);
+          // Page fits completely (no scrolling possible)
+          // Wait based on speed: (600 / speed) seconds. At 50ms per tick, 1s = 20 ticks.
+          final double speed = appState.autoScrollSpeed;
+          final int ticksToWait = ((600.0 / speed) * 20).round().clamp(100, 1000); // 5s to 50s
+
+          _pageTicksCounter++;
+          if (_pageTicksCounter >= ticksToWait) {
+            _pageTicksCounter = 0;
+            _moveToNextPage();
+          }
         }
       }
     });
   }
 
+  void _moveToNextPage() {
+    final quranProvider = Provider.of<QuranProvider>(context, listen: false);
+    if (quranProvider.currentPage < 604) {
+      quranProvider.goToPage(quranProvider.currentPage + 1);
+    } else {
+      _stopAutoScroll();
+    }
+  }
+
   void _stopAutoScroll() {
     _autoScrollTimer?.cancel();
+    _pageTicksCounter = 0;
     setState(() {
       _isAutoScrolling = false;
     });
@@ -801,7 +816,18 @@ class _QuranScreenState extends State<QuranScreen> {
             ? const Color(0xFF5B4636)
             : Colors.white,
 
-        leading: canPop ? const BackButton() : null,
+        leadingWidth: canPop ? 96.0 : 56.0,
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (canPop) const BackButton(),
+            IconButton(
+              icon: const Icon(Icons.format_list_bulleted),
+              onPressed: () => _showSurahIndexBottomSheet(context),
+              tooltip: 'فهرس القرآن الكريم',
+            ),
+          ],
+        ),
 
         actions: [
           IconButton(
@@ -822,11 +848,6 @@ class _QuranScreenState extends State<QuranScreen> {
               }
             },
             tooltip: 'بحث في المصحف',
-          ),
-          IconButton(
-            icon: const Icon(Icons.format_list_bulleted),
-            onPressed: () => _showSurahIndexBottomSheet(context),
-            tooltip: 'فهرس القرآن الكريم',
           ),
         ],
 
@@ -859,12 +880,12 @@ class _QuranScreenState extends State<QuranScreen> {
         children: [
           Column(
             children: [
-              // Horizontal Swipe PageView Reader
+              // Vertical Scroll PageView Reader
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
-                  scrollDirection: Axis.horizontal,
-                  reverse: true, // Swiping RTL
+                  scrollDirection: Axis.vertical,
+                  reverse: false, // Scroll downwards
                   physics: const ClampingScrollPhysics(),
                   allowImplicitScrolling: true,
                   itemCount: 604,
@@ -873,6 +894,7 @@ class _QuranScreenState extends State<QuranScreen> {
                     if (quranProvider.currentPage != targetPage) {
                       quranProvider.setCurrentPageFromScroll(targetPage);
                     }
+                    _pageTicksCounter = 0; // Reset ticks on page change
                   },
                   itemBuilder: (context, index) {
                     final pageNum = index + 1;
@@ -973,44 +995,109 @@ class _QuranScreenState extends State<QuranScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 10.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Row 1: Title and close button
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline,
-                                color: Colors.teal),
-                            onPressed: () => _adjustSpeed(-5.0),
+                          Row(
+                            children: [
+                              Icon(Icons.swap_vertical_circle, color: goldColor, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'التمرير التلقائي للصفحات',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  fontFamily: 'Amiri',
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            'السرعة: ${appState.autoScrollSpeed.toInt()}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
                           IconButton(
-                            icon: const Icon(Icons.add_circle_outline,
-                                color: Colors.teal),
-                            onPressed: () => _adjustSpeed(5.0),
+                            icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                            onPressed: () {
+                              setState(() {
+                                _showAutoScrollPanel = false;
+                                _stopAutoScroll();
+                              });
+                            },
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
                           ),
                         ],
                       ),
-                      IconButton(
-                        icon: Icon(
-                          _isAutoScrolling
-                              ? Icons.pause_circle_filled
-                              : Icons.play_circle_filled,
-                          color: goldColor,
-                          size: 36,
-                        ),
-                        onPressed: _toggleAutoScrolling,
-                      ),
-                      const Text(
-                        'التشغيل التلقائي للصفحات',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 14),
+                      const Divider(height: 8, thickness: 0.5),
+                      // Row 2: Controls (Play/Pause & Speed adjustments)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Play/Pause icon button
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  _isAutoScrolling
+                                      ? Icons.pause_circle_filled
+                                      : Icons.play_circle_filled,
+                                  color: goldColor,
+                                  size: 32,
+                                ),
+                                onPressed: _toggleAutoScrolling,
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _isAutoScrolling ? 'جاري التمرير' : 'متوقف مؤقتاً',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: _isAutoScrolling ? Colors.teal : Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Amiri',
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Speed adjust
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline,
+                                    color: Colors.teal, size: 22),
+                                onPressed: () => _adjustSpeed(-5.0),
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: themeMode == 'dark' ? Colors.black26 : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'السرعة: ${appState.autoScrollSpeed.toInt()}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    fontFamily: 'Amiri',
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline,
+                                    color: Colors.teal, size: 22),
+                                onPressed: () => _adjustSpeed(5.0),
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
