@@ -35,6 +35,17 @@ class NotificationService {
           return enabled ?? false;
         }
       } else if (Platform.isIOS) {
+        final iosImplementation =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>();
+        if (iosImplementation != null) {
+          final bool? granted = await iosImplementation.requestPermissions(
+            alert: false,
+            badge: false,
+            sound: false,
+          );
+          return granted ?? false;
+        }
         return true;
       }
     } catch (e) {
@@ -81,8 +92,9 @@ class NotificationService {
   Future<void> init() async {
     if (_initialized) return;
 
-    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST')) {
-      debugPrint("Web or Test Notification Service Initialized");
+    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST') ||
+        (!Platform.isAndroid && !Platform.isIOS)) {
+      debugPrint("Desktop/Web/Test: Notification Service Mock Initialized");
       _initialized = true;
       return;
     }
@@ -99,7 +111,14 @@ class NotificationService {
         debugPrint("Could not set local timezone: $e. Using fallback Riyadh.");
         try {
           tz.setLocalLocation(tz.getLocation('Asia/Riyadh'));
-        } catch (_) {}
+        } catch (_) {
+          try {
+            tz.setLocalLocation(tz.UTC);
+            debugPrint("Fallback to UTC timezone.");
+          } catch (inner) {
+            debugPrint("Failed to set even UTC timezone: $inner");
+          }
+        }
       }
 
       // 2. Initialize settings for Android & iOS
@@ -203,8 +222,9 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
   }) async {
-    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST')) {
-      debugPrint("Skipping scheduleNotification in test/web");
+    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST') ||
+        (!Platform.isAndroid && !Platform.isIOS)) {
+      debugPrint("Skipping scheduleNotification in desktop/test/web");
       return;
     }
     if (!_initialized) {
@@ -272,7 +292,8 @@ class NotificationService {
 
   // --- Schedule/Cancel Daily Reminder Notification ---
   Future<void> scheduleDailyReminder({required bool enabled}) async {
-    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST')) return;
+    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST') ||
+        (!Platform.isAndroid && !Platform.isIOS)) return;
 
     final int dailyReminderId = 999;
 
@@ -381,7 +402,7 @@ class NotificationService {
     bool preAlarmsEnabled = false,
     int preAlarmMinutes = 15,
   }) async {
-    if (kIsWeb || !_initialized) return;
+    if (kIsWeb || !_initialized || (!Platform.isAndroid && !Platform.isIOS)) return;
 
     try {
       // Cancel previous scheduled prayer alarms to prevent duplicates
@@ -482,7 +503,8 @@ class NotificationService {
     required bool sleepRemEnabled,
     required String contentType,
   }) async {
-    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST')) return;
+    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST') ||
+        (!Platform.isAndroid && !Platform.isIOS)) return;
 
     try {
       // 1. Cancel existing smart reminders first
@@ -641,7 +663,8 @@ class NotificationService {
     required DateTime scheduledDate,
     required String payload,
   }) async {
-    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST')) return;
+    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST') ||
+        (!Platform.isAndroid && !Platform.isIOS)) return;
 
     try {
       final tz.TZDateTime tzDateTime = scheduledDate is tz.TZDateTime
@@ -709,7 +732,8 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
-    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST')) return;
+    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST') ||
+        (!Platform.isAndroid && !Platform.isIOS)) return;
     if (!_initialized) {
       await init();
     }

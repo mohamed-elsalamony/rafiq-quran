@@ -1338,7 +1338,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'خادم المساعد الذكي المطور',
+                                'خادم المساعد الذكي (Firebase Functions)',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold, fontSize: 14),
                               ),
@@ -1398,13 +1398,13 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                     TextField(
                       controller: _backendUrlController,
                       decoration: InputDecoration(
-                        labelText: 'عنوان سيرفر الـ Backend',
+                        labelText: 'رابط دالة Firebase Functions السحابية',
                         labelStyle: TextStyle(
                           color: isDark ? Colors.grey[350] : primaryColor,
                           fontSize: 12,
                         ),
-                        hintText: 'http://10.0.2.2:3000',
-                        hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                        hintText: 'https://<region>-<project-id>.cloudfunctions.net/api',
+                        hintStyle: const TextStyle(color: Colors.grey, fontSize: 11),
                         prefixIcon: Icon(Icons.dns_rounded, color: accentColor),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -1438,23 +1438,23 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                                 appState.setBackendUrl('http://10.0.2.2:3000');
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('تم استعادة عنوان السيرفر الافتراضي للمحاكي',
+                                    content: Text('تم استعادة عنوان المحاكي الافتراضي للتطوير المحلي',
                                         textAlign: TextAlign.right),
                                   ),
                                 );
                               },
                               child: const Text(
-                                'الافتراضي',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                'الافتراضي المحلي',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                               ),
                             ),
                             const SizedBox(width: 4),
                             TextButton(
                               onPressed: () => _showBackendHelpDialog(context, isDark),
                               child: Text(
-                                'دليل الإعداد',
+                                'دليل النشر',
                                 style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                     color: accentColor),
                               ),
@@ -1471,8 +1471,8 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                                   SnackBar(
                                     content: Text(
                                       appState.assistantStatus == 'online'
-                                          ? 'تم الاتصال بالسيرفر بنجاح!'
-                                          : 'فشل الاتصال بالسيرفر. يرجى التأكد من تشغيله.',
+                                          ? 'تم الاتصال بالدالة السحابية بنجاح!'
+                                          : 'تعذر الاتصال بالدالة. تأكد من نشرها وصحة الرابط.',
                                       textAlign: TextAlign.right,
                                     ),
                                     backgroundColor: appState.assistantStatus == 'online'
@@ -1487,9 +1487,9 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              child: const Text('فحص الاتصال', style: TextStyle(fontSize: 12)),
+                              child: const Text('فحص الاتصال', style: TextStyle(fontSize: 11)),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             ElevatedButton(
                               onPressed: () async {
                                 final url = _backendUrlController.text.trim();
@@ -1498,8 +1498,8 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                                   SnackBar(
                                     content: Text(
                                       appState.assistantStatus == 'online'
-                                          ? 'تم حفظ العنوان والاتصال بالسيرفر بنجاح!'
-                                          : 'تم حفظ العنوان، ولكن تعذر الاتصال بالسيرفر.',
+                                          ? 'تم حفظ العنوان والاتصال بنجاح!'
+                                          : 'تم حفظ العنوان، ولكن تعذر الاتصال بالدالة.',
                                       textAlign: TextAlign.right,
                                     ),
                                     backgroundColor: appState.assistantStatus == 'online'
@@ -1516,7 +1516,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                               ),
                               child: const Text(
                                 'حفظ وتفعيل',
-                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
@@ -1672,7 +1672,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          'دليل إعداد وتشغيل الـ Backend',
+          'دليل نشر وربط دالة Firebase Functions',
           textAlign: TextAlign.right,
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F5A47)),
         ),
@@ -1682,16 +1682,17 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'لتأمين مفاتيح الـ API وتحسين ذكاء المساعد، يجب إعداد خادم Backend وسيط باتباع الخطوات التالية:',
+                'لتأمين مفاتيح الـ API وتحسين ذكاء المساعد، يجب إعداد ونشر دالة Firebase السحابية باتباع الخطوات التالية:',
                 textAlign: TextAlign.right,
                 style: TextStyle(fontSize: 13, height: 1.5),
               ),
               const SizedBox(height: 12),
-              _buildStepRow('1', 'افتح مجلد "backend" الموجود في جذر هذا المشروع.'),
-              _buildStepRow('2', 'قم بتثبيت الاعتمادات بتشغيل الأمر: npm install في الطرفية.'),
+              _buildStepRow('1', 'افتح مجلد "functions" الموجود في جذر هذا المشروع.'),
+              _buildStepRow('2', 'قم بتثبيت الاعتمادات بتشغيل الأمر: npm install في الطرفية داخل مجلد functions.'),
               _buildStepRow('3', 'انسخ الملف .env.example إلى .env وافتحه لإضافة مفتاح Gemini الخاص بك في GEMINI_API_KEY.'),
-              _buildStepRow('4', 'شغّل السيرفر محلياً بالأمر: npm run dev (سيستمع على المنفذ 3000).'),
-              _buildStepRow('5', 'عند استخدام محاكي أندرويد، اترك العنوان الافتراضي (http://10.0.2.2:3000). أما عند التشغيل على هاتف حقيقي، فاكتب عنوان الآي بي الخاص بحاسوبك، أو انسخ رابط السيرفر المرفوع سحابياً (مثل Render أو Railway).'),
+              _buildStepRow('4', 'تأكد من تثبيت Firebase CLI وتسجيل الدخول: npm install -g firebase-tools ثم firebase login.'),
+              _buildStepRow('5', 'اربط مشروعك السحابي بتشغيل: firebase use --add، ثم انشر الدالة بالأمر: firebase deploy --only functions.'),
+              _buildStepRow('6', 'بعد نجاح النشر، انسخ الرابط الناتج (الذي ينتهي بـ /api) وضعه في حقل رابط دالة Firebase Functions في التطبيق.'),
             ],
           ),
         ),
