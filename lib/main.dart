@@ -452,35 +452,43 @@ class _MainShellState extends State<MainShell> {
               foregroundColor: Colors.white,
               elevation: 0,
               scrolledUnderElevation: 0,
-              leading: Builder(
-                builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu_rounded),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
+              leadingWidth: 150.0,
+              leading: Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'رفيق',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'القرآن',
+                        style: GoogleFonts.amiri(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                          color: const Color(0xFFD4AF37),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'رفيق',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 20,
-                      color: Colors.white,
-                    ),
+              actions: [
+                Builder(
+                  builder: (context) => IconButton(
+                    icon: const Icon(Icons.menu_rounded),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
                   ),
-                  const SizedBox(width: 2),
-                  Text(
-                    'القرآن',
-                    style: GoogleFonts.amiri(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 17,
-                      color: const Color(0xFFD4AF37),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             )
           : null,
       body: _tabs[_currentIndex],

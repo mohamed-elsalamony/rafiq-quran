@@ -282,20 +282,13 @@ class PrayerProvider extends ChangeNotifier {
             throw Exception('انتهت مهلة الحصول على إحداثيات الموقع.'),
       );
 
-      if (coords.latitude == 21.4225 && coords.longitude == 39.8262) {
-        _selectedCityName = 'مكة المكرمة';
-        _currentCity = PrayerService.defaultCities['مكة المكرمة']!;
-        _errorMessage =
-            'تعذر الوصول لموقعك الجغرافي (قد تكون الصلاحيات مرفوضة أو الـ GPS معطلاً). تم التحويل لمكة المكرمة افتراضياً.';
-      } else {
-        _selectedCityName = 'موقعي الحالي';
-        _currentCity = CityConfig(
-          nameArabic: 'موقعي الحالي',
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          method: CalculationMethod.egyptian,
-        );
-      }
+      _selectedCityName = 'موقعي الحالي';
+      _currentCity = CityConfig(
+        nameArabic: 'موقعي الحالي',
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        method: CalculationMethod.egyptian,
+      );
 
       _calculateTimes();
       _reschedulePrayerAlarms();

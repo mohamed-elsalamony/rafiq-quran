@@ -61,34 +61,29 @@ class PrayerService {
         method: CalculationMethod.egyptian),
   };
 
-  // الحصول على الموقع الحالي للمستخدم أو إرجاع موقع افتراضي
+  // الحصول على الموقع الحالي للمستخدم بإرجاع إحداثياته أو رمي استثناء عند الفشل
   static Future<Coordinates> getCurrentLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        // إذا كان معطلاً نرجع موقع مكة الافتراضي
-        return Coordinates(21.4225, 39.8262);
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          return Coordinates(21.4225, 39.8262);
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        return Coordinates(21.4225, 39.8262);
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low,
-      );
-      return Coordinates(position.latitude, position.longitude);
-    } catch (_) {
-      return Coordinates(21.4225, 39.8262); // Fallback to Makkah
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('خدمات تحديد الموقع (GPS) معطلة على جهازك. يرجى تفعيلها.');
     }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        throw Exception('صلاحيات الوصول للموقع الجغرافي مرفوضة.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception('صلاحيات الوصول للموقع مرفوضة دائماً. يرجى تفعيلها من إعدادات الهاتف.');
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.low,
+    );
+    return Coordinates(position.latitude, position.longitude);
   }
 
   // حساب مواقيت الصلاة لموقع معين وتاريخ معين
