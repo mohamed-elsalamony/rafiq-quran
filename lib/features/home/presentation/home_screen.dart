@@ -27,7 +27,7 @@ import '../../prayer_times/presentation/qibla_compass_screen.dart';
 import '../../prophets_stories/presentation/prophets_stories_screen.dart';
 import '../../seerah/presentation/seerah_screen.dart';
 import '../../auth/presentation/auth_screen.dart';
-import '../../ai_assistant/presentation/ai_chat_screen.dart';
+
 import '../../aldaa_wadawaa/presentation/aldaa_wadawaa_screen.dart';
 import '../../companions/presentation/companions_list_screen.dart';
 import '../../religious_stories/presentation/religious_stories_list_screen.dart';
@@ -763,9 +763,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _GItem('السيرة', Icons.history_edu_rounded,
           const Color(0xFF4527A0),
           () => _pushScreen(const SeerahScreen())),
-      _GItem('رفيق AI', Icons.auto_awesome_rounded,
-          const Color(0xFF8B2FC9),
-          () => _pushScreen(const AiChatScreen())),
+      _GItem('القبلة', Icons.explore_rounded,
+          const Color(0xFF00796B),
+          () => _pushScreen(const QiblaCompassScreen())),
     ];
 
     return Column(
@@ -806,8 +806,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           () => _pushScreen(const ReligiousStoriesListScreen())),
       _MItem('الداء والدواء', Icons.healing_rounded,
           () => _pushScreen(const AldaaWadawaaScreen())),
-      _MItem('القبلة', Icons.explore_rounded,
-          () => _pushScreen(const QiblaCompassScreen())),
+
       _MItem('حفظ وختمة', Icons.assignment_turned_in_rounded,
           () => _pushScreen(const HifzKhatmaScreen())),
       _MItem('حساب ومزامنة', Icons.cloud_sync_rounded,

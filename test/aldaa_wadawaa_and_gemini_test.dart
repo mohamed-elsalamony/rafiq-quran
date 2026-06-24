@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rafiq_quran/core/services/aldaa_wadawaa_service.dart';
-import 'package:rafiq_quran/core/services/gemini_service.dart';
+
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -71,19 +71,5 @@ void main() {
     });
   });
 
-  group('Gemini Service Configuration Tests', () {
-    test('Initialize and verify instruction constraints', () {
-      final service = GeminiService();
-      
-      // Test isInitialized is true due to local fallback availability
-      expect(service.isInitialized, isTrue);
 
-      // Verify instruction system rules
-      const instruction = GeminiService.systemInstruction;
-      expect(instruction, contains('ذكاء اصطناعي'));
-      expect(instruction, contains('مساعد'));
-      expect(instruction, contains('علماء'));
-      expect(instruction, contains('فتوى'));
-    });
-  });
 }
