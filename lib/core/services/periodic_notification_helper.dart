@@ -326,7 +326,7 @@ class PeriodicNotificationHelper {
         FlutterLocalNotificationsPlugin();
 
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_notification');
 
     const DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings();
@@ -364,6 +364,7 @@ class PeriodicNotificationHelper {
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,
+      icon: '@drawable/ic_notification',
     );
 
     const NotificationDetails platformDetails = NotificationDetails(

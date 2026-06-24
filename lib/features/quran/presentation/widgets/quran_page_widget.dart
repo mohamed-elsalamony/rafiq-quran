@@ -265,7 +265,7 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
           );
         }),
         if (widget.pageNumber == 604) ...[
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -337,9 +337,9 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
               ],
             ),
           ),
-          const SizedBox(height: 120),
+          const SizedBox(height: 20),
         ] else ...[
-          const SizedBox(height: 120),
+          const SizedBox(height: 20),
         ],
       ],
     );

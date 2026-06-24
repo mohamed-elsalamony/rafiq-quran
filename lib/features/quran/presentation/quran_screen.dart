@@ -816,13 +816,18 @@ class _QuranScreenState extends State<QuranScreen> {
             ? const Color(0xFF5B4636)
             : Colors.white,
 
-        leadingWidth: canPop ? 96.0 : 56.0,
+        leadingWidth: canPop ? 100.0 : 56.0,
         leading: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (canPop) const BackButton(),
+            if (canPop)
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios_rounded),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: 'رجوع',
+              ),
             IconButton(
-              icon: const Icon(Icons.format_list_bulleted),
+              icon: const Icon(Icons.menu_book_rounded),
               onPressed: () => _showSurahIndexBottomSheet(context),
               tooltip: 'فهرس القرآن الكريم',
             ),
@@ -831,7 +836,7 @@ class _QuranScreenState extends State<QuranScreen> {
 
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search_rounded),
             onPressed: () async {
               final int? targetPage = await showSearch<int?>(
                 context: context,
@@ -849,26 +854,48 @@ class _QuranScreenState extends State<QuranScreen> {
             },
             tooltip: 'بحث في المصحف',
           ),
+          IconButton(
+            icon: const Icon(Icons.tune_rounded),
+            onPressed: () => _showReaderSettingsBottomSheet(context),
+            tooltip: 'إعدادات القارئ',
+          ),
         ],
 
-        // Center: current Surah name with auto-resize
+        // Center: current Surah name & page number
         centerTitle: true,
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.center,
-          child: Text(
-            titleText,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Outfit',
-              fontSize: 16,
-              color: themeMode == 'dark'
-                  ? Colors.amber[200]
-                  : (themeMode == 'sepia'
-                      ? const Color(0xFF5B4636)
-                      : Colors.white),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.center,
+              child: Text(
+                titleText,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Outfit',
+                  fontSize: 15,
+                  color: themeMode == 'dark'
+                      ? Colors.amber[200]
+                      : (themeMode == 'sepia'
+                          ? const Color(0xFF5B4636)
+                          : Colors.white),
+                ),
+              ),
             ),
-          ),
+            Text(
+              'صفحة ${quranProvider.currentPage} من 604',
+              style: TextStyle(
+                fontFamily: 'Amiri',
+                fontSize: 11,
+                color: themeMode == 'dark'
+                    ? Colors.amber[100]!.withOpacity(0.7)
+                    : (themeMode == 'sepia'
+                        ? const Color(0xFF8C7565)
+                        : Colors.white70),
+              ),
+            ),
+          ],
         ),
         iconTheme: IconThemeData(
           color: themeMode == 'dark'
@@ -880,13 +907,13 @@ class _QuranScreenState extends State<QuranScreen> {
         children: [
           Column(
             children: [
-              // Vertical Scroll PageView Reader
+              // Horizontal PageView Reader (swipe left/right to change pages)
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
-                  scrollDirection: Axis.vertical,
-                  reverse: false, // Scroll downwards
-                  physics: const ClampingScrollPhysics(),
+                  scrollDirection: Axis.horizontal,
+                  reverse: true, // RTL: swipe right for next page (Arabic style)
+                  physics: const BouncingScrollPhysics(),
                   allowImplicitScrolling: true,
                   itemCount: 604,
                   onPageChanged: (index) {
@@ -895,15 +922,34 @@ class _QuranScreenState extends State<QuranScreen> {
                       quranProvider.setCurrentPageFromScroll(targetPage);
                     }
                     _pageTicksCounter = 0; // Reset ticks on page change
+                    // Reset scroll position on page change
+                    if (_activePageScrollController.hasClients) {
+                      _activePageScrollController.jumpTo(0);
+                    }
                   },
                   itemBuilder: (context, index) {
                     final pageNum = index + 1;
                     final pageVerses = quranProvider.getVersesOnPage(pageNum);
 
                     if (pageVerses.isEmpty) {
-                      return const SizedBox(
-                        height: 300,
-                        child: Center(child: CircularProgressIndicator()),
+                      return Container(
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(
+                              color: Color(0xFFD4AF37),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'جاري تحميل الصفحة $pageNum...',
+                              style: TextStyle(
+                                fontFamily: 'Amiri',
+                                color: themeMode == 'dark' ? Colors.white54 : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     }
 
@@ -912,9 +958,9 @@ class _QuranScreenState extends State<QuranScreen> {
 
                     return SingleChildScrollView(
                       controller: isActive ? _activePageScrollController : null,
-                      physics: const ClampingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20.0, vertical: 16.0),
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.only(
+                          left: 20.0, right: 20.0, top: 12.0, bottom: 8.0),
                       child: QuranPageWidget(
                         pageNumber: pageNum,
                         verses: pageVerses,

@@ -25,15 +25,19 @@ class NotificationService {
 
   Future<bool> areNotificationsEnabled() async {
     if (kIsWeb) return true;
+    // On non-mobile platforms (desktop, etc.) treat as enabled
+    if (!Platform.isAndroid && !Platform.isIOS) return true;
     try {
       if (Platform.isAndroid) {
         final androidImplementation =
             _notificationsPlugin.resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
         if (androidImplementation != null) {
-          final bool? enabled = await androidImplementation.areNotificationsEnabled();
-          return enabled ?? false;
+          final bool? enabled =
+              await androidImplementation.areNotificationsEnabled();
+          return enabled ?? true;
         }
+        return true;
       } else if (Platform.isIOS) {
         final iosImplementation =
             _notificationsPlugin.resolvePlatformSpecificImplementation<
@@ -44,47 +48,55 @@ class NotificationService {
             badge: false,
             sound: false,
           );
-          return granted ?? false;
+          return granted ?? true;
         }
         return true;
       }
     } catch (e) {
-      debugPrint("Error checking notifications status: $e");
+      debugPrint('Error checking notifications status: $e');
     }
-    return false;
+    return true; // Default to true to avoid false blocking
   }
 
   Future<bool> requestPermission() async {
     if (kIsWeb) return true;
+    if (!Platform.isAndroid && !Platform.isIOS) return true;
     try {
+      bool granted = false;
       if (Platform.isAndroid) {
         final androidImplementation =
             _notificationsPlugin.resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
         if (androidImplementation != null) {
-          final bool? granted = await androidImplementation.requestNotificationsPermission();
+          final bool? result =
+              await androidImplementation.requestNotificationsPermission();
+          granted = result ?? false;
           try {
             await androidImplementation.requestExactAlarmsPermission();
           } catch (e) {
-            debugPrint("Error requesting exact alarms permission: $e");
+            debugPrint('Error requesting exact alarms permission: $e');
           }
-          return (granted ?? false);
         }
       } else if (Platform.isIOS) {
         final iosImplementation =
             _notificationsPlugin.resolvePlatformSpecificImplementation<
                 IOSFlutterLocalNotificationsPlugin>();
         if (iosImplementation != null) {
-          final bool? granted = await iosImplementation.requestPermissions(
+          final bool? result = await iosImplementation.requestPermissions(
             alert: true,
             badge: true,
             sound: true,
           );
-          return granted ?? false;
+          granted = result ?? false;
         }
       }
+      // Re-initialize the service if not already done after permission grant
+      if (granted && !_initialized) {
+        await init();
+      }
+      return granted;
     } catch (e) {
-      debugPrint("Error requesting permissions: $e");
+      debugPrint('Error requesting permissions: $e');
     }
     return false;
   }
@@ -94,7 +106,7 @@ class NotificationService {
 
     if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST') ||
         (!Platform.isAndroid && !Platform.isIOS)) {
-      debugPrint("Desktop/Web/Test: Notification Service Mock Initialized");
+      debugPrint('Desktop/Web/Test: Notification Service Mock Initialized');
       _initialized = true;
       return;
     }
@@ -106,24 +118,26 @@ class NotificationService {
         final String timeZoneName =
             (await FlutterTimezone.getLocalTimezone()).identifier;
         tz.setLocalLocation(tz.getLocation(timeZoneName));
-        debugPrint("Set local timezone to: $timeZoneName");
+        debugPrint('Set local timezone to: $timeZoneName');
       } catch (e) {
-        debugPrint("Could not set local timezone: $e. Using fallback Riyadh.");
+        debugPrint('Could not set local timezone: $e. Using fallback Riyadh.');
         try {
           tz.setLocalLocation(tz.getLocation('Asia/Riyadh'));
         } catch (_) {
           try {
             tz.setLocalLocation(tz.UTC);
-            debugPrint("Fallback to UTC timezone.");
+            debugPrint('Fallback to UTC timezone.');
           } catch (inner) {
-            debugPrint("Failed to set even UTC timezone: $inner");
+            debugPrint('Failed to set even UTC timezone: $inner');
           }
         }
       }
 
       // 2. Initialize settings for Android & iOS
+      // Use @drawable/ic_notification (white icon) — required for Android 5+
+      // Colored icons appear as white squares in status bar on Android 5+
       const AndroidInitializationSettings androidSettings =
-          AndroidInitializationSettings('ic_launcher');
+          AndroidInitializationSettings('@drawable/ic_notification');
 
       const DarwinInitializationSettings iosSettings =
           DarwinInitializationSettings(
@@ -140,7 +154,7 @@ class NotificationService {
       await _notificationsPlugin.initialize(
         initSettings,
         onDidReceiveNotificationResponse: (details) {
-          debugPrint("Notification Clicked: ${details.payload}");
+          debugPrint('Notification Clicked: ${details.payload}');
           final payload = details.payload;
           if (payload != null && payload.isNotEmpty) {
             navigatorKey.currentState?.pushNamedAndRemoveUntil(
@@ -248,6 +262,7 @@ class NotificationService {
         importance: Importance.max,
         priority: Priority.high,
         playSound: true,
+        icon: '@drawable/ic_notification',
       );
 
       const NotificationDetails platformDetails = NotificationDetails(
@@ -332,6 +347,7 @@ class NotificationService {
         importance: Importance.max,
         priority: Priority.high,
         playSound: true,
+        icon: '@drawable/ic_notification',
       );
 
       const NotificationDetails platformDetails = NotificationDetails(
@@ -685,6 +701,7 @@ class NotificationService {
         importance: Importance.max,
         priority: Priority.high,
         playSound: true,
+        icon: '@drawable/ic_notification',
       );
 
       const NotificationDetails platformDetails = NotificationDetails(
@@ -747,6 +764,7 @@ class NotificationService {
       priority: Priority.high,
       playSound: true,
       enableVibration: true,
+      icon: '@drawable/ic_notification',
     );
 
     const NotificationDetails platformDetails = NotificationDetails(

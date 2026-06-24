@@ -274,7 +274,13 @@ class _MainShellState extends State<MainShell> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
-        await NotificationService().requestPermission();
+        final bool granted = await NotificationService().requestPermission();
+        if (granted) {
+          // Re-schedule all notifications now that permission is confirmed
+          final appState = Provider.of<AppState>(context, listen: false);
+          await appState.toggleNotifications(appState.notificationsEnabled);
+          debugPrint("Notifications rescheduled after permission grant.");
+        }
       } catch (e) {
         debugPrint("Error requesting notification permissions on startup: $e");
       }
