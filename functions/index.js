@@ -100,5 +100,13 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// تشغيل السيرفر بشكل مستقل عند استضافته على منصات مثل Render
+const PORT = process.env.PORT || 3000;
+if (!process.env.FUNCTIONS_EMULATOR && !process.env.FIREBASE_CONFIG) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
 // تصدير تطبيق Express كـ Firebase Cloud Function باسم 'api'
 export const api = onRequest({ cors: true, timeoutSeconds: 60, memory: "256MiB" }, app);
