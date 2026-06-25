@@ -1,6 +1,12 @@
+import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/services/app_state.dart';
 import '../../../core/services/prophet_blessing_service.dart';
 
@@ -18,6 +24,8 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen>
   bool _isVibrationEnabled = true;
   double _btnScale = 1.0;
   late AnimationController _pulseController;
+  final AudioPlayer _clickPlayer = AudioPlayer();
+  String? _clickFilePath;
 
   @override
   void initState() {
@@ -26,12 +34,104 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+    _loadSettings();
+    _initSound();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    _clickPlayer.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _isSoundEnabled = prefs.getBool('prophet_blessing_sound_enabled') ?? true;
+        _isVibrationEnabled = prefs.getBool('prophet_blessing_vibration_enabled') ?? true;
+        _targetGoal = prefs.getInt('prophet_blessing_target_goal') ?? 100;
+      });
+    } catch (e) {
+      debugPrint("Error loading settings: $e");
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('prophet_blessing_sound_enabled', _isSoundEnabled);
+      await prefs.setBool('prophet_blessing_vibration_enabled', _isVibrationEnabled);
+      await prefs.setInt('prophet_blessing_target_goal', _targetGoal);
+    } catch (e) {
+      debugPrint("Error saving settings: $e");
+    }
+  }
+
+  Future<void> _initSound() async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/click_sound_blessing.wav');
+      if (!await file.exists()) {
+        final int sampleRate = 8000;
+        final double duration = 0.05; // 50 ms
+        final int numSamples = (sampleRate * duration).toInt();
+        final int dataSize = numSamples;
+        final int fileSize = 44 + dataSize;
+
+        final bytes = Uint8List(fileSize);
+        final data = ByteData.sublistView(bytes);
+
+        // RIFF header
+        data.setUint8(0, 0x52); // R
+        data.setUint8(1, 0x49); // I
+        data.setUint8(2, 0x46); // F
+        data.setUint8(3, 0x46); // F
+        data.setUint32(4, fileSize - 8, Endian.little);
+        data.setUint8(8, 0x57); // W
+        data.setUint8(9, 0x41); // A
+        data.setUint8(10, 0x56); // V
+        data.setUint8(11, 0x45); // E
+
+        // fmt subchunk
+        data.setUint8(12, 0x66); // f
+        data.setUint8(13, 0x6D); // m
+        data.setUint8(14, 0x74); // t
+        data.setUint8(15, 0x20); //
+        data.setUint32(16, 16, Endian.little);
+        data.setUint16(20, 1, Endian.little); // PCM
+        data.setUint16(22, 1, Endian.little); // Mono
+        data.setUint32(24, sampleRate, Endian.little);
+        data.setUint32(28, sampleRate, Endian.little); // ByteRate
+        data.setUint16(32, 1, Endian.little); // BlockAlign
+        data.setUint16(34, 8, Endian.little); // 8-bit
+
+        // data subchunk
+        data.setUint8(36, 0x64); // d
+        data.setUint8(37, 0x61); // a
+        data.setUint8(38, 0x74); // t
+        data.setUint8(39, 0x61); // a
+        data.setUint32(40, dataSize, Endian.little);
+
+        // Decaying sine wave
+        final double frequency = 1000.0;
+        for (int i = 0; i < numSamples; i++) {
+          final double t = i / sampleRate;
+          final double sine = sin(2 * pi * frequency * t);
+          final double envelope = exp(-t * 90.0);
+          final int sampleValue =
+              (128 + 127 * sine * envelope).round().clamp(0, 255);
+          bytes[44 + i] = sampleValue;
+        }
+        await file.writeAsBytes(bytes);
+      }
+      setState(() {
+        _clickFilePath = file.path;
+      });
+    } catch (e) {
+      debugPrint("Error generating click sound WAV file: $e");
+    }
   }
 
   String _formatNumber(int number) {
@@ -52,10 +152,18 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen>
 
     // Trigger haptic & audio
     if (_isVibrationEnabled) {
-      HapticFeedback.lightImpact();
+      HapticFeedback.vibrate();
     }
     if (_isSoundEnabled) {
-      SystemSound.play(SystemSoundType.click);
+      if (_clickFilePath != null) {
+        try {
+          _clickPlayer.play(DeviceFileSource(_clickFilePath!));
+        } catch (_) {
+          SystemSound.play(SystemSoundType.click);
+        }
+      } else {
+        SystemSound.play(SystemSoundType.click);
+      }
     }
 
     // Goal reached celebration
@@ -76,7 +184,7 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen>
           backgroundColor: const Color(0xFF0F5A47),
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -127,6 +235,7 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen>
               setState(() {
                 _targetGoal = value;
               });
+              _saveSettings();
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
@@ -450,6 +559,7 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen>
                                   setState(() {
                                     _isVibrationEnabled = !_isVibrationEnabled;
                                   });
+                                  _saveSettings();
                                 },
                               ),
                               Text(
@@ -480,6 +590,7 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen>
                                   setState(() {
                                     _isSoundEnabled = !_isSoundEnabled;
                                   });
+                                  _saveSettings();
                                 },
                               ),
                               Text(
