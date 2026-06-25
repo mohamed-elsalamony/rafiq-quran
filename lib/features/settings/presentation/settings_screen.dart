@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../core/services/app_state.dart';
 import '../../../core/services/notification_service.dart';
-import '../../../core/services/fcm_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -520,64 +519,6 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              child: ListTile(
-                leading: Icon(Icons.playlist_add_check, color: accentColor),
-                title: const Text('إرسال إشعار تجريبي فوري',
-                    textAlign: TextAlign.right),
-                subtitle: const Text(
-                  'اضغط هنا لاختبار وصول الإشعارات وسماع صوت التنبيه فوراً',
-                  textAlign: TextAlign.right,
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-                trailing: const Icon(Icons.arrow_back_ios, size: 16),
-                onTap: () async {
-                  try {
-                    // Check if system notifications are allowed first
-                    final allowed = await NotificationService().areNotificationsEnabled();
-                    if (!allowed) {
-                      throw Exception("صلاحية الإشعارات معطلة في النظام. يرجى تفعيلها أولاً.");
-                    }
-
-                    // Show notification instantly (0 seconds delay)
-                    await NotificationService().showInstantNotification(
-                      id: 888,
-                      title: '🔔 إشعار تجريبي فوري من رفيق القرآن',
-                      body:
-                          'رائع! خدمة التنبيهات والأصوات تعمل بشكل صحيح وسليم على جهازك 🕌',
-                    );
-
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'تم إرسال إشعار تجريبي فوري بنجاح!',
-                              textAlign: TextAlign.right),
-                          backgroundColor: Colors.teal,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      final msg = e.toString().replaceAll('Exception:', '').trim();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('فشل إرسال الإشعار التجريبي: $msg',
-                              textAlign: TextAlign.right),
-                          backgroundColor: Colors.red.shade900,
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // FCM Token & Status Card
-            Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -590,87 +531,156 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'خدمة الإشعارات السحابية (FCM)',
+                                'لوحة اختبار وتصحيح الإشعارات المحلية',
                                 style: TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 13),
+                                    fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                               const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: FcmService().isInitialized
-                                          ? Colors.green
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    FcmService().isInitialized
-                                        ? 'نشط ومتصل بـ Firebase'
-                                        : 'غير نشط (لم يتم تهيئة Firebase)',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: FcmService().isInitialized
-                                          ? Colors.green
-                                          : Colors.grey,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                'أدوات لاختبار عمل الإشعارات والجدولة الزمنية في الواجهة والخلفية دون الحاجة لـ Firebase.',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? Colors.grey[400] : Colors.grey[600]),
                               ),
                             ],
                           ),
                         ),
-                        Icon(Icons.cloud_sync_outlined, color: accentColor),
+                        Icon(Icons.tune_rounded, color: accentColor),
                       ],
                     ),
-                    if (FcmService().isInitialized && FcmService().fcmToken != null) ...[
-                      const Divider(height: 20),
-                      const Text(
-                        'رمز تسجيل الجهاز (FCM Token):',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.black26 : Colors.grey[100],
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[350]!),
+                    const Divider(height: 24),
+                    
+                    // 1. Instant Test Notification Button
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.flash_on, color: accentColor),
+                      title: const Text('إشعار تجريبي فوري', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('اضغط هنا لإرسال تنبيه فوري واختبار صوت الإشعارات حالاً.', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      trailing: const Icon(Icons.arrow_back_ios, size: 14),
+                      onTap: () async {
+                        try {
+                          final allowed = await NotificationService().areNotificationsEnabled();
+                          if (!allowed) {
+                            throw Exception("صلاحية الإشعارات معطلة في النظام. يرجى تفعيلها أولاً.");
+                          }
+                          await NotificationService().showInstantNotification(
+                            id: 888,
+                            title: '🔔 إشعار تجريبي فوري من رفيق القرآن',
+                            body: 'رائع! خدمة التنبيهات والأصوات تعمل بشكل صحيح وسليم على جهازك 🕌',
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('تم إرسال إشعار تجريبي فوري بنجاح!', textAlign: TextAlign.right),
+                                backgroundColor: Colors.teal,
                               ),
-                              child: SelectableText(
-                                FcmService().fcmToken!,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontFamily: 'monospace',
-                                ),
-                                maxLines: 1,
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            final msg = e.toString().replaceAll('Exception:', '').trim();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('فشل إرسال الإشعار: $msg', textAlign: TextAlign.right),
+                                backgroundColor: Colors.red.shade900,
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.copy, size: 18),
-                            onPressed: () {
-                              Clipboard.setData(ClipboardData(text: FcmService().fcmToken!));
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    const Divider(height: 12),
+
+                    // 2. Scheduled Test Notification Button
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.timer_outlined, color: accentColor),
+                      title: const Text('جدولة إشعار بعد 10 ثوانٍ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('اضغط هنا وجرب إغلاق التطبيق أو وضعه في الخلفية لمراقبة وصول التنبيه.', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      trailing: const Icon(Icons.arrow_back_ios, size: 14),
+                      onTap: () async {
+                        try {
+                          final allowed = await NotificationService().areNotificationsEnabled();
+                          if (!allowed) {
+                            throw Exception("صلاحية الإشعارات معطلة في النظام. يرجى تفعيلها أولاً.");
+                          }
+                          final scheduledTime = DateTime.now().add(const Duration(seconds: 10));
+                          await NotificationService().scheduleNotification(
+                            id: 889,
+                            title: '⏱️ تنبيه مجدول بعد 10 ثوانٍ',
+                            body: 'رائع! الإشعار المجدول يعمل بنجاح في الخلفية وعلى قنوات أندرويد 12/13/14 🌿',
+                            scheduledDate: scheduledTime,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('تمت الجدولة بنجاح! سيصلك التنبيه بعد 10 ثوانٍ.', textAlign: TextAlign.right),
+                                backgroundColor: Colors.teal,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            final msg = e.toString().replaceAll('Exception:', '').trim();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('فشل جدولة الإشعار: $msg', textAlign: TextAlign.right),
+                                backgroundColor: Colors.red.shade900,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    const Divider(height: 12),
+
+                    // 3. Daily Repeating Notification Button
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.alarm_on_rounded, color: accentColor),
+                      title: const Text('إعداد إشعار يومي مكرر', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('اختر وقتًا محددًا لتلقي تنبيه تجريبي يومي مكرر في نفس الميعاد.', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      trailing: const Icon(Icons.arrow_back_ios, size: 14),
+                      onTap: () async {
+                        try {
+                          final allowed = await NotificationService().areNotificationsEnabled();
+                          if (!allowed) {
+                            throw Exception("صلاحية الإشعارات معطلة في النظام. يرجى تفعيلها أولاً.");
+                          }
+                          final TimeOfDay? selectedTime = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                          );
+                          if (selectedTime != null) {
+                            await NotificationService().scheduleDailyTestNotification(
+                              id: 890,
+                              title: '⏰ تنبيه يومي مكرر',
+                              body: 'هذا التنبيه المجدول المكرر يعمل بشكل دوري حسب توقيتك المختار 🕌',
+                              time: selectedTime,
+                            );
+                            if (context.mounted) {
+                              final formattedTime = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('تم نسخ رمز FCM Token للحافظة بنجاح', textAlign: TextAlign.right),
+                                SnackBar(
+                                  content: Text('تم إعداد التنبيه اليومي بنجاح في تمام الساعة $formattedTime!', textAlign: TextAlign.right),
                                   backgroundColor: Colors.teal,
                                 ),
                               );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
+                            }
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            final msg = e.toString().replaceAll('Exception:', '').trim();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('فشل إعداد التنبيه اليومي: $msg', textAlign: TextAlign.right),
+                                backgroundColor: Colors.red.shade900,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
                   ],
                 ),
               ),

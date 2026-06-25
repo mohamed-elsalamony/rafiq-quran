@@ -385,6 +385,77 @@ class NotificationService {
     }
   }
 
+  // --- Schedule Daily Test Notification ---
+  Future<void> scheduleDailyTestNotification({
+    required int id,
+    required String title,
+    required String body,
+    required TimeOfDay time,
+  }) async {
+    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST') ||
+        (!Platform.isAndroid && !Platform.isIOS)) return;
+
+    try {
+      await _notificationsPlugin.cancel(id);
+
+      final now = tz.TZDateTime.now(tz.local);
+      var scheduledTime = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        time.hour,
+        time.minute,
+      );
+
+      if (scheduledTime.isBefore(now)) {
+        scheduledTime = scheduledTime.add(const Duration(days: 1));
+      }
+
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'daily_reminder_channel_id',
+        'التذكير اليومي بالورد والأذكار',
+        channelDescription: 'تنبيه يومي لقراءة الورد القرآني وأذكار الصباح والمساء',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        icon: '@drawable/ic_notification',
+      );
+
+      const NotificationDetails platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+      );
+
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          title,
+          body,
+          scheduledTime,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+        debugPrint("Scheduled daily test notification (exact) at $scheduledTime");
+      } catch (e) {
+        debugPrint("Failed exact daily test scheduling, retrying inexact: $e");
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          title,
+          body,
+          scheduledTime,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+        debugPrint("Scheduled daily test notification (inexact) at $scheduledTime");
+      }
+    } catch (e) {
+      debugPrint("Error scheduling daily test notification: $e");
+    }
+  }
+
   // --- Cancel only prayer alarms ---
   Future<void> _cancelPrayerAlarms() async {
     for (int dayOffset = 0; dayOffset < 7; dayOffset++) {

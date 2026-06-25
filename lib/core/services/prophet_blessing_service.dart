@@ -14,7 +14,6 @@ class ProphetBlessingService extends ChangeNotifier {
 
   int get personalCount => _personalCount;
   int get globalCount => _globalCount;
-  bool get isUsingFirebase => false;
 
   ProphetBlessingService() {
     _init();

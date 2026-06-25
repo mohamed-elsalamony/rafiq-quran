@@ -350,16 +350,11 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen>
                                 width: 10,
                                 height: 10,
                                 decoration: BoxDecoration(
-                                  color: service.isUsingFirebase
-                                      ? Colors.green
-                                      : accentColor,
+                                  color: accentColor,
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: (service.isUsingFirebase
-                                              ? Colors.green
-                                              : accentColor)
-                                          .withOpacity(
+                                      color: accentColor.withOpacity(
                                               0.5 * _pulseController.value),
                                       blurRadius: 8 * _pulseController.value,
                                       spreadRadius: 3 * _pulseController.value,
@@ -371,9 +366,7 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen>
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            service.isUsingFirebase
-                                ? 'العداد العالمي (مباشر)'
-                                : 'العداد العالمي (محاكاة نشطة)',
+                            'العداد العالمي (محاكاة نشطة)',
                             style: TextStyle(
                               fontSize: 12,
                               color:
