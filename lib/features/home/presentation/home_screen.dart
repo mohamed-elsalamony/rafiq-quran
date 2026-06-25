@@ -358,41 +358,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Top row: greeting + settings ──
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/settings'),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.settings_outlined,
-                          color: Colors.white70, size: 18),
+              // ── Top row: settings ──
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: GestureDetector(
+                  onTap: () => Navigator.pushNamed(context, '/settings'),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    child: const Icon(Icons.settings_outlined,
+                        color: Colors.white70, size: 20),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _greeting,
-                        style: GoogleFonts.amiri(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        _arabicDate,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 22),
               // ── Center: countdown ──
