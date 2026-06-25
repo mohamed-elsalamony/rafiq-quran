@@ -558,7 +558,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: Text('فتح المصحف ←',
+                child: Text('فتح المصحف',
                     style: TextStyle(
                         fontSize: 12,
                         color: isDark ? _accent : _primary,
@@ -686,8 +686,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.arrow_back_ios_new_rounded,
-                    size: 13, color: Color(0xFF1565C0)),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -710,6 +708,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
+                const Icon(Icons.arrow_back_ios_new_rounded,
+                    size: 13, color: Color(0xFF1565C0)),
               ],
             ),
             const SizedBox(height: 12),
@@ -733,7 +733,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 color: isDark ? Colors.white38 : Colors.black38,
                 fontStyle: FontStyle.italic,
               ),
-              textAlign: TextAlign.left,
+              textAlign: TextAlign.right,
             ),
           ],
         ),
@@ -1007,8 +1007,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.arrow_back_ios_new_rounded,
-                    size: 13, color: Color(0xFF558B2F)),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1031,6 +1029,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
+                const Icon(Icons.arrow_back_ios_new_rounded,
+                    size: 13, color: Color(0xFF558B2F)),
               ],
             ),
             const SizedBox(height: 10),

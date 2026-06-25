@@ -66,7 +66,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           children: [
             // Skip button
             Align(
-              alignment: Alignment.topLeft,
+              alignment: Alignment.topEnd,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: TextButton(
