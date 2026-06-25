@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProphetVerse {
   final String text;
@@ -139,5 +140,55 @@ class ProphetsStoriesService {
       }
     }
     return results;
+  }
+
+  // --- Favorite Chapters State (IDs saved in SharedPreferences) ---
+  Future<List<int>> getFavoriteChapterIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> list = prefs.getStringList('favorite_prophet_chapters') ?? [];
+    return list
+        .map((idStr) => int.tryParse(idStr) ?? 0)
+        .where((id) => id > 0)
+        .toList();
+  }
+
+  Future<bool> isFavorite(int chapterId) async {
+    final favorites = await getFavoriteChapterIds();
+    return favorites.contains(chapterId);
+  }
+
+  Future<void> toggleFavorite(int chapterId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> list = prefs.getStringList('favorite_prophet_chapters') ?? [];
+    final String idStr = chapterId.toString();
+
+    if (list.contains(idStr)) {
+      list.remove(idStr);
+    } else {
+      list.add(idStr);
+    }
+
+    await prefs.setStringList('favorite_prophet_chapters', list);
+  }
+
+  List<ProphetChapter> getAllChapters() {
+    return _stories.expand((s) => s.chapters).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getFavoriteChapters() async {
+    await loadStories();
+    final favIds = await getFavoriteChapterIds();
+    final List<Map<String, dynamic>> result = [];
+    for (var story in _stories) {
+      for (var chapter in story.chapters) {
+        if (favIds.contains(chapter.id)) {
+          result.add({
+            'story': story,
+            'chapter': chapter,
+          });
+        }
+      }
+    }
+    return result;
   }
 }

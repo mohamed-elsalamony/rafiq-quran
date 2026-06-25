@@ -17,6 +17,7 @@ class _SeerahStageEventsScreenState extends State<SeerahStageEventsScreen> {
   final TextEditingController _searchController = TextEditingController();
   final SeerahService _service = SeerahService();
   List<SeerahEvent> _filteredEvents = [];
+  Set<int> _favoriteIds = {};
   bool _isLoading = true;
   String _searchQuery = '';
 
@@ -34,9 +35,11 @@ class _SeerahStageEventsScreenState extends State<SeerahStageEventsScreen> {
 
   Future<void> _loadData() async {
     await _service.loadEvents();
+    final favs = await _service.getFavoriteEventIds();
     if (mounted) {
       setState(() {
         _filteredEvents = _service.getEventsByStage(widget.stage);
+        _favoriteIds = favs.toSet();
         _isLoading = false;
       });
     }
@@ -133,6 +136,7 @@ class _SeerahStageEventsScreenState extends State<SeerahStageEventsScreen> {
                           itemCount: _filteredEvents.length,
                           itemBuilder: (context, index) {
                             final event = _filteredEvents[index];
+                            final isFav = _favoriteIds.contains(event.id);
                             String snippet = event.content;
                             if (snippet.length > 120) {
                               snippet = '${snippet.substring(0, 120)}...';
@@ -154,7 +158,7 @@ class _SeerahStageEventsScreenState extends State<SeerahStageEventsScreen> {
                                       builder: (context) =>
                                           SeerahDetailScreen(event: event),
                                     ),
-                                  ).then((_) => setState(() {}));
+                                  ).then((_) => _loadData()); // Reload to update favorites indicator
                                 },
                                 borderRadius: BorderRadius.circular(16),
                                 child: Padding(
@@ -163,15 +167,16 @@ class _SeerahStageEventsScreenState extends State<SeerahStageEventsScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
+                                      // Index number
                                       CircleAvatar(
-                                        radius: 20,
+                                        radius: 18,
                                         backgroundColor: isDark
                                             ? const Color(0xFF1D3C34)
                                             : const Color(0xFFE8F3EF),
                                         child: Text(
                                           '${index + 1}',
                                           style: TextStyle(
-                                            fontSize: 14,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                             color: isDark
                                                 ? accentColor
@@ -180,24 +185,39 @@ class _SeerahStageEventsScreenState extends State<SeerahStageEventsScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
+                                      
+                                      // Content details
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              event.title,
-                                              style: TextStyle(
-                                                fontSize: 17,
-                                                fontWeight: FontWeight.bold,
-                                                color: isDark
-                                                    ? accentColor
-                                                    : primaryColor,
-                                                fontFamily: 'Amiri',
-                                              ),
-                                              textAlign: TextAlign.right,
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              textDirection: TextDirection.rtl,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    event.title,
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isDark
+                                                          ? accentColor
+                                                          : primaryColor,
+                                                      fontFamily: 'Amiri',
+                                                    ),
+                                                    textAlign: TextAlign.right,
+                                                  ),
+                                                ),
+                                                if (isFav)
+                                                  const Padding(
+                                                    padding: EdgeInsets.only(right: 6.0),
+                                                    child: Icon(Icons.favorite, color: Colors.red, size: 16),
+                                                  ),
+                                              ],
                                             ),
-                                            const SizedBox(height: 8),
+                                            const SizedBox(height: 6),
                                             Text(
                                               snippet,
                                               style: TextStyle(
@@ -207,8 +227,33 @@ class _SeerahStageEventsScreenState extends State<SeerahStageEventsScreen> {
                                                     : Colors.grey[700],
                                                 height: 1.5,
                                               ),
-                                              textAlign: TextAlign.right,
+                                              textAlign: TextAlign.justify,
                                               textDirection: TextDirection.rtl,
+                                            ),
+                                            const SizedBox(height: 10),
+                                            
+                                            // Badges row
+                                            Row(
+                                              textDirection: TextDirection.rtl,
+                                              children: [
+                                                if (event.hijriDate != null) ...[
+                                                  Icon(Icons.calendar_today_rounded, size: 12, color: accentColor.withOpacity(0.8)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    event.hijriDate!,
+                                                    style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                ],
+                                                if (event.location.isNotEmpty) ...[
+                                                  Icon(Icons.location_on_rounded, size: 12, color: primaryColor.withOpacity(0.8)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    event.location,
+                                                    style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                           ],
                                         ),

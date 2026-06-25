@@ -16,13 +16,25 @@ class ProphetStoryChaptersScreen extends StatefulWidget {
 class _ProphetStoryChaptersScreenState
     extends State<ProphetStoryChaptersScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ProphetsStoriesService _service = ProphetsStoriesService();
   List<ProphetChapter> _filteredChapters = [];
+  Set<int> _favoriteChapterIds = {};
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _filteredChapters = widget.story.chapters;
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final ids = await _service.getFavoriteChapterIds();
+    if (mounted) {
+      setState(() {
+        _favoriteChapterIds = ids.toSet();
+      });
+    }
   }
 
   @override
@@ -143,7 +155,7 @@ class _ProphetStoryChaptersScreenState
                                     initialChapterId: chapter.id,
                                   ),
                                 ),
-                              ).then((_) => setState(() {}));
+                              ).then((_) => _loadFavorites());
                             },
                             borderRadius: BorderRadius.circular(16),
                             child: Padding(
@@ -171,17 +183,29 @@ class _ProphetStoryChaptersScreenState
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          chapter.title,
-                                          style: TextStyle(
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark
-                                                ? accentColor
-                                                : primaryColor,
-                                            fontFamily: 'Amiri',
-                                          ),
-                                          textAlign: TextAlign.right,
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                chapter.title,
+                                                style: TextStyle(
+                                                  fontSize: 17,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isDark
+                                                      ? accentColor
+                                                      : primaryColor,
+                                                  fontFamily: 'Amiri',
+                                                ),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                            ),
+                                            if (_favoriteChapterIds.contains(chapter.id))
+                                              const Padding(
+                                                padding: EdgeInsets.only(right: 8.0),
+                                                child: Icon(Icons.favorite, color: Colors.red, size: 16),
+                                              ),
+                                          ],
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
@@ -196,6 +220,31 @@ class _ProphetStoryChaptersScreenState
                                           textAlign: TextAlign.right,
                                           textDirection: TextDirection.rtl,
                                         ),
+                                        if (chapter.verses.isNotEmpty) ...[
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.menu_book_rounded,
+                                                size: 14,
+                                                color: isDark
+                                                    ? accentColor
+                                                    : primaryColor,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'الآيات المرتبطة: ${chapter.verses.length}',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isDark
+                                                      ? accentColor
+                                                      : primaryColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
