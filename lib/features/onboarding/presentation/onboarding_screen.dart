@@ -66,7 +66,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           children: [
             // Skip button
             Align(
-              alignment: Alignment.topEnd,
+              alignment: AlignmentDirectional.topEnd,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: TextButton(
@@ -149,6 +149,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // Indicator dots
+                  Row(
+                    children: List.generate(_slides.length, (idx) {
+                      final isSelected = _currentPage == idx;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                        width: isSelected ? 24.0 : 8.0,
+                        height: 8.0,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? accentColor
+                              : (isDark ? Colors.grey[700] : Colors.grey[300]),
+                          borderRadius: BorderRadius.circular(4.0),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
                   // Next / Finish Button
                   ElevatedButton(
                     onPressed: () {
@@ -179,25 +198,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-                  ),
-
-                  // Indicator dots
-                  Row(
-                    children: List.generate(_slides.length, (idx) {
-                      final isSelected = _currentPage == idx;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                        width: isSelected ? 24.0 : 8.0,
-                        height: 8.0,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? accentColor
-                              : (isDark ? Colors.grey[700] : Colors.grey[300]),
-                          borderRadius: BorderRadius.circular(4.0),
-                        ),
-                      );
-                    }).toList(),
                   ),
                 ],
               ),
