@@ -178,7 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: Container(
         color: isDark ? const Color(0xFF121212) : const Color(0xFFF4F7F5),

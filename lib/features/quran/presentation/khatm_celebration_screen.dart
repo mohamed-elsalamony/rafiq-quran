@@ -162,7 +162,7 @@ class _KhatmCelebrationScreenState extends State<KhatmCelebrationScreen> {
           'دعاء ختم القرآن الكريم',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),

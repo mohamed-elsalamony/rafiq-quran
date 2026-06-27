@@ -143,7 +143,7 @@ class _ProphetStoryDetailScreenState extends State<ProphetStoryDetailScreen> {
             fontSize: 18,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
             icon: Icon(

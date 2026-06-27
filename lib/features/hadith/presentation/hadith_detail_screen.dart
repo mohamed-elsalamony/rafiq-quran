@@ -71,7 +71,7 @@ class _HadithDetailScreenState extends State<HadithDetailScreen> {
             fontSize: 18,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
             icon: Icon(

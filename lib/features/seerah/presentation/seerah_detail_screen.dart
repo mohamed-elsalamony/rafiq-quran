@@ -65,7 +65,7 @@ class _SeerahDetailScreenState extends State<SeerahDetailScreen> {
             fontSize: 16,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
             icon: Icon(

@@ -239,7 +239,7 @@ class _TasbihScreenState extends State<TasbihScreen>
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle_outline_rounded),

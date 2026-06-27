@@ -115,7 +115,7 @@ class _ReligiousStoriesListScreenState
             fontSize: 16,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: Container(
         color: isDark ? const Color(0xFF121212) : const Color(0xFFF4F6F4),

@@ -89,7 +89,7 @@ class _AldaaWadawaaCategoryScreenState
             fontSize: 18,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: Container(
         color: isDark ? const Color(0xFF121212) : const Color(0xFFF4F7F5),

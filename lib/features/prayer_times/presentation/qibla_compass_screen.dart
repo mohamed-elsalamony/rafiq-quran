@@ -127,7 +127,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
             ),
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: Container(
         padding: const EdgeInsets.all(24.0),

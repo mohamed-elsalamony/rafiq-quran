@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:quran/quran.dart' as quran;
 import 'package:adhan/adhan.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Core services
 import '../../../core/services/app_state.dart';
@@ -26,7 +27,7 @@ import '../../prayer_times/presentation/prayer_provider.dart';
 import '../../prayer_times/presentation/qibla_compass_screen.dart';
 import '../../prophets_stories/presentation/prophets_stories_screen.dart';
 import '../../seerah/presentation/seerah_screen.dart';
-import '../../auth/presentation/auth_screen.dart';
+
 
 import '../../aldaa_wadawaa/presentation/aldaa_wadawaa_screen.dart';
 import '../../companions/presentation/companions_list_screen.dart';
@@ -65,10 +66,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Companion? _companionOfDay;
   String? _dailyDhikrTip;
 
-  // ── Ayah of day (static for now) ─────────────────────
-  static const _ayahText =
-      'إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ وَيُبَشِّرُ الْمُؤْمِنِينَ';
-  static const _ayahRef = 'سورة الإسراء • الآية ٩';
+  // ── Ayah of day (rotates daily) ───────────────────────
+  String _ayahText =
+      'إِنَّ هٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ وَيُبَشِّرُ الْمُؤْمِنِينَ';
+  String _ayahRef = 'سورة الإسراء • الآية ٩';
 
   // ═══════════════════════════════════════════════════════
   @override
@@ -95,21 +96,60 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   //  Data loading
   // ═══════════════════════════════════════════════════════
   Future<void> _loadDashboardData() async {
+    // ── Compute day index (days since epoch) for daily rotation ──
+    final now = DateTime.now();
+    final dayIndex = now.difference(DateTime(2024, 1, 1)).inDays;
+
+    final prefs = await SharedPreferences.getInstance();
+    final savedDay = prefs.getInt('home_content_day') ?? -1;
+    final shouldRotate = savedDay != dayIndex;
+
     final bookmarks = await DbHelper.getBookmarks();
     final khatmas = await DbHelper.getKhatmaPlans();
 
+    // ── Hadith of the day (day-stable) ──
     final hadithSvc = HadithService();
     final hadith = await hadithSvc.getHadithOfDay();
 
+    // ── Companion of the day (day-stable) ──
     final compSvc = CompanionsService();
     await compSvc.loadCompanions();
     final companion = compSvc.getCompanionOfDay();
 
-    // Pick a random dhikr tip once
-    final random = Random();
+    // ── Ayah of the day (day-stable via dayIndex) ──
+    String newAyahText = _ayahText;
+    String newAyahRef = _ayahRef;
+    if (shouldRotate || savedDay == -1) {
+      try {
+        // Total surahs = 114, pick one based on day
+        final surahNum = (dayIndex % 114) + 1;
+        final totalAyahs = quran.getVerseCount(surahNum);
+        final ayahNum = (dayIndex % totalAyahs) + 1;
+        newAyahText = quran.getVerse(surahNum, ayahNum, verseEndSymbol: true);
+        final surahName = quran.getSurahNameArabic(surahNum);
+        // Convert ayah number to Arabic
+        const arabicNums = ['', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩', '؜١'];
+        final ayahArabic = ayahNum <= 10 ? arabicNums[ayahNum] : '$ayahNum';
+        newAyahRef = 'سورة $surahName • الآية $ayahArabic';
+        await prefs.setInt('home_content_day', dayIndex);
+        await prefs.setString('home_ayah_text', newAyahText);
+        await prefs.setString('home_ayah_ref', newAyahRef);
+      } catch (e) {
+        debugPrint('Error getting daily ayah: $e');
+        newAyahText = prefs.getString('home_ayah_text') ?? _ayahText;
+        newAyahRef = prefs.getString('home_ayah_ref') ?? _ayahRef;
+      }
+    } else {
+      // Same day — restore cached content
+      newAyahText = prefs.getString('home_ayah_text') ?? _ayahText;
+      newAyahRef = prefs.getString('home_ayah_ref') ?? _ayahRef;
+    }
+
+    // ── Dhikr tip (once per session) ──
     String? dhikrTip;
     if (_dailyDhikrTip == null && PeriodicNotificationHelper.adhkar.isNotEmpty) {
-      dhikrTip = PeriodicNotificationHelper.adhkar[random.nextInt(PeriodicNotificationHelper.adhkar.length)];
+      dhikrTip = PeriodicNotificationHelper.adhkar[
+          dayIndex % PeriodicNotificationHelper.adhkar.length];
     }
 
     if (!mounted) return;
@@ -118,9 +158,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _khatmaPlans = khatmas;
       _hadithOfDay = hadith;
       _companionOfDay = companion;
-      if (dhikrTip != null) {
-        _dailyDhikrTip = dhikrTip;
-      }
+      _ayahText = newAyahText;
+      _ayahRef = newAyahRef;
+      if (dhikrTip != null) _dailyDhikrTip = dhikrTip;
     });
   }
 
@@ -809,8 +849,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
       _MItem('حفظ وختمة', Icons.assignment_turned_in_rounded,
           () => _pushScreen(const HifzKhatmaScreen())),
-      _MItem('حساب ومزامنة', Icons.cloud_sync_rounded,
-          () => _pushScreen(const AuthScreen())),
     ];
 
     return Column(

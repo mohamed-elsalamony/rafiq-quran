@@ -69,7 +69,7 @@ class _ProphetsStoriesScreenState extends State<ProphetsStoriesScreen> {
               fontSize: 20,
             ),
           ),
-          centerTitle: true,
+          centerTitle: false,
           bottom: const TabBar(
             indicatorColor: accentColor,
             labelColor: Colors.white,

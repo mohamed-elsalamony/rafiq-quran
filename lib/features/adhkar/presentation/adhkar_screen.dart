@@ -88,7 +88,7 @@ class _AdhkarScreenState extends State<AdhkarScreen>
                   fontWeight: FontWeight.bold,
                 ),
               ),
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           if (!adhkarProvider.isSearching) ...[
             IconButton(

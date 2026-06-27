@@ -188,7 +188,7 @@ class _QuranIndexScreenState extends State<QuranIndexScreen>
             ),
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         bottom: TabBar(
           controller: _tabController,
           labelColor: goldColor,

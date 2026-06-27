@@ -98,7 +98,7 @@ class _AldaaWadawaaDetailScreenState extends State<AldaaWadawaaDetailScreen> {
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.copy),

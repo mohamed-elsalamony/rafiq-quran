@@ -20,7 +20,6 @@ import 'features/quran/presentation/quran_screen.dart';
 import 'features/adhkar/presentation/adhkar_screen.dart';
 import 'features/tasbih/presentation/tasbih_screen.dart';
 import 'features/prayer_times/presentation/prayer_qibla_screen.dart';
-import 'features/auth/presentation/auth_screen.dart';
 import 'features/hifz_khatma/presentation/hifz_khatma_screen.dart';
 
 import 'features/quran/presentation/quran_provider.dart';
@@ -410,19 +409,7 @@ class _MainShellState extends State<MainShell> {
                 ),
               ),
 
-              // خيارات التنقل والخدمات المساعدة
-              ListTile(
-                title: const Text('الحساب والمزامنة السحابية',
-                    textAlign: TextAlign.right),
-                trailing: const Icon(Icons.cloud_sync, color: Colors.teal),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AuthScreen()));
-                },
-              ),
+
               ListTile(
                 title:
                     const Text('الورد وحفظ القرآن', textAlign: TextAlign.right),

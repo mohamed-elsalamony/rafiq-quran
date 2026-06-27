@@ -951,7 +951,7 @@ class _QuranScreenState extends State<QuranScreen>
         ],
 
         // Center: current Surah name & page number
-        centerTitle: true,
+        centerTitle: false,
         title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

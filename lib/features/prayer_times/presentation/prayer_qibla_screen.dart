@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:adhan/adhan.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/services/app_state.dart';
 import '../../../core/services/prayer_service.dart';
 import 'prayer_provider.dart';
@@ -269,23 +270,23 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
+        backgroundColor:
+            isDark ? const Color(0xFF0E1A17) : primaryColor,
         foregroundColor: Colors.white,
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: const Text(
-            'مواقيت الصلاة والقبلة',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Outfit',
-              fontSize: 16,
-            ),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'مواقيت الصلاة والقبلة',
+          style: GoogleFonts.amiri(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.explore),
+            icon: const Icon(Icons.explore_rounded),
             onPressed: () {
               Navigator.push(
                 context,
@@ -293,17 +294,17 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
                     builder: (context) => const QiblaCompassScreen()),
               );
             },
-            tooltip: 'بوصلة القبلة التفاعلية حية',
+            tooltip: 'بوصلة القبلة',
           ),
           IconButton(
-            icon: const Icon(Icons.my_location),
+            icon: const Icon(Icons.my_location_rounded),
             onPressed: prayerProvider.detectLocation,
-            tooltip: 'تحديد موقعي بالـ GPS',
+            tooltip: 'تحديد موقعي',
           ),
         ],
       ),
       body: Container(
-        color: isDark ? const Color(0xFF121212) : const Color(0xFFF4F6F4),
+        color: isDark ? const Color(0xFF0E1A17) : const Color(0xFFF2F5F3),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
           child: Column(
@@ -438,100 +439,7 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
               const SizedBox(height: 12),
 
               // Pre-Prayer Alarms Card
-              Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(Icons.timer_outlined, color: goldColor),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'تنبيهات الاستعداد المسبق للصلاة',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Switch(
-                            value: prayerProvider.preAlarmsEnabled,
-                            activeColor: goldColor,
-                            onChanged: (val) {
-                              prayerProvider.setPreAlarmsEnabled(val);
-                            },
-                          ),
-                        ],
-                      ),
-                      if (prayerProvider.preAlarmsEnabled) ...[
-                        const Divider(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'وقت التنبيه قبل الصلاة:',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isDark
-                                    ? Colors.grey[350]
-                                    : Colors.grey[700],
-                              ),
-                            ),
-                            DropdownButton<int>(
-                              value: prayerProvider.preAlarmMinutes,
-                              dropdownColor: isDark
-                                  ? const Color(0xFF2C2C2C)
-                                  : Colors.white,
-                              style: TextStyle(
-                                color:
-                                    isDark ? Colors.amber[200] : primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              underline: const SizedBox(),
-                              items: const [
-                                DropdownMenuItem(
-                                    value: 5,
-                                    child: Text('قبل الصلاة بـ 5 دقائق')),
-                                DropdownMenuItem(
-                                    value: 10,
-                                    child: Text('قبل الصلاة بـ 10 دقائق')),
-                                DropdownMenuItem(
-                                    value: 15,
-                                    child: Text('قبل الصلاة بـ 15 دقيقة')),
-                                DropdownMenuItem(
-                                    value: 30,
-                                    child: Text('قبل الصلاة بـ 30 دقيقة')),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) {
-                                  prayerProvider.setPreAlarmMinutes(val);
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
+              _buildPreAlarmCard(isDark, primaryColor, goldColor, prayerProvider),
               const SizedBox(height: 20),
 
               // Dynamic countdown card
@@ -710,115 +618,289 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Prayer list details with toggle controls
+              // Prayer list details with consistent RTL alignment
               Card(
-                elevation: 3,
+                elevation: 2,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: prayersList.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final pr = prayersList[index];
-                    final String pKey = pr['key'];
-                    final String name = pr['name'];
-
-                    final isNext = (nextPrayer.name == 'fajr' &&
-                            name == 'الفجر') ||
-                        (nextPrayer.name == 'dhuhr' && name == 'الظهر') ||
-                        (nextPrayer.name == 'asr' && name == 'العصر') ||
-                        (nextPrayer.name == 'maghrib' && name == 'المغرب') ||
-                        (nextPrayer.name == 'isha' && name == 'العشاء');
-
-                    final bool hasAlarm = pKey != 'Sunrise';
-                    final bool isAlarmOn = hasAlarm &&
-                        (prayerProvider.alarmsEnabled[pKey] ?? true);
-
-                    return Container(
-                      color: isNext
-                          ? (isDark
-                              ? Colors.teal.shade900.withOpacity(0.4)
-                              : Colors.teal.shade50.withOpacity(0.5))
-                          : Colors.transparent,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                    borderRadius: BorderRadius.circular(20)),
+                color: isDark ? const Color(0xFF182420) : Colors.white,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.access_time_rounded,
+                                color: primaryColor, size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'جدول الصلوات',
+                            style: GoogleFonts.amiri(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: prayersList.length,
+                      separatorBuilder: (context, index) =>
+                          Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey.shade100),
+                      itemBuilder: (context, index) {
+                        final pr = prayersList[index];
+                        final String pKey = pr['key'];
+                        final String name = pr['name'];
+                        final IconData icon = pr['icon'];
+
+                        final isNext = (nextPrayer.name == 'fajr' &&
+                                name == 'الفجر') ||
+                            (nextPrayer.name == 'dhuhr' && name == 'الظهر') ||
+                            (nextPrayer.name == 'asr' && name == 'العصر') ||
+                            (nextPrayer.name == 'maghrib' && name == 'المغرب') ||
+                            (nextPrayer.name == 'isha' && name == 'العشاء');
+
+                        final bool hasAlarm = pKey != 'Sunrise';
+                        final bool isAlarmOn = hasAlarm &&
+                            (prayerProvider.alarmsEnabled[pKey] ?? true);
+
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          color: isNext
+                              ? (isDark
+                                  ? Colors.teal.shade900.withOpacity(0.35)
+                                  : Colors.teal.shade50)
+                              : Colors.transparent,
+                          height: 64,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
                             children: [
-                              Text(
-                                _formatTime(pr['time']),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: isNext
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: isNext
-                                      ? goldColor
-                                      : (isDark
-                                          ? Colors.white
-                                          : Colors.black87),
-                                  fontFamily: 'Outfit',
-                                ),
-                              ),
-                              const SizedBox(width: 12),
+                              // LEFT SIDE: alarm icon + time
                               if (hasAlarm)
                                 IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                      minWidth: 36, minHeight: 36),
                                   icon: Icon(
                                     isAlarmOn
-                                        ? Icons.notifications_active
-                                        : Icons.notifications_off,
+                                        ? Icons.notifications_active_rounded
+                                        : Icons.notifications_off_outlined,
                                     color: isAlarmOn ? goldColor : Colors.grey,
+                                    size: 20,
                                   ),
-                                  onPressed: () {
-                                    prayerProvider.toggleAlarm(pKey);
-                                  },
+                                  onPressed: () =>
+                                      prayerProvider.toggleAlarm(pKey),
                                   tooltip: isAlarmOn
                                       ? 'تعطيل منبه الأذان'
                                       : 'تفعيل منبه الأذان',
                                 )
                               else
-                                const SizedBox(width: 48),
-                            ],
-                          ),
-                          Row(
-                            children: [
+                                const SizedBox(width: 36),
+                              const SizedBox(width: 4),
+                              SizedBox(
+                                width: 72,
+                                child: Text(
+                                  _formatTime(pr['time']),
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: isNext
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                    color: isNext
+                                        ? goldColor
+                                        : (isDark
+                                            ? Colors.white70
+                                            : Colors.black87),
+                                    fontFamily: 'Outfit',
+                                  ),
+                                  textAlign: TextAlign.start,
+                                ),
+                              ),
+                              // SPACER
+                              const Spacer(),
+                              // RIGHT SIDE: prayer name + icon
                               Text(
                                 name,
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   fontWeight: isNext
                                       ? FontWeight.bold
-                                      : FontWeight.normal,
+                                      : FontWeight.w500,
                                   color: isNext
                                       ? primaryColor
                                       : (isDark
-                                          ? Colors.grey[200]
+                                          ? Colors.white
                                           : Colors.black87),
+                                  fontFamily: 'Amiri',
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Icon(
-                                pr['icon'],
-                                color: isNext ? goldColor : Colors.grey,
-                                size: 22,
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: BoxDecoration(
+                                  color: isNext
+                                      ? primaryColor.withOpacity(0.12)
+                                      : (isDark
+                                          ? Colors.white.withOpacity(0.05)
+                                          : Colors.grey.shade100),
+                                  shape: BoxShape.circle,
+                                  border: isNext
+                                      ? Border.all(
+                                          color: goldColor.withOpacity(0.5),
+                                          width: 1.5)
+                                      : null,
+                                ),
+                                child: Icon(
+                                  icon,
+                                  size: 18,
+                                  color: isNext ? goldColor : Colors.grey,
+                                ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    );
-                  },
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 100),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  Pre-Alarm Card (extracted for cleanliness)
+  // ═══════════════════════════════════════════════════════
+  Widget _buildPreAlarmCard(
+    bool isDark,
+    Color primaryColor,
+    Color goldColor,
+    dynamic prayerProvider,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF182420) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.07)
+              : Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header row
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: goldColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(Icons.timer_outlined, color: goldColor, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'تنبيهات قبل الصلاة',
+                    style: GoogleFonts.amiri(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: prayerProvider.preAlarmsEnabled,
+                  activeColor: goldColor,
+                  onChanged: prayerProvider.setPreAlarmsEnabled,
+                ),
+              ],
+            ),
+            // Minutes picker (shown only when enabled)
+            if (prayerProvider.preAlarmsEnabled) ...[
+              const Divider(height: 20),
+              Text(
+                'اختر وقت التنبيه قبل الصلاة:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [5, 10, 15, 30].map((mins) {
+                  final isSelected =
+                      prayerProvider.preAlarmMinutes == mins;
+                  return GestureDetector(
+                    onTap: () => prayerProvider.setPreAlarmMinutes(mins),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? goldColor
+                            : (isDark
+                                ? Colors.white.withOpacity(0.07)
+                                : Colors.grey.shade100),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? goldColor
+                              : (isDark
+                                  ? Colors.white12
+                                  : Colors.grey.shade300),
+                        ),
+                      ),
+                      child: Text(
+                        '$mins دقيقة',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isSelected
+                              ? Colors.white
+                              : (isDark ? Colors.white60 : Colors.black54),
+                          fontFamily: 'Outfit',
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
         ),
       ),
     );

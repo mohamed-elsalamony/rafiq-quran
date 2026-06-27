@@ -75,7 +75,7 @@ class _CompanionDetailScreenState extends State<CompanionDetailScreen> {
             fontSize: 20,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.share),

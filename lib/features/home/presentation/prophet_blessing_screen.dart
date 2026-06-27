@@ -215,7 +215,7 @@ class _ProphetBlessingScreenState extends State<ProphetBlessingScreen>
         backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         title: FittedBox(
           fit: BoxFit.scaleDown,
           child: const Text(

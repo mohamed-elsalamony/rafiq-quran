@@ -352,7 +352,7 @@ class _HifzKhatmaScreenState extends State<HifzKhatmaScreen>
             ),
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         bottom: TabBar(
           controller: _tabController,
           labelColor: accentColor,
