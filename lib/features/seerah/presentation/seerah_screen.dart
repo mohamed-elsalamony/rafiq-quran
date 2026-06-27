@@ -93,8 +93,8 @@ class _SeerahScreenState extends State<SeerahScreen> {
       'السيرة النبوية المطهرة',
       style: TextStyle(
         fontWeight: FontWeight.bold,
-        fontFamily: 'Outfit',
-        fontSize: 16,
+        fontFamily: 'Amiri',
+        fontSize: 18,
       ),
     );
   }
@@ -110,9 +110,12 @@ class _SeerahScreenState extends State<SeerahScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
-          foregroundColor: Colors.white,
-          title: _buildAppBarTitle(primaryColor),
+        backgroundColor:
+            isDark ? const Color(0xFF0E1A17) : primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: _buildAppBarTitle(primaryColor),
           centerTitle: !_isSearching,
           actions: [
             IconButton(
@@ -147,7 +150,7 @@ class _SeerahScreenState extends State<SeerahScreen> {
                 ),
         ),
         body: Container(
-          color: isDark ? const Color(0xFF121212) : const Color(0xFFF4F6F4),
+          color: isDark ? const Color(0xFF0E1A17) : const Color(0xFFF2F5F3),
           child: _isLoading
               ? Center(
                   child: CircularProgressIndicator(color: primaryColor))

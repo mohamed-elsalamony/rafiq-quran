@@ -165,17 +165,17 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
+        backgroundColor:
+            isDark ? const Color(0xFF0E1A17) : primaryColor,
         foregroundColor: Colors.white,
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: const Text(
-            'إعدادات التطبيق',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Outfit',
-              fontSize: 16,
-            ),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'إعدادات التطبيق',
+          style: GoogleFonts.amiri(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
@@ -1411,25 +1411,29 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
       required bool isDark,
       required Color accentColor}) {
     return Padding(
-      padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
+      padding: const EdgeInsets.only(bottom: 10.0, top: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontSize: 14,
+            style: GoogleFonts.amiri(
+              fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.teal[100] : Colors.teal.shade800,
+              color: isDark ? Colors.teal[200] : const Color(0xFF0F5A47),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Container(
-            width: 4,
-            height: 14,
+            width: 5,
+            height: 18,
             decoration: BoxDecoration(
-              color: accentColor,
-              borderRadius: BorderRadius.circular(2),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [accentColor, accentColor.withOpacity(0.5)],
+              ),
+              borderRadius: BorderRadius.circular(3),
             ),
           ),
         ],

@@ -247,6 +247,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   bool _isInit = false;
+  DateTime? _lastBackPressed;
 
   final List<Widget> _tabs = [];
 
@@ -340,7 +341,41 @@ class _MainShellState extends State<MainShell> {
       _isInit = true;
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        // If not on home tab, navigate to home tab first
+        if (_currentIndex != 2) {
+          setState(() => _currentIndex = 2);
+          return;
+        }
+        // If on home tab, show exit confirmation
+        final now = DateTime.now();
+        if (_lastBackPressed == null ||
+            now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+          _lastBackPressed = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'اضغط مرة أخرى للخروج من التطبيق',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: const Color(0xFF0F5A47),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+          return;
+        }
+        // Exit app
+        Navigator.of(context).pop();
+      },
+      child: Scaffold(
       drawer: Drawer(
         child: Container(
           color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
@@ -495,6 +530,7 @@ class _MainShellState extends State<MainShell> {
         primaryColor,
         accentColor,
       ),
+    ),
     );
   }
 
