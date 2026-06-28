@@ -178,21 +178,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (!mounted) return;
     try {
       final pp = Provider.of<PrayerProvider>(context, listen: false);
-      final times = pp.prayerTimes;
+      final coords = Coordinates(
+          pp.currentCity.latitude, pp.currentCity.longitude);
+      final method = pp.currentCity.method;
       final now = DateTime.now();
 
-      var next = times.nextPrayer();
-      if (next == Prayer.none) next = Prayer.fajr;
+      // Calculate today's times dynamically for the current date
+      final todayTimes = PrayerService.getPrayerTimes(coords, method, date: now);
 
-      DateTime? nextTime = times.timeForPrayer(next);
-      if (nextTime == null || nextTime.isBefore(now)) {
+      // We only consider the 5 daily prayers chronologically (skipping Sunrise)
+      const prayers = [
+        Prayer.fajr,
+        Prayer.dhuhr,
+        Prayer.asr,
+        Prayer.maghrib,
+        Prayer.isha,
+      ];
+
+      Prayer next = Prayer.none;
+      DateTime? nextTime;
+
+      for (final p in prayers) {
+        final time = todayTimes.timeForPrayer(p);
+        if (time != null && time.isAfter(now)) {
+          next = p;
+          nextTime = time;
+          break;
+        }
+      }
+
+      // If all of today's 5 prayers have passed, find tomorrow's Fajr
+      if (next == Prayer.none) {
         final tomorrow = now.add(const Duration(days: 1));
-        final coords = Coordinates(
-            pp.currentCity.latitude, pp.currentCity.longitude);
-        final tTimes = PrayerService.getPrayerTimes(
-            coords, pp.currentCity.method,
-            date: tomorrow);
-        nextTime = tTimes.timeForPrayer(next);
+        final tomorrowTimes =
+            PrayerService.getPrayerTimes(coords, method, date: tomorrow);
+        next = Prayer.fajr;
+        nextTime = tomorrowTimes.timeForPrayer(Prayer.fajr);
       }
 
       if (nextTime != null) {
@@ -211,6 +232,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           _nextPrayerName = names[next] ?? 'الفجر';
           _timeUntilNextPrayer =
               '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+        });
+      } else {
+        setState(() {
+          _timeUntilNextPrayer = '--:--:--';
+          _nextPrayerName = '';
         });
       }
     } catch (_) {}
@@ -545,6 +571,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             initialPage: readPage, initialSurah: readSurah)),
       ),
     ];
+
+    // ── العلامات المرجعية ──
+    if (_lastBookmark != null) {
+      final bPage = _lastBookmark!['page'] as int;
+      final bSurah = _lastBookmark!['surah'] as int;
+      final bAyah = _lastBookmark!['ayah'] as int;
+      final bSurahName = _lastBookmark!['surahName'] ?? '';
+      cards.add(_ContinueCard(
+        icon: Icons.bookmark_added_rounded,
+        iconColor: _accent,
+        title: 'العلامة المرجعية',
+        subtitle: 'سورة $bSurahName • آية $bAyah',
+        actionLabel: 'انتقل',
+        isDark: isDark,
+        onTap: () => _pushScreen(QuranScreen(
+            initialPage: bPage, initialSurah: bSurah)),
+      ));
+    }
 
     // ── تلاوة صوتية ──
     if (hasAudio) {

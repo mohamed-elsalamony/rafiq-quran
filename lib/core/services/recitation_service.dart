@@ -81,4 +81,26 @@ class RecitationService {
       onFailure(e.toString().replaceAll('Exception:', '').trim());
     }
   }
+
+  /// Prefetches a single verse silently in the background.
+  static Future<void> prefetchVerse(
+      int surah, int ayah, String reciterId) async {
+    try {
+      final file = await getLocalFile(surah, ayah, reciterId);
+      if (!await file.exists()) {
+        final url = getAudioUrl(surah, ayah, reciterId);
+        final response = await http.get(Uri.parse(url)).timeout(
+              const Duration(seconds: 15),
+            );
+        if (response.statusCode == 200) {
+          await file.parent.create(recursive: true);
+          await file.writeAsBytes(response.bodyBytes);
+          debugPrint(
+              "Prefetched successfully: Surah $surah, Ayah $ayah for $reciterId");
+        }
+      }
+    } catch (e) {
+      debugPrint("Prefetch verse error: $e");
+    }
+  }
 }

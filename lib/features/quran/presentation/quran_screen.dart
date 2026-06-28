@@ -470,6 +470,56 @@ class _QuranScreenState extends State<QuranScreen>
                     ],
                   ),
                   const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                  const Text('طريقة التصفح:',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      textAlign: TextAlign.right),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => appState.setQuranScrollDirection('horizontal'),
+                          icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                          label: const Text('أفقي (يمين/يسار)'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: appState.quranScrollDirection == 'horizontal'
+                                ? primaryColor
+                                : (appState.isDarkMode ? Colors.white70 : Colors.grey[700]),
+                            backgroundColor: appState.quranScrollDirection == 'horizontal'
+                                ? primaryColor.withOpacity(0.1)
+                                : Colors.transparent,
+                            side: BorderSide(
+                                color: appState.quranScrollDirection == 'horizontal'
+                                    ? primaryColor
+                                    : (appState.isDarkMode ? Colors.white24 : Colors.grey[300]!)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => appState.setQuranScrollDirection('vertical'),
+                          icon: const Icon(Icons.swap_vert_rounded, size: 18),
+                          label: const Text('رأسي (أعلى/أسفل)'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: appState.quranScrollDirection == 'vertical'
+                                ? primaryColor
+                                : (appState.isDarkMode ? Colors.white70 : Colors.grey[700]),
+                            backgroundColor: appState.quranScrollDirection == 'vertical'
+                                ? primaryColor.withOpacity(0.1)
+                                : Colors.transparent,
+                            side: BorderSide(
+                                color: appState.quranScrollDirection == 'vertical'
+                                    ? primaryColor
+                                    : (appState.isDarkMode ? Colors.white24 : Colors.grey[300]!)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -572,7 +622,7 @@ class _QuranScreenState extends State<QuranScreen>
                     const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: DefaultTabController(
-                length: 2,
+                length: 3,
                 child: Column(
                   children: [
                     const SizedBox(height: 12),
@@ -635,6 +685,7 @@ class _QuranScreenState extends State<QuranScreen>
                       tabs: const [
                         Tab(text: 'السور'),
                         Tab(text: 'الأجزاء والأرباع'),
+                        Tab(text: 'العلامات المرجعية'),
                       ],
                     ),
                     Expanded(
@@ -644,6 +695,8 @@ class _QuranScreenState extends State<QuranScreen>
                               goldColor, modalSearchQuery),
                           _buildJuzTabList(
                               context, isDark, primaryColor, goldColor),
+                          _buildBookmarksTabList(
+                              context, isDark, primaryColor, goldColor, setModalState),
                         ],
                       ),
                     ),
@@ -872,6 +925,119 @@ class _QuranScreenState extends State<QuranScreen>
     );
   }
 
+  Widget _buildBookmarksTabList(BuildContext context, bool isDark,
+      Color primaryColor, Color goldColor, StateSetter setModalState) {
+    final quranProvider = Provider.of<QuranProvider>(context, listen: false);
+
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: DbHelper.getBookmarks(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final list = snapshot.data ?? [];
+        if (list.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.bookmark_outline_rounded,
+                    size: 48, color: Colors.grey.withOpacity(0.5)),
+                const SizedBox(height: 12),
+                const Text(
+                  'لا توجد علامات مرجعية حالياً.\nيمكنك إضافة علامة بالضغط الطويل على الآية.',
+                  style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: list.length,
+          itemBuilder: (context, index) {
+            final bookmark = list[index];
+            final int surah = bookmark['surah'] as int;
+            final int ayah = bookmark['ayah'] as int;
+            final int page = bookmark['page'] as int;
+            final String label = bookmark['label'] ?? '';
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10.0),
+              color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 4.0),
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: goldColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Icon(Icons.bookmark_rounded,
+                        color: goldColor, size: 18),
+                  ),
+                ),
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.amiri(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      'صفحة $page',
+                      style: TextStyle(
+                          color: goldColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'الآية $ayah',
+                      style: const TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                  ],
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.red, size: 20),
+                  onPressed: () async {
+                    await DbHelper.deleteBookmark(surah, ayah);
+                    setModalState(() {}); // rebuild bottom sheet
+                  },
+                ),
+                onTap: () {
+                  Navigator.pop(context); // Close bottom sheet
+                  if (quranProvider.isPlaying) {
+                    quranProvider.pauseRecitation();
+                  }
+                  quranProvider.goToPage(page);
+                  quranProvider.selectAyah(surah, ayah);
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
@@ -996,12 +1162,15 @@ class _QuranScreenState extends State<QuranScreen>
         children: [
           Column(
             children: [
-              // Horizontal PageView Reader (swipe left/right to change pages)
+              // Scrollable PageView Reader (orientation configured by user settings)
               Expanded(
                 child: PageView.builder(
+                  key: ValueKey(appState.quranScrollDirection),
                   controller: _pageController,
-                  scrollDirection: Axis.horizontal,
-                  reverse: true, // RTL: swipe right for next page (Arabic style)
+                  scrollDirection: appState.quranScrollDirection == 'vertical'
+                      ? Axis.vertical
+                      : Axis.horizontal,
+                  reverse: appState.quranScrollDirection != 'vertical', // RTL swipe right for horizontal, standard down scroll for vertical
                   physics: const BouncingScrollPhysics(),
                   allowImplicitScrolling: true,
                   itemCount: 604,

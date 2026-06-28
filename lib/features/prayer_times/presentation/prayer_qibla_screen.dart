@@ -80,61 +80,87 @@ class _PrayerQiblaScreenState extends State<PrayerQiblaScreen> {
 
   void _updatePrayerTime() {
     if (!mounted) return;
-    final provider = Provider.of<PrayerProvider>(context, listen: false);
-    final times = provider.prayerTimes;
-    final now = DateTime.now();
-
-    // Identify next prayer
-    var next = times.nextPrayer();
-    if (next == Prayer.none) {
-      next = Prayer.fajr;
-    }
-
-    DateTime? nextTime = times.timeForPrayer(next);
-    if (nextTime == null || nextTime.isBefore(now)) {
-      // If it's Fajr for tomorrow, calculate next day's times
-      final tomorrow = now.add(const Duration(days: 1));
-      final tomorrowCoords = Coordinates(
+    try {
+      final provider = Provider.of<PrayerProvider>(context, listen: false);
+      final coords = Coordinates(
           provider.currentCity.latitude, provider.currentCity.longitude);
-      final tomorrowTimes = PrayerService.getPrayerTimes(
-          tomorrowCoords, provider.currentCity.method,
-          date: tomorrow);
-      nextTime = tomorrowTimes.timeForPrayer(next);
-    }
+      final method = provider.currentCity.method;
+      final now = DateTime.now();
 
-    if (nextTime != null) {
-      final diff = nextTime.difference(now);
-      final hours = diff.inHours;
-      final mins = diff.inMinutes % 60;
-      final secs = diff.inSeconds % 60;
+      // Calculate today's times dynamically for the current date
+      final todayTimes = PrayerService.getPrayerTimes(coords, method, date: now);
 
-      String nameStr = '';
-      switch (next) {
-        case Prayer.fajr:
-          nameStr = 'الفجر';
+      // We only consider the 5 daily prayers chronologically (skipping Sunrise)
+      const prayers = [
+        Prayer.fajr,
+        Prayer.dhuhr,
+        Prayer.asr,
+        Prayer.maghrib,
+        Prayer.isha,
+      ];
+
+      Prayer next = Prayer.none;
+      DateTime? nextTime;
+
+      for (final p in prayers) {
+        final time = todayTimes.timeForPrayer(p);
+        if (time != null && time.isAfter(now)) {
+          next = p;
+          nextTime = time;
           break;
-        case Prayer.dhuhr:
-          nameStr = 'الظهر';
-          break;
-        case Prayer.asr:
-          nameStr = 'العصر';
-          break;
-        case Prayer.maghrib:
-          nameStr = 'المغرب';
-          break;
-        case Prayer.isha:
-          nameStr = 'العشاء';
-          break;
-        default:
-          nameStr = 'الفجر';
-          break;
+        }
       }
 
-      setState(() {
-        _nextPrayerName = nameStr;
-        _timeUntilNextPrayer =
-            '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-      });
+      // If all of today's 5 prayers have passed, find tomorrow's Fajr
+      if (next == Prayer.none) {
+        final tomorrow = now.add(const Duration(days: 1));
+        final tomorrowTimes =
+            PrayerService.getPrayerTimes(coords, method, date: tomorrow);
+        next = Prayer.fajr;
+        nextTime = tomorrowTimes.timeForPrayer(Prayer.fajr);
+      }
+
+      if (nextTime != null) {
+        final diff = nextTime.difference(now);
+        final hours = diff.inHours;
+        final mins = diff.inMinutes % 60;
+        final secs = diff.inSeconds % 60;
+
+        String nameStr = '';
+        switch (next) {
+          case Prayer.fajr:
+            nameStr = 'الفجر';
+            break;
+          case Prayer.dhuhr:
+            nameStr = 'الظهر';
+            break;
+          case Prayer.asr:
+            nameStr = 'العصر';
+            break;
+          case Prayer.maghrib:
+            nameStr = 'المغرب';
+            break;
+          case Prayer.isha:
+            nameStr = 'العشاء';
+            break;
+          default:
+            nameStr = 'الفجر';
+            break;
+        }
+
+        setState(() {
+          _nextPrayerName = nameStr;
+          _timeUntilNextPrayer =
+              '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+        });
+      } else {
+        setState(() {
+          _timeUntilNextPrayer = '--:--:--';
+          _nextPrayerName = '';
+        });
+      }
+    } catch (e) {
+      debugPrint("Error updating prayer time: $e");
     }
   }
 

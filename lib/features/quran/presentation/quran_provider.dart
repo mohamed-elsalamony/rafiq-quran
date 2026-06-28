@@ -68,9 +68,29 @@ class QuranProvider extends ChangeNotifier {
     {'name': 'محمود خليل الحصري', 'id': 'Husary_64kbps'},
     {'name': 'مشاري راشد العفاسي', 'id': 'Alafasy_128kbps'},
     {'name': 'سعد الغامدي', 'id': 'Ghamadi_40kbps'},
+    {'name': 'ياسر الدوسري', 'id': 'Dussary_128kbps'},
+    {'name': 'ماهر المعيقلي', 'id': 'MaherAlMuaiqly128kbps'},
+    {'name': 'عبد الرحمن السديس', 'id': 'Abdurrahmaan_As-Sudais_192kbps'},
+    {'name': 'سعود الشريم', 'id': 'Shuraym_128kbps'},
   ];
 
   QuranProvider({required this.appState}) {
+    _audioPlayer.setAudioContext(AudioContext(
+      android: const AudioContextAndroid(
+        stayAwake: true,
+        contentType: AndroidContentType.music,
+        usageType: AndroidUsageType.media,
+        audioFocus: AndroidAudioFocus.gain,
+      ),
+      iOS: AudioContextIOS(
+        category: AVAudioSessionCategory.playback,
+        options: {
+          AVAudioSessionOptions.mixWithOthers,
+          AVAudioSessionOptions.defaultToSpeaker,
+        },
+      ),
+    ));
+
     _currentPage = appState.lastPageRead;
     // Load the initial page and prefetch neighbors
     _loadPageVerses(_currentPage);
@@ -227,6 +247,9 @@ class QuranProvider extends ChangeNotifier {
         surah: surah,
         ayah: ayah,
       );
+
+      // Prefetch the next verse silently in the background
+      _prefetchNextVerse(surah, ayah);
     } catch (e) {
       debugPrint("Error starting recitation: $e");
       _isPlaying = false;
@@ -274,6 +297,24 @@ class QuranProvider extends ChangeNotifier {
     }
 
     startRecitation(currentSurah, currentAyah);
+  }
+
+  void _prefetchNextVerse(int surah, int ayah) {
+    int nextAyah = ayah;
+    int nextSurah = surah;
+    int total = quran.getVerseCount(nextSurah);
+
+    if (nextAyah < total) {
+      nextAyah++;
+    } else if (nextSurah < 114) {
+      nextSurah++;
+      nextAyah = 1;
+    } else {
+      return; // End of Quran
+    }
+
+    // Call the recitation service prefetch method asynchronously
+    RecitationService.prefetchVerse(nextSurah, nextAyah, _currentReciterId);
   }
 
   void pauseRecitation() {

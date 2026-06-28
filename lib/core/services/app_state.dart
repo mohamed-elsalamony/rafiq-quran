@@ -23,6 +23,7 @@ class AppState extends ChangeNotifier {
   static const String _keyQuranFontFamily =
       'quran_font_family'; // 'Amiri', 'Scheherazade'
   static const String _keyQuranViewMode = 'quran_view_mode'; // 'page', 'verse'
+  static const String _keyQuranScrollDirection = 'quran_scroll_direction'; // 'vertical' or 'horizontal'
   static const String _keyShowTranslation = 'show_translation';
 
   static const String _keyPeriodicDhikrEnabled = 'periodic_dhikr_enabled';
@@ -72,6 +73,7 @@ class AppState extends ChangeNotifier {
   String _quranThemeMode = 'light';
   String _quranFontFamily = 'Amiri';
   String _quranViewMode = 'page';
+  String _quranScrollDirection = 'vertical';
   bool _showTranslation = true;
 
   bool _periodicDhikrEnabled = false;
@@ -119,6 +121,7 @@ class AppState extends ChangeNotifier {
   String get quranThemeMode => _quranThemeMode;
   String get quranFontFamily => _quranFontFamily;
   String get quranViewMode => _quranViewMode;
+  String get quranScrollDirection => _quranScrollDirection;
   bool get showTranslation => _showTranslation;
 
   bool get periodicDhikrEnabled => _periodicDhikrEnabled;
@@ -174,6 +177,7 @@ class AppState extends ChangeNotifier {
           (_isDarkMode ? 'dark' : 'light');
       _quranFontFamily = prefs.getString(_keyQuranFontFamily) ?? 'Amiri';
       _quranViewMode = prefs.getString(_keyQuranViewMode) ?? 'page';
+      _quranScrollDirection = prefs.getString(_keyQuranScrollDirection) ?? 'vertical';
       _showTranslation = prefs.getBool(_keyShowTranslation) ?? true;
 
       _periodicDhikrEnabled = prefs.getBool(_keyPeriodicDhikrEnabled) ?? false;
@@ -357,6 +361,14 @@ class AppState extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyQuranViewMode, mode);
+  }
+
+  Future<void> setQuranScrollDirection(String direction) async {
+    _quranScrollDirection = direction;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyQuranScrollDirection, direction);
   }
 
   Future<void> setShowTranslation(bool show) async {
@@ -605,6 +617,7 @@ class AppState extends ChangeNotifier {
     _quranThemeMode = 'light';
     _quranFontFamily = 'Amiri';
     _quranViewMode = 'page';
+    _quranScrollDirection = 'vertical';
     _showTranslation = true;
 
     _periodicDhikrEnabled = false;
