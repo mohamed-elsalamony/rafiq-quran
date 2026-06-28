@@ -68,8 +68,8 @@ class QuranProvider extends ChangeNotifier {
     {'name': 'محمود خليل الحصري', 'id': 'Husary_64kbps'},
     {'name': 'مشاري راشد العفاسي', 'id': 'Alafasy_128kbps'},
     {'name': 'سعد الغامدي', 'id': 'Ghamadi_40kbps'},
-    {'name': 'ياسر الدوسري', 'id': 'Dussary_128kbps'},
-    {'name': 'ماهر المعيقلي', 'id': 'MaherAlMuaiqly128kbps'},
+    {'name': 'ياسر الدوسري', 'id': 'Yasser_Ad-Dussary_128kbps'},
+    {'name': 'ماهر المعيقلي', 'id': 'Maher_AlMuaiqly_64kbps'},
     {'name': 'عبد الرحمن السديس', 'id': 'Abdurrahmaan_As-Sudais_192kbps'},
     {'name': 'سعود الشريم', 'id': 'Shuraym_128kbps'},
   ];
@@ -302,19 +302,20 @@ class QuranProvider extends ChangeNotifier {
   void _prefetchNextVerse(int surah, int ayah) {
     int nextAyah = ayah;
     int nextSurah = surah;
-    int total = quran.getVerseCount(nextSurah);
 
-    if (nextAyah < total) {
-      nextAyah++;
-    } else if (nextSurah < 114) {
-      nextSurah++;
-      nextAyah = 1;
-    } else {
-      return; // End of Quran
+    // Prefetch the next 3 verses in the background to build a buffer
+    for (int i = 0; i < 3; i++) {
+      int total = quran.getVerseCount(nextSurah);
+      if (nextAyah < total) {
+        nextAyah++;
+      } else if (nextSurah < 114) {
+        nextSurah++;
+        nextAyah = 1;
+      } else {
+        break; // End of Quran
+      }
+      RecitationService.prefetchVerse(nextSurah, nextAyah, _currentReciterId);
     }
-
-    // Call the recitation service prefetch method asynchronously
-    RecitationService.prefetchVerse(nextSurah, nextAyah, _currentReciterId);
   }
 
   void pauseRecitation() {

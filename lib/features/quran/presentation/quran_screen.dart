@@ -203,7 +203,6 @@ class _QuranScreenState extends State<QuranScreen>
       final quranProvider = Provider.of<QuranProvider>(context, listen: false);
       final ctrl = _controllerForPage(quranProvider.currentPage);
 
-      // ── Audio-sync mode: follow the audio page ──────────────
       if (quranProvider.isPlaying) {
         final playingSurah = quranProvider.activePlayingSurah;
         final playingAyah = quranProvider.activePlayingAyah;
@@ -225,8 +224,6 @@ class _QuranScreenState extends State<QuranScreen>
             }
           }
         }
-        _lastElapsed = elapsed;
-        return; // In audio mode, let the page track audio; no manual scroll
       }
 
       // ── Manual auto-scroll mode ─────────────────────────────
