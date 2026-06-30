@@ -97,17 +97,37 @@ class _QuranScreenState extends State<QuranScreen> {
 
   @override
   void dispose() {
-    _pageTransitionTimer?.cancel();
-    for (final c in _pageScrollControllers.values) {
-      c.dispose();
-    }
-    _pageScrollControllers.clear();
-    _pageController.dispose();
-    _searchController.dispose();
+    // 1. Remove the listener first so we don't receive any more notifications during/after dispose
     try {
       final quranProvider = Provider.of<QuranProvider>(context, listen: false);
       quranProvider.removeListener(_onProviderChange);
     } catch (_) {}
+
+    // 2. Cancel timers and stop active scroll animations to prevent layout frame errors
+    _pageTransitionTimer?.cancel();
+    _pageTransitionTimer = null;
+    
+    for (final ctrl in _pageScrollControllers.values) {
+      if (ctrl.hasClients) {
+        try {
+          ctrl.jumpTo(ctrl.offset);
+        } catch (_) {}
+      }
+    }
+
+    // 3. Dispose of controllers safely
+    for (final c in _pageScrollControllers.values) {
+      try {
+        c.dispose();
+      } catch (_) {}
+    }
+    _pageScrollControllers.clear();
+    
+    try {
+      _pageController.dispose();
+    } catch (_) {}
+    _searchController.dispose();
+    
     super.dispose();
   }
 
