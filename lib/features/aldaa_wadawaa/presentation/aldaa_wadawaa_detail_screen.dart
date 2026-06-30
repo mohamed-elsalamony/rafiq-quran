@@ -20,9 +20,13 @@ class AldaaWadawaaDetailScreen extends StatefulWidget {
 }
 
 class _AldaaWadawaaDetailScreenState extends State<AldaaWadawaaDetailScreen> {
+  final AldaaWadawaaService _bookService = AldaaWadawaaService();
+  bool _isFavorite = false;
+
   @override
   void initState() {
     super.initState();
+    _checkFavoriteStatus();
     // Save reading position when screen is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = Provider.of<AppState>(context, listen: false);
@@ -30,15 +34,29 @@ class _AldaaWadawaaDetailScreenState extends State<AldaaWadawaaDetailScreen> {
     });
   }
 
+  Future<void> _checkFavoriteStatus() async {
+    final isFav = await _bookService.isFavorite(widget.chapter.id);
+    if (mounted) {
+      setState(() {
+        _isFavorite = isFav;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    await _bookService.toggleFavorite(widget.chapter.id);
+    await _checkFavoriteStatus();
+  }
+
   void _shareContent(BuildContext context) {
     final textToShare =
-        "${widget.chapter.title}\n\n${widget.chapter.content}\n\nالمصدر: كتاب الداء والدواء - ابن قيم الجوزية (صفحة ${widget.chapter.page})";
+        "${widget.chapter.title}\n\n${widget.chapter.content}\n\nالمصدر: كتاب الداء والدواء (الجواب الكافي لمن سأل عن الدواء الشافي) - طبعة مجمع الفقه الإسلامي (صفحة ${widget.chapter.page})";
     Share.share(textToShare);
   }
 
   void _copyToClipboard(BuildContext context) {
     final textToCopy =
-        "${widget.chapter.title}\n\n${widget.chapter.content}\n\nالمصدر: كتاب الداء والدواء - ابن قيم الجوزية (صفحة ${widget.chapter.page})";
+        "${widget.chapter.title}\n\n${widget.chapter.content}\n\nالمصدر: كتاب الداء والدواء (الجواب الكافي لمن سأل عن الدواء الشافي) - طبعة مجمع الفقه الإسلامي (صفحة ${widget.chapter.page})";
     Clipboard.setData(ClipboardData(text: textToCopy));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -91,15 +109,20 @@ class _AldaaWadawaaDetailScreenState extends State<AldaaWadawaaDetailScreen> {
         backgroundColor:
             themeMode == 'dark' ? const Color(0xFF1F1F1F) : primaryColor,
         foregroundColor: Colors.white,
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            widget.chapter.title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
+        title: const Text(
+          'قارئ الكتاب',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: Icon(
+              _isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+              color: _isFavorite ? accentColor : Colors.white,
+            ),
+            tooltip: 'حفظ في المفضلة',
+            onPressed: _toggleFavorite,
+          ),
           IconButton(
             icon: const Icon(Icons.copy),
             tooltip: 'نسخ الفصل',
@@ -221,6 +244,7 @@ class _AldaaWadawaaDetailScreenState extends State<AldaaWadawaaDetailScreen> {
                         fontSize: appState.fontSize + 2,
                         color: accentColor,
                         height: 1.5,
+                        fontFamily: 'Amiri',
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -245,6 +269,10 @@ class _AldaaWadawaaDetailScreenState extends State<AldaaWadawaaDetailScreen> {
                       textDirection: TextDirection.rtl,
                     ),
                     const SizedBox(height: 40),
+
+                    // Previous / Next Chapter Navigation Buttons
+                    _buildNavigationButtons(context, primaryColor, accentColor, themeMode),
+                    const SizedBox(height: 30),
 
                     // Citation Footer Card
                     Container(
@@ -282,7 +310,7 @@ class _AldaaWadawaaDetailScreenState extends State<AldaaWadawaaDetailScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'الكتاب: الداء والدواء (الجواب الكافي لمن سأل عن الدواء الشافي)\nالمؤلف: الإمام ابن قيم الجوزية رحمه الله\nالصفحة المعتمدة في الطبعة المحققة: ${widget.chapter.page}',
+                            'الكتاب: الداء والدواء (الجواب الكافي لمن سأل عن الدواء الشافي)\nالمؤلف: الإمام ابن قيم الجوزية رحمه الله\nالطبعة المعتمدة: طبعة مجمع الفقه الإسلامي بجدة (بإشراف الشيخ بكر أبو زيد رحمه الله)\nالصفحة التقريبية في الطبعة المحققة: ${widget.chapter.page}',
                             style: TextStyle(
                               fontSize: 11,
                               height: 1.6,
@@ -304,6 +332,152 @@ class _AldaaWadawaaDetailScreenState extends State<AldaaWadawaaDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildNavigationButtons(
+      BuildContext context, Color primaryColor, Color accentColor, String themeMode) {
+    final prevChapter = _bookService.getChapterById(widget.chapter.id - 1);
+    final nextChapter = _bookService.getChapterById(widget.chapter.id + 1);
+
+    Color btnBgColor;
+    Color btnTextColor;
+    if (themeMode == 'dark') {
+      btnBgColor = const Color(0xFF2C2C2C);
+      btnTextColor = Colors.white;
+    } else if (themeMode == 'sepia') {
+      btnBgColor = const Color(0xFFEADBBE);
+      btnTextColor = const Color(0xFF5B4636);
+    } else {
+      btnBgColor = const Color(0xFFE8F3EF);
+      btnTextColor = primaryColor;
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Previous Button
+        Expanded(
+          child: prevChapter != null
+              ? Card(
+                  elevation: 1,
+                  color: btnBgColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AldaaWadawaaDetailScreen(chapter: prevChapter),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.arrow_back,
+                                  size: 14, color: btnTextColor),
+                              const SizedBox(width: 4),
+                              Text(
+                                'الفصل السابق',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: btnTextColor.withOpacity(0.8),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            prevChapter.title,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: btnTextColor,
+                              fontFamily: 'Amiri',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+        const SizedBox(width: 12),
+        // Next Button
+        Expanded(
+          child: nextChapter != null
+              ? Card(
+                  elevation: 1,
+                  color: btnBgColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AldaaWadawaaDetailScreen(chapter: nextChapter),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                'الفصل التالي',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: btnTextColor.withOpacity(0.8),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(Icons.arrow_forward,
+                                  size: 14, color: btnTextColor),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            nextChapter.title,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: btnTextColor,
+                              fontFamily: 'Amiri',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 }

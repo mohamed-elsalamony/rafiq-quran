@@ -31,7 +31,7 @@ class RecitationService {
     }
   }
 
-  /// Downloads a list of verses for offline playback.
+  /// Downloads a list of verses for offline playback with retry logic.
   /// Reports progress callback.
   static Future<void> downloadVerses({
     required List<Map<String, int>> verses,
@@ -57,18 +57,35 @@ class RecitationService {
 
         if (!await file.exists()) {
           final url = getAudioUrl(surah, ayah, reciterId);
-          // Set a timeout of 15 seconds to prevent hanging indefinitely
-          final response = await http.get(Uri.parse(url)).timeout(
-                const Duration(seconds: 15),
-                onTimeout: () => throw Exception(
-                    'انتهت مهلة الاتصال بالخادم عند تحميل الآية $ayah.'),
-              );
+          int attempts = 0;
+          bool success = false;
+          dynamic lastError;
 
-          if (response.statusCode == 200) {
-            await file.writeAsBytes(response.bodyBytes);
-          } else {
+          while (attempts < 3 && !success) {
+            try {
+              final response = await http.get(Uri.parse(url)).timeout(
+                    const Duration(seconds: 15),
+                  );
+
+              if (response.statusCode == 200) {
+                await file.writeAsBytes(response.bodyBytes);
+                success = true;
+              } else {
+                throw Exception(
+                    'رمز الاستجابة: ${response.statusCode}');
+              }
+            } catch (e) {
+              attempts++;
+              lastError = e;
+              if (attempts < 3) {
+                await Future.delayed(const Duration(seconds: 2));
+              }
+            }
+          }
+
+          if (!success) {
             throw Exception(
-                'فشل تحميل الآية $ayah (رمز الاستجابة: ${response.statusCode}).');
+                'فشل تحميل الآية $ayah بعد 3 محاولات. (التفاصيل: $lastError)');
           }
         }
 
@@ -82,21 +99,35 @@ class RecitationService {
     }
   }
 
-  /// Prefetches a single verse silently in the background.
+  /// Prefetches a single verse silently in the background with retry logic.
   static Future<void> prefetchVerse(
       int surah, int ayah, String reciterId) async {
     try {
       final file = await getLocalFile(surah, ayah, reciterId);
       if (!await file.exists()) {
         final url = getAudioUrl(surah, ayah, reciterId);
-        final response = await http.get(Uri.parse(url)).timeout(
-              const Duration(seconds: 15),
-            );
-        if (response.statusCode == 200) {
-          await file.parent.create(recursive: true);
-          await file.writeAsBytes(response.bodyBytes);
-          debugPrint(
-              "Prefetched successfully: Surah $surah, Ayah $ayah for $reciterId");
+        int attempts = 0;
+        bool success = false;
+        while (attempts < 2 && !success) {
+          try {
+            final response = await http.get(Uri.parse(url)).timeout(
+                  const Duration(seconds: 10),
+                );
+            if (response.statusCode == 200) {
+              await file.parent.create(recursive: true);
+              await file.writeAsBytes(response.bodyBytes);
+              success = true;
+              debugPrint(
+                  "Prefetched successfully: Surah $surah, Ayah $ayah for $reciterId");
+            } else {
+              attempts++;
+            }
+          } catch (_) {
+            attempts++;
+            if (attempts < 2) {
+              await Future.delayed(const Duration(seconds: 2));
+            }
+          }
         }
       }
     } catch (e) {

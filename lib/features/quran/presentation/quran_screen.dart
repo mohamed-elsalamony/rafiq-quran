@@ -31,8 +31,7 @@ class QuranScreen extends StatefulWidget {
   State<QuranScreen> createState() => _QuranScreenState();
 }
 
-class _QuranScreenState extends State<QuranScreen>
-    with TickerProviderStateMixin {
+class _QuranScreenState extends State<QuranScreen> {
   late PageController _pageController;
   final TextEditingController _searchController = TextEditingController();
 
@@ -40,20 +39,19 @@ class _QuranScreenState extends State<QuranScreen>
   bool _isProgrammaticScroll = false;
   bool _isDownloadDialogShowing = false;
 
-  // Auto-scroll variables — Ticker-based for 60 FPS smoothness
-  Ticker? _scrollTicker;
+  // Auto-scroll variables
   bool _isAutoScrolling = false;
   bool _showAutoScrollPanel = false;
 
   // Per-page scroll controllers to avoid isActive juggling
   final Map<int, ScrollController> _pageScrollControllers = {};
 
-  // Accumulated fractional pixels for sub-pixel smooth scrolling
-  double _scrollAccumulator = 0.0;
-
-  // Audio-sync: last ayah the auto-scroll reacted to
+  // Audio-sync and page tracking
   int? _lastSyncedAyah;
   int? _lastSyncedSurah;
+  int? _lastSyncedPage;
+  Timer? _pageTransitionTimer;
+  bool _isAnimatingScroll = false;
 
   ScrollController _controllerForPage(int pageNum) {
     return _pageScrollControllers.putIfAbsent(
@@ -99,7 +97,7 @@ class _QuranScreenState extends State<QuranScreen>
 
   @override
   void dispose() {
-    _scrollTicker?.dispose();
+    _pageTransitionTimer?.cancel();
     for (final c in _pageScrollControllers.values) {
       c.dispose();
     }
@@ -176,10 +174,15 @@ class _QuranScreenState extends State<QuranScreen>
         _scrollToPage(provider.currentPage);
       }
     }
+
+    // 4. Sync auto scroll
+    if (_isAutoScrolling) {
+      _syncScrollState();
+    }
   }
 
   // ═══════════════════════════════════════════════════════
-  //  SMOOTH AUTO SCROLL — Ticker-based (vsync 60 FPS)
+  //  SMOOTH AUTO SCROLL — Native animateTo (Linear & EaseInOut)
   // ═══════════════════════════════════════════════════════
 
   /// Pixels per second (mapped from speed setting 5–100)
@@ -188,115 +191,189 @@ class _QuranScreenState extends State<QuranScreen>
     return speedSetting * 3.0;
   }
 
-  void _startAutoScroll() {
-    _scrollTicker?.dispose();
-    _scrollAccumulator = 0.0;
-    _lastSyncedAyah = null;
-    _lastSyncedSurah = null;
+  void _syncScrollState() {
+    if (!mounted) return;
 
-    Duration? _lastElapsed;
+    final quranProvider = Provider.of<QuranProvider>(context, listen: false);
+    final appState = Provider.of<AppState>(context, listen: false);
 
-    _scrollTicker = createTicker((elapsed) {
-      if (!_isAutoScrolling || !mounted) return;
+    if (!_isAutoScrolling) {
+      _stopScrollAnimation();
+      return;
+    }
 
-      final appState = Provider.of<AppState>(context, listen: false);
-      final quranProvider = Provider.of<QuranProvider>(context, listen: false);
-      final ctrl = _controllerForPage(quranProvider.currentPage);
+    final currentPage = quranProvider.currentPage;
+    final ctrl = _controllerForPage(currentPage);
 
-      if (quranProvider.isPlaying) {
-        final playingSurah = quranProvider.activePlayingSurah;
-        final playingAyah = quranProvider.activePlayingAyah;
+    if (!ctrl.hasClients) {
+      // Wait for layout to build and attach ScrollController
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncScrollState());
+      return;
+    }
 
-        if (playingSurah != null && playingAyah != null) {
-          // If the audio moved to a new ayah, jump to that page
+    // Stop any scroll animation on the previous page if we switched pages
+    if (_lastSyncedPage != null && _lastSyncedPage != currentPage) {
+      _stopScrollOnPage(_lastSyncedPage!);
+    }
+    _lastSyncedPage = currentPage;
+
+    if (quranProvider.isPlaying) {
+      // ─── Case A: Recitation is active (Synchronized Scroll) ───
+      final playingSurah = quranProvider.activePlayingSurah;
+      final playingAyah = quranProvider.activePlayingAyah;
+
+      if (playingSurah != null && playingAyah != null) {
+        final pageVerses = quranProvider.getVersesOnPage(currentPage);
+
+        // Find the index of the currently playing verse on this page
+        final idx = pageVerses.indexWhere(
+            (v) => v['surah'] == playingSurah && v['ayah'] == playingAyah);
+
+        if (idx != -1) {
+          // The playing verse is on this page!
           if (playingSurah != _lastSyncedSurah ||
               playingAyah != _lastSyncedAyah) {
             _lastSyncedSurah = playingSurah;
             _lastSyncedAyah = playingAyah;
 
-            // Scroll to top of current page when audio advances
-            if (ctrl.hasClients) {
+            _pageTransitionTimer?.cancel();
+            _pageTransitionTimer = null;
+
+            final maxScroll = ctrl.position.maxScrollExtent;
+            if (maxScroll > 0) {
+              final double fraction = pageVerses.length > 1
+                  ? idx / (pageVerses.length - 1)
+                  : 0.0;
+              final double targetOffset = fraction * maxScroll;
+
+              _isAnimatingScroll = true;
               ctrl.animateTo(
-                0.0,
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeOut,
-              );
+                targetOffset,
+                duration: const Duration(milliseconds: 1500),
+                curve: Curves.easeInOut,
+              ).then((_) {
+                _isAnimatingScroll = false;
+              });
             }
           }
+          return; // Skip manual scroll logic if synchronized is active
         }
       }
+    }
 
-      // ── Manual auto-scroll mode ─────────────────────────────
-      if (!ctrl.hasClients) {
-        _lastElapsed = elapsed;
-        return;
-      }
+    // ─── Case B: Recitation is NOT active (or playing verse is not on page) ───
+    _startManualSpeedScroll(ctrl, appState);
+  }
 
-      final dt = _lastElapsed == null
-          ? 0.0
-          : (elapsed - _lastElapsed!).inMicroseconds / 1000000.0;
-      _lastElapsed = elapsed;
+  void _startManualSpeedScroll(ScrollController ctrl, AppState appState) {
+    if (!ctrl.hasClients) return;
 
-      if (dt <= 0 || dt > 0.5) return; // Skip first frame or stalls
+    final maxScroll = ctrl.position.maxScrollExtent;
+    final currentScroll = ctrl.offset;
 
-      final double pxPerSec = _pixelsPerSecond(appState.autoScrollSpeed);
-      _scrollAccumulator += pxPerSec * dt;
-
-      if (_scrollAccumulator >= 1.0) {
-        final int wholePx = _scrollAccumulator.floor();
-        _scrollAccumulator -= wholePx;
-
-        final maxScroll = ctrl.position.maxScrollExtent;
-        final currentScroll = ctrl.offset;
-
-        if (maxScroll > 0) {
-          if (currentScroll + wholePx >= maxScroll) {
-            // Page end reached — flip to next after a brief pause
-            ctrl.jumpTo(maxScroll);
-            Future.delayed(const Duration(milliseconds: 1500), () {
-              if (_isAutoScrolling && mounted) _moveToNextPage();
-            });
-            // Stop ticker temporarily to avoid repeated triggers
-            _scrollTicker?.stop();
-          } else {
-            ctrl.jumpTo(currentScroll + wholePx);
+    if (maxScroll <= 0) {
+      // Page fits on screen. Wait and flip page.
+      if (_pageTransitionTimer == null) {
+        final waitSeconds = (300.0 / appState.autoScrollSpeed).clamp(5.0, 60.0);
+        _pageTransitionTimer = Timer(Duration(milliseconds: (waitSeconds * 1000).toInt()), () {
+          if (_isAutoScrolling && mounted) {
+            _moveToNextPage();
           }
-        } else {
-          // Page fits on screen — wait proportional to speed then flip
-          final waitMs = (60000.0 / appState.autoScrollSpeed).clamp(2000.0, 30000.0).toInt();
-          _scrollTicker?.stop();
-          Future.delayed(Duration(milliseconds: waitMs), () {
-            if (_isAutoScrolling && mounted) {
-              _moveToNextPage();
-            }
-          });
-        }
+        });
+      }
+      return;
+    }
+
+    if (currentScroll >= maxScroll - 2) {
+      // Page end reached. Wait and flip.
+      if (_pageTransitionTimer == null) {
+        _pageTransitionTimer = Timer(const Duration(milliseconds: 1500), () {
+          if (_isAutoScrolling && mounted) {
+            _moveToNextPage();
+          }
+        });
+      }
+      return;
+    }
+
+    // Start continuous linear animation to bottom of page
+    final double pxPerSec = _pixelsPerSecond(appState.autoScrollSpeed);
+    final double remainingDistance = maxScroll - currentScroll;
+    final double durationSeconds = remainingDistance / pxPerSec;
+
+    if (durationSeconds <= 0.1) {
+      if (_pageTransitionTimer == null) {
+        _pageTransitionTimer = Timer(const Duration(milliseconds: 1500), () {
+          if (_isAutoScrolling && mounted) {
+            _moveToNextPage();
+          }
+        });
+      }
+      return;
+    }
+
+    _pageTransitionTimer?.cancel();
+    _pageTransitionTimer = null;
+
+    _isAnimatingScroll = true;
+    ctrl.animateTo(
+      maxScroll,
+      duration: Duration(milliseconds: (durationSeconds * 1000).toInt()),
+      curve: Curves.linear,
+    ).then((_) {
+      _isAnimatingScroll = false;
+      if (_isAutoScrolling && mounted && ctrl.hasClients && ctrl.offset >= maxScroll - 2) {
+        _pageTransitionTimer?.cancel();
+        _pageTransitionTimer = Timer(const Duration(milliseconds: 1500), () {
+          if (_isAutoScrolling && mounted) {
+            _moveToNextPage();
+          }
+        });
       }
     });
-
-    _scrollTicker!.start();
   }
 
   void _moveToNextPage() {
     if (!mounted) return;
     final quranProvider = Provider.of<QuranProvider>(context, listen: false);
     if (quranProvider.currentPage < 604) {
+      _stopScrollOnPage(quranProvider.currentPage);
+      
       quranProvider.goToPage(quranProvider.currentPage + 1);
-      // Reset accumulator and restart ticker for the new page
-      _scrollAccumulator = 0.0;
+
+      _lastSyncedAyah = null;
+      _lastSyncedSurah = null;
+      _lastSyncedPage = quranProvider.currentPage;
+
       if (_isAutoScrolling) {
-        _scrollTicker?.dispose();
-        Future.microtask(_startAutoScroll);
+        Future.microtask(_syncScrollState);
       }
     } else {
       _stopAutoScroll();
     }
   }
 
+  void _stopScrollOnPage(int pageNum) {
+    final ctrl = _pageScrollControllers[pageNum];
+    if (ctrl != null && ctrl.hasClients) {
+      ctrl.jumpTo(ctrl.offset);
+    }
+  }
+
+  void _stopScrollAnimation() {
+    _pageTransitionTimer?.cancel();
+    _pageTransitionTimer = null;
+    _isAnimatingScroll = false;
+    _lastSyncedAyah = null;
+    _lastSyncedSurah = null;
+    _lastSyncedPage = null;
+
+    final quranProvider = Provider.of<QuranProvider>(context, listen: false);
+    _stopScrollOnPage(quranProvider.currentPage);
+  }
+
   void _stopAutoScroll() {
-    _scrollTicker?.dispose();
-    _scrollTicker = null;
-    _scrollAccumulator = 0.0;
+    _stopScrollAnimation();
     if (mounted) {
       setState(() {
         _isAutoScrolling = false;
@@ -308,9 +385,9 @@ class _QuranScreenState extends State<QuranScreen>
     setState(() {
       _isAutoScrolling = !_isAutoScrolling;
       if (_isAutoScrolling) {
-        _startAutoScroll();
+        _syncScrollState();
       } else {
-        _stopAutoScroll();
+        _stopScrollAnimation();
       }
     });
   }
@@ -319,10 +396,10 @@ class _QuranScreenState extends State<QuranScreen>
     final appState = Provider.of<AppState>(context, listen: false);
     double newSpeed = (appState.autoScrollSpeed + delta).clamp(5.0, 100.0);
     appState.setAutoScrollSpeed(newSpeed);
-    // Restart ticker to pick up new speed immediately
+    
     if (_isAutoScrolling) {
-      _scrollTicker?.dispose();
-      _startAutoScroll();
+      _stopScrollAnimation();
+      Future.microtask(_syncScrollState);
     }
     setState(() {});
   }
@@ -1274,7 +1351,7 @@ class _QuranScreenState extends State<QuranScreen>
                     _showAutoScrollPanel = !_showAutoScrollPanel;
                     if (_showAutoScrollPanel) {
                       _isAutoScrolling = true;
-                      _startAutoScroll();
+                      _syncScrollState();
                     } else {
                       _stopAutoScroll();
                     }

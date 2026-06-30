@@ -46,20 +46,10 @@ class _AldaaWadawaaCategoryScreenState
   void _applyFilter() {
     if (mounted) {
       setState(() {
-        final allChapters = _bookService.getAllChapters();
-        final categoryChapters =
-            allChapters.where((c) => widget.chapterIds.contains(c.id)).toList();
-
-        if (_searchQuery.isEmpty) {
-          _filteredChapters = categoryChapters;
-        } else {
-          _filteredChapters = categoryChapters
-              .where((c) =>
-                  c.title.contains(_searchQuery) ||
-                  c.content.contains(_searchQuery) ||
-                  c.page.toString().contains(_searchQuery))
-              .toList();
-        }
+        final filteredGlobal = _bookService.searchChapters(_searchQuery);
+        _filteredChapters = filteredGlobal
+            .where((c) => widget.chapterIds.contains(c.id))
+            .toList();
         _isLoading = false;
       });
     }

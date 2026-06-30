@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rafiq_quran/core/services/aldaa_wadawaa_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter/services.dart';
 import 'dart:convert';
@@ -68,6 +69,38 @@ void main() {
       final searchPage = service.searchChapters('5');
       expect(searchPage.length, 1);
       expect(searchPage[0].id, 1);
+    });
+
+    test('Diacritic-insensitive search and favorite chapters', () async {
+      SharedPreferences.setMockInitialValues({
+        'favorite_aldaa_chapters': ['2']
+      });
+
+      final service = AldaaWadawaaService();
+      await service.loadChapters();
+
+      // Test diacritic-insensitive search
+      final searchHarakat = service.searchChapters('الدُّعَاء');
+      expect(searchHarakat.length, 1);
+      expect(searchHarakat[0].id, 2);
+
+      // Test letters variation
+      final searchAlif = service.searchChapters('الفتوي');
+      expect(searchAlif.length, 1);
+      expect(searchAlif[0].id, 1);
+
+      // Test favorite methods
+      final isFav2 = await service.isFavorite(2);
+      final isFav1 = await service.isFavorite(1);
+      expect(isFav2, isTrue);
+      expect(isFav1, isFalse);
+
+      await service.toggleFavorite(1);
+      final isFav1After = await service.isFavorite(1);
+      expect(isFav1After, isTrue);
+
+      final favChapters = await service.getFavoriteChapters();
+      expect(favChapters.length, 2);
     });
   });
 

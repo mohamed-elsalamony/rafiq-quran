@@ -71,7 +71,7 @@ class QuranProvider extends ChangeNotifier {
     {'name': 'ياسر الدوسري', 'id': 'Yasser_Ad-Dussary_128kbps'},
     {'name': 'ماهر المعيقلي', 'id': 'Maher_AlMuaiqly_64kbps'},
     {'name': 'عبد الرحمن السديس', 'id': 'Abdurrahmaan_As-Sudais_192kbps'},
-    {'name': 'سعود الشريم', 'id': 'Shuraym_128kbps'},
+    {'name': 'سعود الشريم', 'id': 'Saood_ash-Shuraym_128kbps'},
   ];
 
   QuranProvider({required this.appState}) {
@@ -208,7 +208,7 @@ class QuranProvider extends ChangeNotifier {
 
   // --- Recitation controls ---
   Future<void> startRecitation(int surah, int ayah,
-      {int? startPositionMs}) async {
+      {int? startPositionMs, int retryCount = 0}) async {
     _errorMessage = null;
     _activePlayingSurah = surah;
     _activePlayingAyah = ayah;
@@ -217,19 +217,21 @@ class QuranProvider extends ChangeNotifier {
     _currentAudioPositionMs = startPositionMs ?? 0;
     notifyListeners();
 
+    final String targetReciterId = _currentReciterId;
+
     try {
       final localFile =
-          await RecitationService.getLocalFile(surah, ayah, _currentReciterId);
+          await RecitationService.getLocalFile(surah, ayah, targetReciterId);
       await _audioPlayer.setPlaybackRate(_playbackSpeed);
 
       if (await localFile.exists()) {
         await _audioPlayer.play(DeviceFileSource(localFile.path));
       } else {
         final url =
-            RecitationService.getAudioUrl(surah, ayah, _currentReciterId);
+            RecitationService.getAudioUrl(surah, ayah, targetReciterId);
         await _audioPlayer.play(UrlSource(url)).timeout(
               const Duration(seconds: 15),
-              onTimeout: () => throw Exception(
+              onTimeout: () => throw TimeoutException(
                   'انتهت مهلة تشغيل الصوت. يرجى التحقق من اتصالك بالإنترنت.'),
             );
       }
@@ -240,7 +242,7 @@ class QuranProvider extends ChangeNotifier {
 
       // Save audio state
       final reciterName =
-          reciters.firstWhere((r) => r['id'] == _currentReciterId)['name']!;
+          reciters.firstWhere((r) => r['id'] == targetReciterId)['name']!;
       appState.saveAudioState(
         reciter: reciterName,
         positionMs: startPositionMs ?? 0,
@@ -251,10 +253,28 @@ class QuranProvider extends ChangeNotifier {
       // Prefetch the next verse silently in the background
       _prefetchNextVerse(surah, ayah);
     } catch (e) {
-      debugPrint("Error starting recitation: $e");
+      debugPrint("Error starting recitation (Attempt ${retryCount + 1}): $e");
+      
+      // If we still have retries, and the user hasn't changed the active playing verse/reciter, and we are still in playing state:
+      if (retryCount < 2 &&
+          _isPlaying &&
+          _activePlayingSurah == surah &&
+          _activePlayingAyah == ayah &&
+          _currentReciterId == targetReciterId) {
+        debugPrint("Retrying recitation in 2 seconds...");
+        await Future.delayed(const Duration(seconds: 2));
+        if (_isPlaying &&
+            _activePlayingSurah == surah &&
+            _activePlayingAyah == ayah &&
+            _currentReciterId == targetReciterId) {
+          return startRecitation(surah, ayah,
+              startPositionMs: startPositionMs, retryCount: retryCount + 1);
+        }
+      }
+
       _isPlaying = false;
       _errorMessage =
-          "عذراً، فشل تشغيل الصوت: ${e.toString().replaceAll('Exception:', '').trim()}";
+          "عذراً، فشل تشغيل الصوت بعد محاولات متعددة. يرجى التحقق من الاتصال بالإنترنت أو تجربة قارئ آخر. (خطأ: ${e.toString().replaceAll('Exception:', '').trim()})";
       notifyListeners();
     }
   }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AldaaWadawaaChapter {
   final int id;
@@ -61,13 +62,68 @@ class AldaaWadawaaService {
     }
   }
 
+  String _normalizeArabic(String text) {
+    return text
+        .replaceAll(RegExp(r'[َُِّْٰ]'), '') // remove diacritics (harakat)
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ة', 'ه')
+        .replaceAll('ى', 'ي');
+  }
+
   List<AldaaWadawaaChapter> searchChapters(String query) {
     if (query.isEmpty) return _chapters;
+    final normalizedQuery = _normalizeArabic(query.trim().toLowerCase());
     return _chapters
         .where((c) =>
-            c.title.contains(query) ||
-            c.content.contains(query) ||
-            c.page.toString().contains(query))
+            _normalizeArabic(c.title.toLowerCase()).contains(normalizedQuery) ||
+            _normalizeArabic(c.content.toLowerCase()).contains(normalizedQuery) ||
+            c.page.toString().contains(normalizedQuery))
         .toList();
+  }
+
+  // --- Favorite Chapters Persistence ---
+  Future<List<int>> getFavoriteChapterIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> list = prefs.getStringList('favorite_aldaa_chapters') ?? [];
+      return list
+          .map((idStr) => int.tryParse(idStr) ?? 0)
+          .where((id) => id > 0)
+          .toList();
+    } catch (e) {
+      print("Error fetching favorite chapters: $e");
+      return [];
+    }
+  }
+
+  Future<bool> isFavorite(int chapterId) async {
+    final favorites = await getFavoriteChapterIds();
+    return favorites.contains(chapterId);
+  }
+
+  Future<void> toggleFavorite(int chapterId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> list = prefs.getStringList('favorite_aldaa_chapters') ?? [];
+      final String idStr = chapterId.toString();
+
+      if (list.contains(idStr)) {
+        list.remove(idStr);
+      } else {
+        list.add(idStr);
+      }
+
+      await prefs.setStringList('favorite_aldaa_chapters', list);
+    } catch (e) {
+      print("Error toggling favorite chapter: $e");
+    }
+  }
+
+  Future<List<AldaaWadawaaChapter>> getFavoriteChapters() async {
+    await loadChapters();
+    final favIds = await getFavoriteChapterIds();
+    return _chapters.where((c) => favIds.contains(c.id)).toList();
   }
 }
