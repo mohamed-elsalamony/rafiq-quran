@@ -508,7 +508,10 @@ class _MainShellState extends State<MainShell> {
               ],
             )
           : null,
-      body: _tabs[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _tabs,
+      ),
       bottomNavigationBar: _buildBottomNavigationBar(
         screenWidth,
         tabWidth,

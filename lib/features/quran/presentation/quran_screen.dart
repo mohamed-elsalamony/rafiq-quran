@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -54,6 +53,8 @@ class _QuranScreenState extends State<QuranScreen> {
   Timer? _pageTransitionTimer;
   bool _isAnimatingScroll = false;
 
+  QuranProvider? _quranProvider;
+
   ScrollController _controllerForPage(int pageNum) {
     return _pageScrollControllers.putIfAbsent(
         pageNum, () => ScrollController());
@@ -68,12 +69,12 @@ class _QuranScreenState extends State<QuranScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_isInit) {
-      final quranProvider = Provider.of<QuranProvider>(context, listen: false);
-      quranProvider.addListener(_onProviderChange);
+      _quranProvider = Provider.of<QuranProvider>(context, listen: false);
+      _quranProvider?.addListener(_onProviderChange);
 
       final int startPage = widget.initialPage != 1
           ? widget.initialPage
-          : quranProvider.currentPage;
+          : _quranProvider!.currentPage;
       _pageController = PageController(initialPage: startPage - 1);
 
       // Clear any stale per-page scroll controllers from a previous visit
@@ -92,14 +93,14 @@ class _QuranScreenState extends State<QuranScreen> {
 
       if (widget.initialPage != 1) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          quranProvider.goToPage(widget.initialPage);
+          _quranProvider?.goToPage(widget.initialPage);
         });
       }
 
       if (widget.autoPlay) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final appState = Provider.of<AppState>(context, listen: false);
-          quranProvider.startRecitation(
+          _quranProvider?.startRecitation(
             appState.lastAudioSurah,
             appState.lastAudioAyah,
             startPositionMs: appState.lastAudioPositionMs,
@@ -112,10 +113,9 @@ class _QuranScreenState extends State<QuranScreen> {
 
   @override
   void dispose() {
-    // 1. Remove the listener first so we don't receive any more notifications during/after dispose
+    // 1. Remove the listener first using the stored provider reference to avoid lookup exceptions
     try {
-      final quranProvider = Provider.of<QuranProvider>(context, listen: false);
-      quranProvider.removeListener(_onProviderChange);
+      _quranProvider?.removeListener(_onProviderChange);
     } catch (_) {}
 
     // 2. Cancel timers and stop active scroll animations to prevent layout frame errors
@@ -1350,9 +1350,6 @@ class _QuranScreenState extends State<QuranScreen> {
                         ),
                       );
                     }
-
-                    final bool isActive =
-                        (quranProvider.currentPage - 1) == index;
 
                     return SingleChildScrollView(
                       controller: _controllerForPage(pageNum),
