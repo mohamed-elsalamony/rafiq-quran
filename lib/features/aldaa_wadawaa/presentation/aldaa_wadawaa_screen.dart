@@ -12,62 +12,80 @@ class AldaaWadawaaScreen extends StatefulWidget {
   State<AldaaWadawaaScreen> createState() => _AldaaWadawaaScreenState();
 }
 
-class _AldaaWadawaaScreenState extends State<AldaaWadawaaScreen> {
+class _AldaaWadawaaScreenState extends State<AldaaWadawaaScreen>
+    with SingleTickerProviderStateMixin {
   final AldaaWadawaaService _bookService = AldaaWadawaaService();
   final TextEditingController _searchController = TextEditingController();
+  late final TabController _tabController;
+
   bool _isLoading = true;
   List<int> _favChapterIds = [];
   String _searchQuery = '';
   List<AldaaWadawaaChapter> _searchResults = [];
 
+  static const Color _primaryColor = Color(0xFF0F5A47);
+  static const Color _accentColor = Color(0xFFD4AF37);
+
   final List<Map<String, dynamic>> _categories = [
     {
       'name': 'الدعاء وعلاج البلاء',
       'icon': Icons.healing_rounded,
-      'desc': 'أهمية الدعاء وشروطه، والالحاح فيه وعلاقته بالقدر وكيف يكون سلاحاً ودواءً للقلب',
+      'desc': 'أهمية الدعاء وشروطه والإلحاح فيه وعلاقته بالقدر',
       'chapterIds': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      'color': const Color(0xFF1B6B52),
     },
     {
       'name': 'عقوبات الذنوب والمعاصي',
       'icon': Icons.warning_amber_rounded,
-      'desc': 'تفصيل آثار الذنوب والمعاصي في حرمان العبد وتأثيرها على العقل والبدن ومحق البركة',
-      'chapterIds': [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
+      'desc': 'آثار الذنوب على العقل والبدن ومحق البركة والنعم',
+      'chapterIds': [
+        11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+        21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+        31, 32, 33, 34, 35, 36, 37, 38
+      ],
+      'color': const Color(0xFF8B4513),
     },
     {
       'name': 'الحدود والذنوب الكبرى',
       'icon': Icons.gavel_rounded,
-      'desc': 'التحذير من كبائر الذنوب والشرك والقتل والزنا واللوط وأحكام الجنايات والحدود الشرعية',
+      'desc': 'التحذير من كبائر الذنوب وأحكام الحدود الشرعية',
       'chapterIds': [39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53],
+      'color': const Color(0xFF6B2D2D),
     },
     {
-      'name': 'أدوية القلوب وتجريد التوحيد',
+      'name': 'أدوية القلوب والتوحيد',
       'icon': Icons.favorite_rounded,
-      'desc': 'سبيل عيش القلب السليم وصلاحه والتخلص من الشرك في المحبة والإرادات والنيات',
+      'desc': 'سبيل صلاح القلب والتخلص من الشرك في المحبة والإرادات',
       'chapterIds': [54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67],
+      'color': const Color(0xFF0F5A47),
     },
     {
       'name': 'علاج العشق والشهوات',
       'icon': Icons.heart_broken_rounded,
-      'desc': 'بيان داء عشق الصور والتعلق بالخلق ومفاسده، وسبل العلاج بغض البصر وصيانة الجوارح',
+      'desc': 'داء عشق الصور وسبل العلاج بغض البصر وصيانة الجوارح',
       'chapterIds': [68, 69, 70, 71, 72],
+      'color': const Color(0xFF6B4C8B),
     },
     {
       'name': 'التوبة النصوح والخاتمة',
       'icon': Icons.verified_user_rounded,
-      'desc': 'حقيقة التوبة النصوح وشروط قبولها للنجاة في الدنيا والآخرة وخاتمة كتاب الجواب الكافي',
+      'desc': 'حقيقة التوبة النصوح وشروط قبولها للنجاة في الدارين',
       'chapterIds': [73, 74, 75],
+      'color': const Color(0xFF2E5D8A),
     },
   ];
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadBookData();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -78,7 +96,6 @@ class _AldaaWadawaaScreenState extends State<AldaaWadawaaScreen> {
       setState(() {
         _favChapterIds = favIds;
         _isLoading = false;
-        // Refresh search results if search is active
         if (_searchQuery.isNotEmpty) {
           _searchResults = _bookService.searchChapters(_searchQuery);
         }
@@ -93,210 +110,158 @@ class _AldaaWadawaaScreenState extends State<AldaaWadawaaScreen> {
     });
   }
 
+  void _clearSearch() {
+    _searchController.clear();
+    _onSearchChanged('');
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final isDark = appState.isDarkMode;
-    const primaryColor = Color(0xFF0F5A47);
-    const Color accentColor = Color(0xFFD4AF37);
-
     final lastReadId = appState.lastReadAldaaWadawaaChapterId;
     final lastReadChapter =
         lastReadId > 0 ? _bookService.getChapterById(lastReadId) : null;
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: isDark ? const Color(0xFF1F1F1F) : primaryColor,
-          foregroundColor: Colors.white,
-          title: const Text(
-            'كتاب الداء والدواء',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Outfit',
-              fontSize: 16,
-            ),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: isDark ? const Color(0xFF1F1F1F) : _primaryColor,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'كتاب الداء والدواء',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Amiri',
+            fontSize: 17,
           ),
-          bottom: _searchQuery.isNotEmpty
-              ? null
-              : const TabBar(
-                  labelColor: accentColor,
-                  unselectedLabelColor: Colors.white70,
-                  indicatorColor: accentColor,
-                  indicatorWeight: 3,
-                  labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Outfit'),
-                  tabs: [
-                    Tab(text: 'فهرس الفصول'),
-                    Tab(text: 'أقسام الكتاب'),
-                    Tab(text: 'المفضلة والإشارات'),
-                  ],
-                ),
         ),
-        body: Container(
-          color: isDark ? const Color(0xFF121212) : const Color(0xFFF4F6F4),
-          child: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: primaryColor))
-              : Column(
-                  children: [
-                    // Global Search Bar
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                      child: Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                        child: TextField(
-                          controller: _searchController,
-                          textAlign: TextAlign.right,
-                          onChanged: _onSearchChanged,
-                          decoration: InputDecoration(
-                            hintText: 'ابحث في الكتاب كاملاً (بالعنوان والمحتوى)...',
-                            prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear, color: Colors.grey),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      _onSearchChanged('');
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ),
+        bottom: _searchQuery.isNotEmpty
+            ? null
+            : TabBar(
+                controller: _tabController,
+                labelColor: _accentColor,
+                unselectedLabelColor: Colors.white60,
+                indicatorColor: _accentColor,
+                indicatorWeight: 2.5,
+                labelStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.5,
+                    fontFamily: 'Amiri'),
+                unselectedLabelStyle:
+                    const TextStyle(fontSize: 12, fontFamily: 'Amiri'),
+                tabs: const [
+                  Tab(text: 'فهرس الفصول'),
+                  Tab(text: 'أقسام الكتاب'),
+                  Tab(text: 'المفضلة'),
+                ],
+              ),
+      ),
+      body: Container(
+        color: isDark ? const Color(0xFF121212) : const Color(0xFFF4F6F4),
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: _primaryColor))
+            : Column(
+                children: [
+                  // شريط البحث
+                  _buildSearchBar(isDark),
 
-                    // Main Content / Search Results
-                    Expanded(
-                      child: _searchQuery.isNotEmpty
-                          ? _buildSearchResults(isDark, primaryColor, accentColor, appState)
-                          : _buildTabContent(isDark, primaryColor, accentColor, lastReadChapter, appState),
-                    ),
-                  ],
+                  // المحتوى الرئيسي
+                  Expanded(
+                    child: _searchQuery.isNotEmpty
+                        ? _buildSearchResults(isDark, appState)
+                        : _buildTabContent(isDark, lastReadChapter, appState),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+      child: Card(
+        elevation: 2,
+        shadowColor: Colors.black12,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            children: [
+              // أيقونة البحث على اليمين (RTL)
+              Padding(
+                padding: const EdgeInsets.only(right: 10, left: 4),
+                child: Icon(
+                  Icons.search_rounded,
+                  color: _searchQuery.isNotEmpty
+                      ? _primaryColor
+                      : Colors.grey[400],
+                  size: 22,
                 ),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  textAlign: TextAlign.right,
+                  textDirection: TextDirection.rtl,
+                  onChanged: _onSearchChanged,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontFamily: 'Amiri',
+                    fontSize: 15,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'ابحث في الكتاب بالعنوان أو المحتوى...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey[400],
+                      fontFamily: 'Amiri',
+                      fontSize: 14,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding:
+                        const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                ),
+              ),
+              // زر مسح البحث
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        key: const ValueKey('clear'),
+                        icon: const Icon(Icons.close_rounded,
+                            color: Colors.grey, size: 20),
+                        onPressed: _clearSearch,
+                      )
+                    : const SizedBox(width: 8, key: ValueKey('empty')),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSearchResults(
-      bool isDark, Color primaryColor, Color accentColor, AppState appState) {
-    if (_searchResults.isEmpty) {
-      return const Center(
-        child: Text(
-          'لا توجد نتائج بحث مطابقة',
-          style: TextStyle(fontSize: 15, color: Colors.grey),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: _searchResults.length,
-      itemBuilder: (context, index) {
-        final chapter = _searchResults[index];
-
-        // Find a search snippet
-        String snippet = chapter.content;
-        final cleanQuery = _searchQuery.toLowerCase();
-        final matchIdx = snippet.toLowerCase().indexOf(cleanQuery);
-        if (matchIdx != -1) {
-          final start = (matchIdx - 30).clamp(0, snippet.length);
-          final end = (matchIdx + cleanQuery.length + 60).clamp(0, snippet.length);
-          snippet = "...${snippet.substring(start, end).trim()}...";
-        } else if (snippet.length > 120) {
-          snippet = "${snippet.substring(0, 120).trim()}...";
-        }
-
-        return _buildChapterCard(
-            chapter, snippet, isDark, primaryColor, accentColor, appState);
-      },
-    );
-  }
-
   Widget _buildTabContent(
-      bool isDark,
-      Color primaryColor,
-      Color accentColor,
-      AldaaWadawaaChapter? lastReadChapter,
-      AppState appState) {
+    bool isDark,
+    AldaaWadawaaChapter? lastReadChapter,
+    AppState appState,
+  ) {
     return Column(
       children: [
-        // Resume Reading Card
-        if (lastReadChapter != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Card(
-              color: isDark ? const Color(0xFF1B3D34) : const Color(0xFFE8F3EF),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AldaaWadawaaDetailScreen(
-                          chapter: lastReadChapter),
-                    ),
-                  ).then((_) => _loadBookData());
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.play_circle_filled,
-                          color: accentColor, size: 28),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'متابعة القراءة من حيث توقفت',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'آخر فصل: ${lastReadChapter.title} (صفحة ${lastReadChapter.page})',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: isDark
-                                      ? Colors.grey[300]
-                                      : Colors.grey[600]),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.arrow_back_ios,
-                          size: 14, color: Colors.grey),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+        // بطاقة متابعة القراءة
+        if (lastReadChapter != null) _buildResumeCard(isDark, lastReadChapter),
 
-        // Tabs Content
+        // التبويبات
         Expanded(
           child: TabBarView(
+            controller: _tabController,
             children: [
-              // Tab 1: فهرس الفصول
-              _buildChaptersList(isDark, primaryColor, accentColor, appState),
-
-              // Tab 2: أقسام الكتاب
-              _buildCategoriesGrid(isDark, primaryColor, accentColor),
-
-              // Tab 3: المفضلة والإشارات
-              _buildFavoritesList(isDark, primaryColor, accentColor, appState),
+              _buildChaptersList(isDark, appState),
+              _buildCategoriesGrid(isDark),
+              _buildFavoritesList(isDark, appState),
             ],
           ),
         ),
@@ -304,26 +269,149 @@ class _AldaaWadawaaScreenState extends State<AldaaWadawaaScreen> {
     );
   }
 
-  Widget _buildChaptersList(
-      bool isDark, Color primaryColor, Color accentColor, AppState appState) {
+  Widget _buildResumeCard(bool isDark, AldaaWadawaaChapter chapter) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 6),
+      child: Card(
+        elevation: 1.5,
+        shadowColor: Colors.black12,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: isDark ? const Color(0xFF1B3D34) : const Color(0xFFE6F3EE),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AldaaWadawaaDetailScreen(chapter: chapter),
+              ),
+            ).then((_) => _loadBookData());
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.play_circle_fill_rounded,
+                    color: _accentColor, size: 26),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'متابعة القراءة',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          fontFamily: 'Amiri',
+                        ),
+                        textDirection: TextDirection.rtl,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        chapter.title,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.grey[600],
+                          fontFamily: 'Amiri',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textDirection: TextDirection.rtl,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.arrow_back_ios_rounded,
+                    size: 13, color: Colors.grey[500]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchResults(bool isDark, AppState appState) {
+    if (_searchResults.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off_rounded,
+                size: 56, color: Colors.grey[300]),
+            const SizedBox(height: 12),
+            Text(
+              'لا توجد نتائج لـ "$_searchQuery"',
+              style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                  fontFamily: 'Amiri'),
+              textDirection: TextDirection.rtl,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Text(
+            '${_searchResults.length} نتيجة',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[500],
+              fontFamily: 'Amiri',
+            ),
+            textDirection: TextDirection.rtl,
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            itemCount: _searchResults.length,
+            itemBuilder: (context, index) {
+              final chapter = _searchResults[index];
+              String snippet = chapter.content;
+              final cleanQuery = _searchQuery.toLowerCase();
+              final matchIdx = snippet.toLowerCase().indexOf(cleanQuery);
+              if (matchIdx != -1) {
+                final start = (matchIdx - 20).clamp(0, snippet.length);
+                final end =
+                    (matchIdx + cleanQuery.length + 80).clamp(0, snippet.length);
+                snippet = '...${snippet.substring(start, end).trim()}...';
+              } else if (snippet.length > 100) {
+                snippet = '${snippet.substring(0, 100).trim()}...';
+              }
+              return _buildChapterCard(chapter, snippet, isDark, appState);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChaptersList(bool isDark, AppState appState) {
     final allChapters = _bookService.getAllChapters();
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       itemCount: allChapters.length,
       itemBuilder: (context, index) {
         final chapter = allChapters[index];
         String snippet = chapter.content;
-        if (snippet.length > 120) {
-          snippet = "${snippet.substring(0, 120).trim()}...";
+        if (snippet.length > 100) {
+          snippet = '${snippet.substring(0, 100).trim()}...';
         }
-        return _buildChapterCard(
-            chapter, snippet, isDark, primaryColor, accentColor, appState);
+        return _buildChapterCard(chapter, snippet, isDark, appState);
       },
     );
   }
 
-  Widget _buildFavoritesList(
-      bool isDark, Color primaryColor, Color accentColor, AppState appState) {
+  Widget _buildFavoritesList(bool isDark, AppState appState) {
     final allChapters = _bookService.getAllChapters();
     final favChapters =
         allChapters.where((c) => _favChapterIds.contains(c.id)).toList();
@@ -335,26 +423,27 @@ class _AldaaWadawaaScreenState extends State<AldaaWadawaaScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.star_outline_rounded,
+              Icon(Icons.star_border_rounded,
                   size: 64,
-                  color: isDark ? Colors.grey[700] : Colors.grey[400]),
+                  color: isDark ? Colors.grey[700] : Colors.grey[300]),
               const SizedBox(height: 16),
               Text(
-                'لا توجد علامات مرجعية أو مفضلة بعد',
+                'لا توجد فصول محفوظة',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   color: isDark ? Colors.grey[400] : Colors.grey[600],
                   fontWeight: FontWeight.bold,
+                  fontFamily: 'Amiri',
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
-                'يمكنك حفظ الفصول المفضلة بالضغط على علامة النجمة في أعلى صفحة القارئ للرجوع إليها لاحقاً.',
+                'اضغط على النجمة داخل الفصل لحفظه هنا',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: isDark ? Colors.grey[500] : Colors.grey[500],
-                  height: 1.4,
+                  height: 1.5,
+                  fontFamily: 'Amiri',
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -365,29 +454,27 @@ class _AldaaWadawaaScreenState extends State<AldaaWadawaaScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       itemCount: favChapters.length,
       itemBuilder: (context, index) {
         final chapter = favChapters[index];
         String snippet = chapter.content;
-        if (snippet.length > 120) {
-          snippet = "${snippet.substring(0, 120).trim()}...";
+        if (snippet.length > 100) {
+          snippet = '${snippet.substring(0, 100).trim()}...';
         }
-        return _buildChapterCard(
-            chapter, snippet, isDark, primaryColor, accentColor, appState);
+        return _buildChapterCard(chapter, snippet, isDark, appState);
       },
     );
   }
 
-  Widget _buildCategoriesGrid(
-      bool isDark, Color primaryColor, Color accentColor) {
+  Widget _buildCategoriesGrid(bool isDark) {
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.82,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.85,
       ),
       itemCount: _categories.length,
       itemBuilder: (context, index) {
@@ -396,84 +483,111 @@ class _AldaaWadawaaScreenState extends State<AldaaWadawaaScreen> {
         final IconData icon = cat['icon'] as IconData;
         final String desc = cat['desc'] as String;
         final List<int> chapterIds = cat['chapterIds'] as List<int>;
+        final Color catColor = cat['color'] as Color;
 
         return Card(
-          elevation: 2.5,
+          elevation: 2,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16)),
           color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AldaaWadawaaCategoryScreen(
+                  builder: (_) => AldaaWadawaaCategoryScreen(
                     categoryName: name,
                     chapterIds: chapterIds,
                   ),
                 ),
               ).then((_) => _loadBookData());
             },
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: isDark
-                        ? const Color(0xFF1D3C34)
-                        : const Color(0xFFE8F3EF),
-                    child: Icon(
-                      icon,
-                      size: 26,
-                      color: isDark ? accentColor : primaryColor,
+            child: Column(
+              children: [
+                // رأس الكارد
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        catColor,
+                        catColor.withOpacity(0.75),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black87,
-                      fontFamily: 'Amiri',
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Expanded(
-                    child: Text(
-                      desc,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        height: 1.35,
+                  child: Column(
+                    children: [
+                      Icon(icon, size: 30, color: Colors.white),
+                      const SizedBox(height: 6),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Amiri',
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
+                    ],
+                  ),
+                ),
+                // جسم الكارد
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            desc,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: isDark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
+                              height: 1.4,
+                              fontFamily: 'Amiri',
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: catColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: catColor.withOpacity(0.25)),
+                          ),
+                          child: Text(
+                            '${chapterIds.length} فصلاً',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: catColor,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Amiri',
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${chapterIds.length} فصول',
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        color: accentColor,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Outfit',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -482,100 +596,165 @@ class _AldaaWadawaaScreenState extends State<AldaaWadawaaScreen> {
   }
 
   Widget _buildChapterCard(
-      AldaaWadawaaChapter chapter,
-      String snippet,
-      bool isDark,
-      Color primaryColor,
-      Color accentColor,
-      AppState appState) {
+    AldaaWadawaaChapter chapter,
+    String snippet,
+    bool isDark,
+    AppState appState,
+  ) {
     final isLastRead = appState.lastReadAldaaWadawaaChapterId == chapter.id;
     final isFav = _favChapterIds.contains(chapter.id);
+    final chapterIndex = _bookService.getChapterIndex(chapter.id);
+    final chapterNum = chapterIndex >= 0 ? chapterIndex + 1 : chapter.id;
 
     return Card(
-      elevation: 1.5,
-      margin: const EdgeInsets.only(bottom: 10),
+      elevation: isLastRead ? 2 : 1,
+      margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isLastRead ? accentColor : Colors.transparent,
-          width: isLastRead ? 1.5 : 0.0,
+          color: isLastRead
+              ? _accentColor
+              : (isFav
+                  ? _accentColor.withOpacity(0.3)
+                  : Colors.transparent),
+          width: isLastRead ? 1.5 : (isFav ? 1.0 : 0.0),
         ),
       ),
-      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      color: isDark
+          ? (isLastRead
+              ? const Color(0xFF1F2D28)
+              : const Color(0xFF1E1E1E))
+          : (isLastRead
+              ? const Color(0xFFF0F8F4)
+              : Colors.white),
       child: InkWell(
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => AldaaWadawaaDetailScreen(
-                  chapter: chapter),
+              builder: (_) => AldaaWadawaaDetailScreen(chapter: chapter),
             ),
           ).then((_) => _loadBookData());
         },
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(14.0),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // رقم الفصل
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: isLastRead
+                      ? _accentColor.withOpacity(0.15)
+                      : (isDark
+                          ? Colors.grey[800]
+                          : const Color(0xFFE8F3EF)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    '$chapterNum',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isLastRead
+                          ? _accentColor
+                          : (isDark ? Colors.white70 : _primaryColor),
+                      fontFamily: 'Amiri',
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // العنوان والمقتطف
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Expanded(
+                        if (isFav)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 4),
+                            child: Icon(Icons.star_rounded,
+                                color: _accentColor, size: 15),
+                          ),
+                        if (isLastRead)
+                          Container(
+                            margin: const EdgeInsets.only(left: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _accentColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: const Text(
+                              'آخر قراءة',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: _accentColor,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Amiri',
+                              ),
+                            ),
+                          ),
+                        Flexible(
                           child: Text(
                             chapter.title,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: isLastRead
-                                  ? accentColor
-                                  : (isDark ? Colors.white : primaryColor),
+                                  ? _accentColor
+                                  : (isDark ? Colors.white : _primaryColor),
                               fontFamily: 'Amiri',
                             ),
                             textAlign: TextAlign.right,
+                            textDirection: TextDirection.rtl,
                           ),
                         ),
-                        if (isFav)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 6.0),
-                            child: Icon(Icons.star_rounded,
-                                color: accentColor, size: 18),
-                          ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
                     Text(
                       snippet,
                       style: TextStyle(
                         fontSize: 11.5,
                         color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        height: 1.45,
+                        height: 1.5,
+                        fontFamily: 'Amiri',
                       ),
                       textAlign: TextAlign.right,
                       textDirection: TextDirection.rtl,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
+              // رقم الصفحة
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  color: _accentColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(7),
                 ),
                 child: Text(
-                  'ص ${chapter.page}',
-                  style: TextStyle(
-                    color: accentColor,
+                  'ص\n${chapter.page}',
+                  style: const TextStyle(
+                    color: _accentColor,
                     fontWeight: FontWeight.bold,
-                    fontSize: 9.5,
-                    fontFamily: 'Outfit',
+                    fontSize: 10,
+                    fontFamily: 'Amiri',
+                    height: 1.3,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
