@@ -314,6 +314,8 @@ class QuranProvider extends ChangeNotifier {
     if (nextPage != _currentPage) {
       _currentPage = nextPage;
       _saveProgress(nextPage);
+      // Notify UI immediately so the page scrolls before audio starts
+      notifyListeners();
     }
 
     startRecitation(currentSurah, currentAyah);

@@ -38,6 +38,7 @@ class _QuranScreenState extends State<QuranScreen> {
   bool _isInit = false;
   bool _isProgrammaticScroll = false;
   bool _isDownloadDialogShowing = false;
+  Timer? _programmaticScrollSafetyTimer;
 
   // Auto-scroll variables
   bool _isAutoScrolling = false;
@@ -75,6 +76,20 @@ class _QuranScreenState extends State<QuranScreen> {
           : quranProvider.currentPage;
       _pageController = PageController(initialPage: startPage - 1);
 
+      // Clear any stale per-page scroll controllers from a previous visit
+      for (final c in _pageScrollControllers.values) {
+        try { c.dispose(); } catch (_) {}
+      }
+      _pageScrollControllers.clear();
+
+      // Reset scroll/state flags
+      _isProgrammaticScroll = false;
+      _isAutoScrolling = false;
+      _isAnimatingScroll = false;
+      _lastSyncedAyah = null;
+      _lastSyncedSurah = null;
+      _lastSyncedPage = null;
+
       if (widget.initialPage != 1) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           quranProvider.goToPage(widget.initialPage);
@@ -104,8 +119,11 @@ class _QuranScreenState extends State<QuranScreen> {
     } catch (_) {}
 
     // 2. Cancel timers and stop active scroll animations to prevent layout frame errors
+    _programmaticScrollSafetyTimer?.cancel();
+    _programmaticScrollSafetyTimer = null;
     _pageTransitionTimer?.cancel();
     _pageTransitionTimer = null;
+    _isProgrammaticScroll = false;
     
     for (final ctrl in _pageScrollControllers.values) {
       if (ctrl.hasClients) {
@@ -122,6 +140,7 @@ class _QuranScreenState extends State<QuranScreen> {
       } catch (_) {}
     }
     _pageScrollControllers.clear();
+    _isInit = false;
     
     try {
       _pageController.dispose();
@@ -134,6 +153,13 @@ class _QuranScreenState extends State<QuranScreen> {
   void _scrollToPage(int pageNum) {
     if (!_pageController.hasClients) return;
     _isProgrammaticScroll = true;
+
+    // Safety timer: always reset flag after 800ms in case animation is interrupted
+    _programmaticScrollSafetyTimer?.cancel();
+    _programmaticScrollSafetyTimer = Timer(const Duration(milliseconds: 800), () {
+      if (mounted) _isProgrammaticScroll = false;
+    });
+
     _pageController
         .animateToPage(
       pageNum - 1,
@@ -141,7 +167,13 @@ class _QuranScreenState extends State<QuranScreen> {
       curve: Curves.easeInOut,
     )
         .then((_) {
-      _isProgrammaticScroll = false;
+      _programmaticScrollSafetyTimer?.cancel();
+      _programmaticScrollSafetyTimer = null;
+      if (mounted) _isProgrammaticScroll = false;
+    }).catchError((_) {
+      _programmaticScrollSafetyTimer?.cancel();
+      _programmaticScrollSafetyTimer = null;
+      if (mounted) _isProgrammaticScroll = false;
     });
   }
 
@@ -188,7 +220,8 @@ class _QuranScreenState extends State<QuranScreen> {
     }
 
     // 3. Sync page change externally
-    if (!_isProgrammaticScroll && _pageController.hasClients) {
+    // Skip if we are already animating to avoid conflicting scroll animations
+    if (!_isProgrammaticScroll && !_isAnimatingScroll && _pageController.hasClients) {
       final currentPageIndex = _pageController.page?.round() ?? 0;
       if (currentPageIndex + 1 != provider.currentPage) {
         _scrollToPage(provider.currentPage);
@@ -1269,15 +1302,28 @@ class _QuranScreenState extends State<QuranScreen> {
                   allowImplicitScrolling: true,
                   itemCount: 604,
                   onPageChanged: (index) {
+                    // If this was triggered by the user (not programmatically), reset the flag
+                    if (_isProgrammaticScroll) {
+                      // Still programmatic — let the animation finish
+                    } else {
+                      // User manually swiped — stop any active auto-scroll animation
+                      if (_isAutoScrolling) {
+                        _stopScrollAnimation();
+                        Future.microtask(_syncScrollState);
+                      }
+                    }
+
                     final targetPage = index + 1;
                     if (quranProvider.currentPage != targetPage) {
                       quranProvider.setCurrentPageFromScroll(targetPage);
                     }
-                    // Reset scroll position on page change for old page
-                    final prevCtrl = _pageScrollControllers[index]; // same index = old page
-                    if (prevCtrl != null && prevCtrl.hasClients) {
-                      prevCtrl.jumpTo(0);
-                    }
+                    // Reset inner scroll position of the NEW page being shown
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      final newCtrl = _pageScrollControllers[targetPage];
+                      if (newCtrl != null && newCtrl.hasClients) {
+                        newCtrl.jumpTo(0);
+                      }
+                    });
                   },
                   itemBuilder: (context, index) {
                     final pageNum = index + 1;
