@@ -53,6 +53,11 @@ class _QuranScreenState extends State<QuranScreen> {
   Timer? _pageTransitionTimer;
   bool _isAnimatingScroll = false;
 
+  // True while the user is actively dragging the PageView with their finger.
+  // Prevents _onProviderChange from firing conflicting animateToPage calls
+  // that would freeze the PageView's scroll physics.
+  bool _isUserScrolling = false;
+
   QuranProvider? _quranProvider;
 
   ScrollController _controllerForPage(int pageNum) {
@@ -219,9 +224,11 @@ class _QuranScreenState extends State<QuranScreen> {
       _showDownloadProgressDialog(provider);
     }
 
-    // 3. Sync page change externally
-    // Skip if we are already animating to avoid conflicting scroll animations
-    if (!_isProgrammaticScroll && !_isAnimatingScroll && _pageController.hasClients) {
+    // 3. Sync page change externally (e.g. audio recitation jumps to a new page)
+    // CRITICAL: Do NOT animate if the user is currently dragging the PageView,
+    // or if a programmatic/auto-scroll is already in flight.
+    // Firing animateToPage during a drag permanently breaks the PageController.
+    if (!_isProgrammaticScroll && !_isAnimatingScroll && !_isUserScrolling && _pageController.hasClients) {
       final currentPageIndex = _pageController.page?.round() ?? 0;
       if (currentPageIndex + 1 != provider.currentPage) {
         _scrollToPage(provider.currentPage);
@@ -1291,41 +1298,56 @@ class _QuranScreenState extends State<QuranScreen> {
             children: [
               // Scrollable PageView Reader (orientation configured by user settings)
               Expanded(
-                child: PageView.builder(
-                  key: ValueKey(appState.quranScrollDirection),
-                  controller: _pageController,
-                  scrollDirection: appState.quranScrollDirection == 'vertical'
-                      ? Axis.vertical
-                      : Axis.horizontal,
-                  reverse: appState.quranScrollDirection != 'vertical', // RTL swipe right for horizontal, standard down scroll for vertical
-                  physics: const BouncingScrollPhysics(),
-                  allowImplicitScrolling: true,
-                  itemCount: 604,
-                  onPageChanged: (index) {
-                    // If this was triggered by the user (not programmatically), reset the flag
-                    if (_isProgrammaticScroll) {
-                      // Still programmatic — let the animation finish
-                    } else {
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    // Track whether the user is actively dragging the PageView.
+                    // This is the KEY guard that prevents animateToPage from being
+                    // called while a finger gesture is in progress.
+                    if (notification.depth == 0) {
+                      if (notification is ScrollStartNotification &&
+                          notification.dragDetails != null) {
+                        // User started a drag gesture
+                        _isUserScrolling = true;
+                      } else if (notification is ScrollEndNotification) {
+                        // User lifted finger — safe to allow programmatic scrolls again
+                        _isUserScrolling = false;
+                      }
+                    }
+                    return false; // don't absorb the notification
+                  },
+                  child: PageView.builder(
+                    key: ValueKey(appState.quranScrollDirection),
+                    controller: _pageController,
+                    scrollDirection: appState.quranScrollDirection == 'vertical'
+                        ? Axis.vertical
+                        : Axis.horizontal,
+                    reverse: appState.quranScrollDirection != 'vertical', // RTL swipe right for horizontal, standard down scroll for vertical
+                    physics: const BouncingScrollPhysics(),
+                    allowImplicitScrolling: true,
+                    itemCount: 604,
+                    onPageChanged: (index) {
                       // User manually swiped — stop any active auto-scroll animation
-                      if (_isAutoScrolling) {
+                      if (!_isProgrammaticScroll && _isAutoScrolling) {
                         _stopScrollAnimation();
                         Future.microtask(_syncScrollState);
                       }
-                    }
 
-                    final targetPage = index + 1;
-                    if (quranProvider.currentPage != targetPage) {
-                      quranProvider.setCurrentPageFromScroll(targetPage);
-                    }
-                    // Reset inner scroll position of the NEW page being shown
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      final newCtrl = _pageScrollControllers[targetPage];
-                      if (newCtrl != null && newCtrl.hasClients) {
-                        newCtrl.jumpTo(0);
+                      final targetPage = index + 1;
+                      // Update provider WITHOUT triggering a conflicting animateToPage.
+                      // _isUserScrolling is true here, so _onProviderChange will skip
+                      // the _scrollToPage call.
+                      if (quranProvider.currentPage != targetPage) {
+                        quranProvider.setCurrentPageFromScroll(targetPage);
                       }
-                    });
-                  },
-                  itemBuilder: (context, index) {
+                      // Reset inner scroll position of the NEW page being shown
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        final newCtrl = _pageScrollControllers[targetPage];
+                        if (newCtrl != null && newCtrl.hasClients) {
+                          newCtrl.jumpTo(0);
+                        }
+                      });
+                    },
+                    itemBuilder: (context, index) {
                     final pageNum = index + 1;
                     final pageVerses = quranProvider.getVersesOnPage(pageNum);
 
@@ -1387,6 +1409,7 @@ class _QuranScreenState extends State<QuranScreen> {
                       ),
                     );
                   },
+                ),
                 ),
               ),
 
