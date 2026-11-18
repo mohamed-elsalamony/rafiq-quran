@@ -72,7 +72,7 @@ void callbackDispatcher() {
           method: method,
           cityName: savedCity,
           dailyAyah: "إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ",
-          dailyHadith: hadith?.text ?? "خيركم من تعلم القرآن وعلمه",
+          dailyHadith: hadith.text,
         );
       }
     } catch (e) {
@@ -375,152 +375,152 @@ class _MainShellState extends State<MainShell> {
         Navigator.of(context).pop();
       },
       child: Scaffold(
-      drawer: Drawer(
-        child: Container(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              // رأس القائمة الجانبية
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [primaryColor, const Color(0xFF073A2F)],
+        drawer: Drawer(
+          child: Container(
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                // رأس القائمة الجانبية
+                DrawerHeader(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryColor, const Color(0xFF073A2F)],
+                    ),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      'رفيق القرآن',
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'إصدار 1.1.0',
-                      style: TextStyle(color: Colors.teal[100], fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-
-
-              ListTile(
-                title:
-                    const Text('الورد وحفظ القرآن', textAlign: TextAlign.right),
-                trailing: const Icon(Icons.assignment, color: Colors.teal),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const HifzKhatmaScreen()));
-                },
-              ),
-              ListTile(
-                title:
-                    const Text('إعدادات التطبيق', textAlign: TextAlign.right),
-                trailing: const Icon(Icons.settings, color: Colors.teal),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/settings');
-                },
-              ),
-              const Divider(),
-
-              // التحكم بحجم خط المصحف في القائمة الجانبية مباشرة
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'حجم خط المصحف (${appState.fontSize.toInt()})',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 13),
-                      textAlign: TextAlign.right,
-                    ),
-                    Slider(
-                      value: appState.fontSize,
-                      min: 16.0,
-                      max: 36.0,
-                      activeColor: primaryColor,
-                      inactiveColor: primaryColor.withOpacity(0.2),
-                      onChanged: (val) {
-                        appState.setFontSize(val);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      appBar: _currentIndex == 2
-          ? AppBar(
-              backgroundColor: isDark ? const Color(0xFF0E1A17) : primaryColor,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              leadingWidth: 150.0,
-              leading: Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Text(
-                        'رفيق',
+                        'رفيق القرآن',
                         style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 20,
                           color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(height: 4),
                       Text(
-                        'القرآن',
-                        style: GoogleFonts.amiri(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 17,
-                          color: const Color(0xFFD4AF37),
-                        ),
+                        'إصدار 1.1.0',
+                        style: TextStyle(color: Colors.teal[100], fontSize: 12),
                       ),
                     ],
                   ),
                 ),
-              ),
-              actions: [
-                Builder(
-                  builder: (context) => IconButton(
-                    icon: const Icon(Icons.menu_rounded),
-                    onPressed: () => Scaffold.of(context).openDrawer(),
+
+                ListTile(
+                  title: const Text('الورد وحفظ القرآن',
+                      textAlign: TextAlign.right),
+                  trailing: const Icon(Icons.assignment, color: Colors.teal),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const HifzKhatmaScreen()));
+                  },
+                ),
+                ListTile(
+                  title:
+                      const Text('إعدادات التطبيق', textAlign: TextAlign.right),
+                  trailing: const Icon(Icons.settings, color: Colors.teal),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/settings');
+                  },
+                ),
+                const Divider(),
+
+                // التحكم بحجم خط المصحف في القائمة الجانبية مباشرة
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'حجم خط المصحف (${appState.fontSize.toInt()})',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13),
+                        textAlign: TextAlign.right,
+                      ),
+                      Slider(
+                        value: appState.fontSize,
+                        min: 16.0,
+                        max: 36.0,
+                        activeColor: primaryColor,
+                        inactiveColor: primaryColor.withOpacity(0.2),
+                        onChanged: (val) {
+                          appState.setFontSize(val);
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ],
-            )
-          : null,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _tabs,
+            ),
+          ),
+        ),
+        appBar: _currentIndex == 2
+            ? AppBar(
+                backgroundColor:
+                    isDark ? const Color(0xFF0E1A17) : primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                leadingWidth: 150.0,
+                leading: Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'رفيق',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'القرآن',
+                          style: GoogleFonts.amiri(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17,
+                            color: const Color(0xFFD4AF37),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                actions: [
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu_rounded),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    ),
+                  ),
+                ],
+              )
+            : null,
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _tabs,
+        ),
+        bottomNavigationBar: _buildBottomNavigationBar(
+          screenWidth,
+          tabWidth,
+          isRtl,
+          isDark,
+          primaryColor,
+          accentColor,
+        ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(
-        screenWidth,
-        tabWidth,
-        isRtl,
-        isDark,
-        primaryColor,
-        accentColor,
-      ),
-    ),
     );
   }
 
@@ -558,14 +558,14 @@ class _MainShellState extends State<MainShell> {
           children: [
             _buildNavItem(0, Icons.menu_book_outlined, Icons.menu_book,
                 'المصحف', isDark, primaryColor, accentColor),
-            _buildNavItem(1, Icons.wb_sunny_outlined, Icons.wb_sunny,
-                'الأذكار', isDark, primaryColor, accentColor),
-            _buildNavItem(2, Icons.home_outlined, Icons.home,
-                'الرئيسية', isDark, primaryColor, accentColor),
+            _buildNavItem(1, Icons.wb_sunny_outlined, Icons.wb_sunny, 'الأذكار',
+                isDark, primaryColor, accentColor),
+            _buildNavItem(2, Icons.home_outlined, Icons.home, 'الرئيسية',
+                isDark, primaryColor, accentColor),
             _buildNavItem(3, Icons.fingerprint_outlined, Icons.fingerprint,
                 'التسبيح', isDark, primaryColor, accentColor),
-            _buildNavItem(4, Icons.mosque_outlined, Icons.mosque,
-                'الصلاة', isDark, primaryColor, accentColor),
+            _buildNavItem(4, Icons.mosque_outlined, Icons.mosque, 'الصلاة',
+                isDark, primaryColor, accentColor),
           ],
         ),
       ),
@@ -597,9 +597,7 @@ class _MainShellState extends State<MainShell> {
           ),
           decoration: isSelected
               ? BoxDecoration(
-                  color: isHome
-                      ? primaryColor
-                      : accentColor.withOpacity(0.1),
+                  color: isHome ? primaryColor : accentColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                 )
               : null,
@@ -622,8 +620,7 @@ class _MainShellState extends State<MainShell> {
                 duration: const Duration(milliseconds: 200),
                 style: TextStyle(
                   fontSize: isSelected ? 10.5 : 9.5,
-                  fontWeight:
-                      isSelected ? FontWeight.w700 : FontWeight.w400,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
                   color: isSelected
                       ? (isHome ? Colors.white : accentColor)
                       : (isDark ? Colors.white38 : Colors.grey[500]),

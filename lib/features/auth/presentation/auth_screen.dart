@@ -103,7 +103,6 @@ class _AuthScreenState extends State<AuthScreen> {
     final appState = Provider.of<AppState>(context);
     final isDark = appState.isDarkMode;
     const primaryColor = Color(0xFF0F5A47);
-    const Color accentColor = Color(0xFFD4AF37);
 
     return Scaffold(
       appBar: AppBar(

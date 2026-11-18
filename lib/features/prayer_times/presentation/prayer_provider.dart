@@ -53,7 +53,10 @@ class PrayerProvider extends ChangeNotifier {
   Future<void> _initProvider() async {
     await _loadSettings();
     try {
-      await NotificationService().init();
+      final ns = NotificationService();
+      if (!ns.isInitialized) {
+        await ns.init();
+      }
       _reschedulePrayerAlarms();
     } catch (e) {
       debugPrint("Error initializing notifications: $e");
@@ -79,7 +82,7 @@ class PrayerProvider extends ChangeNotifier {
           method: _currentCity.method,
           cityName: _currentCity.nameArabic,
           dailyAyah: "إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ",
-          dailyHadith: hadith?.text ?? "خيركم من تعلم القرآن وعلمه",
+          dailyHadith: hadith.text,
         );
       }).catchError((e) {
         WidgetUpdateService.updateWidget(
@@ -159,7 +162,7 @@ class PrayerProvider extends ChangeNotifier {
       }
 
       _calculateTimes();
-      _reschedulePrayerAlarms();
+      // Note: _reschedulePrayerAlarms() is called by _initProvider() after init() completes
       notifyListeners();
     } catch (e) {
       debugPrint("Error loading prayer settings: $e");
@@ -206,7 +209,7 @@ class PrayerProvider extends ChangeNotifier {
       _selectedCityName = 'القاهرة';
       _currentCity = PrayerService.defaultCities['القاهرة']!;
       _calculateTimes();
-      _reschedulePrayerAlarms();
+      // Note: _reschedulePrayerAlarms() is called by _initProvider() after init() completes
       notifyListeners();
       _saveSettings();
     }

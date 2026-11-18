@@ -100,7 +100,7 @@ class SeerahService {
         .where((e) =>
             e.title.contains(query) ||
             e.content.contains(query) ||
-            e.source.contains(query) ||
+            e.source.toLowerCase().contains(lowerQuery) ||
             e.location.contains(query) ||
             e.stage.contains(query) ||
             e.characters.any((c) => c.contains(query)))

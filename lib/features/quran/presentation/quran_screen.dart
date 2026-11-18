@@ -1321,7 +1321,7 @@ class _QuranScreenState extends State<QuranScreen> {
                     scrollDirection: appState.quranScrollDirection == 'vertical'
                         ? Axis.vertical
                         : Axis.horizontal,
-                    reverse: appState.quranScrollDirection != 'vertical', // RTL swipe right for horizontal, standard down scroll for vertical
+                    reverse: false, // LTR swipe: swipe left → next page (page number increases)
                     physics: const BouncingScrollPhysics(),
                     allowImplicitScrolling: true,
                     itemCount: 604,

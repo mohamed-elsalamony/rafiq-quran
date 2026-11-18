@@ -133,7 +133,6 @@ class _QuranPageWidgetState extends State<QuranPageWidget> {
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF0F5A47);
-    const Color goldColor = Color(0xFFD4AF37);
 
     int getHizbNumber(int page) {
       if (page <= 1) return 1;

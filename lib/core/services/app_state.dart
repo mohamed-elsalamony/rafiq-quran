@@ -73,7 +73,7 @@ class AppState extends ChangeNotifier {
   String _quranThemeMode = 'light';
   String _quranFontFamily = 'Amiri';
   String _quranViewMode = 'page';
-  String _quranScrollDirection = 'vertical';
+  String _quranScrollDirection = 'horizontal';
   bool _showTranslation = true;
 
   bool _periodicDhikrEnabled = false;
@@ -177,7 +177,7 @@ class AppState extends ChangeNotifier {
           (_isDarkMode ? 'dark' : 'light');
       _quranFontFamily = prefs.getString(_keyQuranFontFamily) ?? 'Amiri';
       _quranViewMode = prefs.getString(_keyQuranViewMode) ?? 'page';
-      _quranScrollDirection = prefs.getString(_keyQuranScrollDirection) ?? 'vertical';
+      _quranScrollDirection = prefs.getString(_keyQuranScrollDirection) ?? 'horizontal';
       _showTranslation = prefs.getBool(_keyShowTranslation) ?? true;
 
       _periodicDhikrEnabled = prefs.getBool(_keyPeriodicDhikrEnabled) ?? false;
@@ -388,8 +388,12 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> toggleNotifications(bool val) async {
+    final ns = NotificationService();
+    if (!ns.isInitialized) {
+      await ns.init();
+    }
     if (val) {
-      await NotificationService().requestPermission();
+      await ns.requestPermission();
     }
     _notificationsEnabled = val;
     notifyListeners();
@@ -398,6 +402,7 @@ class AppState extends ChangeNotifier {
     await prefs.setBool(_keyNotifications, val);
 
     _rescheduleDailyReminder();
+    _rescheduleSmartReminders();
   }
 
   Future<void> setPeriodicDhikrEnabled(bool val) async {
@@ -575,7 +580,12 @@ class AppState extends ChangeNotifier {
 
   Future<void> _rescheduleSmartReminders() async {
     try {
-      await NotificationService().scheduleSmartReminders(
+      // Ensure NotificationService is initialized before scheduling
+      final ns = NotificationService();
+      if (!ns.isInitialized) {
+        await ns.init();
+      }
+      await ns.scheduleSmartReminders(
         wakeUpHour: _smartWakeUpHour,
         wakeUpMinute: _smartWakeUpMinute,
         returnHour: _smartReturnHour,
@@ -617,7 +627,7 @@ class AppState extends ChangeNotifier {
     _quranThemeMode = 'light';
     _quranFontFamily = 'Amiri';
     _quranViewMode = 'page';
-    _quranScrollDirection = 'vertical';
+    _quranScrollDirection = 'horizontal';
     _showTranslation = true;
 
     _periodicDhikrEnabled = false;
@@ -658,8 +668,12 @@ class AppState extends ChangeNotifier {
 
   Future<void> _rescheduleDailyReminder() async {
     try {
-      await NotificationService()
-          .scheduleDailyReminder(enabled: _notificationsEnabled);
+      // Ensure NotificationService is initialized before scheduling
+      final ns = NotificationService();
+      if (!ns.isInitialized) {
+        await ns.init();
+      }
+      await ns.scheduleDailyReminder(enabled: _notificationsEnabled);
     } catch (e) {
       debugPrint("Error scheduling daily reminder: $e");
     }

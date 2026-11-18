@@ -20,13 +20,15 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _isInitializing = false;
+
+  static bool get _isUnsupportedPlatform =>
+      kIsWeb || (!Platform.isAndroid && !Platform.isIOS);
 
   bool get isInitialized => _initialized;
 
   Future<bool> areNotificationsEnabled() async {
-    if (kIsWeb) return true;
-    // On non-mobile platforms (desktop, etc.) treat as enabled
-    if (!Platform.isAndroid && !Platform.isIOS) return true;
+    if (_isUnsupportedPlatform) return true;
     try {
       if (Platform.isAndroid) {
         final androidImplementation =
@@ -103,20 +105,27 @@ class NotificationService {
 
   Future<void> init() async {
     if (_initialized) return;
-
-    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST') ||
-        (!Platform.isAndroid && !Platform.isIOS)) {
-      debugPrint('Desktop/Web/Test: Notification Service Mock Initialized');
-      _initialized = true;
+    if (_isInitializing) {
+      while (_isInitializing && !_initialized) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
       return;
     }
+    _isInitializing = true;
 
     try {
+      if (_isUnsupportedPlatform) {
+        debugPrint('Desktop/Web/Test: Notification Service Mock Initialized');
+        _initialized = true;
+        return;
+      }
       // 1. Initialize timezone database
       tz.initializeTimeZones();
       try {
-        final String timeZoneName =
-            (await FlutterTimezone.getLocalTimezone()).identifier;
+        final dynamic tzResult = await FlutterTimezone.getLocalTimezone();
+        final String timeZoneName = tzResult is String
+            ? tzResult
+            : (tzResult?.identifier ?? tzResult.toString());
         tz.setLocalLocation(tz.getLocation(timeZoneName));
         debugPrint('Set local timezone to: $timeZoneName');
       } catch (e) {
@@ -226,6 +235,8 @@ class NotificationService {
       _initialized = true;
     } catch (e) {
       debugPrint("Error initializing notifications: $e");
+    } finally {
+      _isInitializing = false;
     }
   }
 
@@ -236,13 +247,16 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
   }) async {
-    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST') ||
-        (!Platform.isAndroid && !Platform.isIOS)) {
+    if (_isUnsupportedPlatform) {
       debugPrint("Skipping scheduleNotification in desktop/test/web");
       return;
     }
     if (!_initialized) {
-      throw Exception("خدمة الإشعارات ليست نشطة حالياً. يرجى تفعيلها أولاً.");
+      await init();
+    }
+    if (!_initialized) {
+      debugPrint("Notification service not initialized. Skipping ID: $id");
+      return;
     }
 
     try {
@@ -307,8 +321,13 @@ class NotificationService {
 
   // --- Schedule/Cancel Daily Reminder Notification ---
   Future<void> scheduleDailyReminder({required bool enabled}) async {
-    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST') ||
-        (!Platform.isAndroid && !Platform.isIOS)) return;
+    if (_isUnsupportedPlatform) return;
+
+    // Auto-initialize if not done yet
+    if (!_initialized) {
+      await init();
+    }
+    if (!_initialized) return; // init failed
 
     final int dailyReminderId = 999;
 
@@ -392,8 +411,11 @@ class NotificationService {
     required String body,
     required TimeOfDay time,
   }) async {
-    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST') ||
-        (!Platform.isAndroid && !Platform.isIOS)) return;
+    if (_isUnsupportedPlatform) return;
+    if (!_initialized) {
+      await init();
+    }
+    if (!_initialized) return;
 
     try {
       await _notificationsPlugin.cancel(id);
@@ -489,7 +511,13 @@ class NotificationService {
     bool preAlarmsEnabled = false,
     int preAlarmMinutes = 15,
   }) async {
-    if (kIsWeb || !_initialized || (!Platform.isAndroid && !Platform.isIOS)) return;
+    if (_isUnsupportedPlatform) return;
+
+    // Auto-initialize if not done yet
+    if (!_initialized) {
+      await init();
+    }
+    if (!_initialized) return; // init failed
 
     try {
       // Cancel previous scheduled prayer alarms to prevent duplicates
@@ -590,8 +618,13 @@ class NotificationService {
     required bool sleepRemEnabled,
     required String contentType,
   }) async {
-    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST') ||
-        (!Platform.isAndroid && !Platform.isIOS)) return;
+    if (_isUnsupportedPlatform) return;
+
+    // Auto-initialize if not done yet
+    if (!_initialized) {
+      await init();
+    }
+    if (!_initialized) return; // init failed
 
     try {
       // 1. Cancel existing smart reminders first
@@ -750,8 +783,11 @@ class NotificationService {
     required DateTime scheduledDate,
     required String payload,
   }) async {
-    if (kIsWeb || !_initialized || Platform.environment.containsKey('FLUTTER_TEST') ||
-        (!Platform.isAndroid && !Platform.isIOS)) return;
+    if (_isUnsupportedPlatform) return;
+    if (!_initialized) {
+      await init();
+    }
+    if (!_initialized) return;
 
     try {
       final tz.TZDateTime tzDateTime = scheduledDate is tz.TZDateTime
@@ -820,11 +856,11 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
-    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST') ||
-        (!Platform.isAndroid && !Platform.isIOS)) return;
+    if (_isUnsupportedPlatform) return;
     if (!_initialized) {
       await init();
     }
+    if (!_initialized) return;
 
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(

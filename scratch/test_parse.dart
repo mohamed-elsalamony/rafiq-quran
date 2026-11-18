@@ -89,7 +89,7 @@ void main() async {
         }
         nextIndex++;
       }
-      if (currentTitle == null || currentTitle!.isEmpty) {
+      if (currentTitle == null || currentTitle.isEmpty) {
         currentTitle = "فصل في العقوبات والآثار";
       }
     } else {

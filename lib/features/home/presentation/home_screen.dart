@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -408,19 +407,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Decorative circle
-          Positioned(
-            left: -30,
-            top: -30,
-            child: Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.03),
-              ),
-            ),
-          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

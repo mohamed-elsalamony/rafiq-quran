@@ -18,7 +18,6 @@ class _AdhkarScreenState extends State<AdhkarScreen>
   late AnimationController _animCtrl;
 
   static const _primary = Color(0xFF0F5A47);
-  static const _accent = Color(0xFFD4AF37);
 
   @override
   void initState() {
